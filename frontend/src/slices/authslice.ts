@@ -1,16 +1,14 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 
-/* Define what userInfo looks like */
 interface UserInfo {
   token: string;
-  // add other fields if you have them (name, email, etc)
+  // add other fields if needed
 }
 
 interface AuthState {
   userInfo: UserInfo | null;
 }
 
-/* Safe localStorage parsing */
 const storedUserInfo = localStorage.getItem("userInfo");
 
 const initialState: AuthState = {
@@ -21,13 +19,11 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // ✅ Set Credentials
-    setCredentials: (state, action: PayloadAction<UserInfo>) => {
+    setCredentials: (state, action) => {
       state.userInfo = action.payload;
       localStorage.setItem("userInfo", JSON.stringify(action.payload));
     },
 
-    // ✅ Logout (removed unused action)
     logout: (state) => {
       state.userInfo = null;
       localStorage.removeItem("userInfo");
