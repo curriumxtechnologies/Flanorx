@@ -1,0 +1,415 @@
+<!doctype html>
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Flanorx - Sign in</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="images/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="images/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="images/favicon-16x16.png"
+    />
+    <link rel="manifest" href="images/site.webmanifest" />
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#13ec5b",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102216",
+            },
+            fontFamily: {
+              display: ["Manrope", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        font-family: "Manrope", sans-serif;
+      }
+
+      .fuel-pump-glow {
+        box-shadow: 0 0 20px rgba(19, 236, 91, 0.3);
+      }
+
+      #pageLoader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f6f8f6;
+        transition:
+          opacity 0.45s ease,
+          visibility 0.45s ease;
+      }
+
+      .dark #pageLoader {
+        background: #102216;
+      }
+
+      #pageLoader.hidden-loader {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .loader-logo {
+        width: 120px;
+        max-width: 40vw;
+        height: auto;
+        animation: logoPulse 1.5s ease-in-out infinite;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+
+      @keyframes logoPulse {
+        0% {
+          transform: scale(0.92);
+          opacity: 0.85;
+        }
+        50% {
+          transform: scale(1.12);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.92);
+          opacity: 0.85;
+        }
+      }
+    </style>
+  </head>
+
+  <body
+    class="min-h-screen flex flex-col bg-background-light font-display dark:bg-background-dark"
+  >
+    <!-- Loader -->
+    <div id="pageLoader">
+      <img src="flanorx.png" alt="Flanorx Loading Logo" class="loader-logo" />
+    </div>
+
+    <!-- Header -->
+    <header
+      class="mx-auto flex w-full max-w-7xl items-center justify-between px-8 py-6"
+    >
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center">
+          <img
+            src="flanorx.png"
+            alt="Flanorx Logo"
+            class="h-6 w-auto object-contain transition-transform duration-300 hover:scale-105"
+          />
+        </a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span
+          class="hidden items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 sm:flex"
+        >
+          <i data-lucide="fuel" class="h-4 w-4"></i>
+          Customer Portal
+        </span>
+
+        <a
+          href="customer-support.html"
+          class="inline-block rounded-lg border border-slate-200 px-6 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          Support
+        </a>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex flex-1 items-center justify-center px-4 py-12">
+      <div class="w-full max-w-[520px] space-y-8">
+        <!-- Intro -->
+        <div class="space-y-3 text-center">
+          <div class="mb-2 flex justify-center">
+            <div
+              class="fuel-pump-glow flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10"
+            >
+              <i data-lucide="fuel" class="h-8 w-8 text-primary"></i>
+            </div>
+          </div>
+
+          <h2 class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+            Welcome back, Fuel Saver
+          </h2>
+          <p class="text-slate-500 dark:text-slate-400">
+            Skip the line, we bring the pump to you.
+          </p>
+        </div>
+
+        <!-- Card -->
+        <div
+          class="rounded-xl border border-slate-100 bg-white p-8 shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
+        >
+          <div id="authMsg" class="hidden mb-4 text-sm"></div>
+
+          <!-- Feature badges -->
+          <div class="mb-6 grid grid-cols-2 gap-3">
+            <div
+              class="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800/50"
+            >
+              <div class="flex justify-center">
+                <i data-lucide="zap" class="h-6 w-6 text-primary"></i>
+              </div>
+              <p class="mt-1 text-xs font-bold">30-min delivery</p>
+            </div>
+
+            <div
+              class="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800/50"
+            >
+              <div class="flex justify-center">
+                <i data-lucide="tag" class="h-6 w-6 text-primary"></i>
+              </div>
+              <p class="mt-1 text-xs font-bold">Member pricing</p>
+            </div>
+
+            <div
+              class="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800/50"
+            >
+              <div class="flex justify-center">
+                <i data-lucide="map-pinned" class="h-6 w-6 text-primary"></i>
+              </div>
+              <p class="mt-1 text-xs font-bold">Real-time tracking</p>
+            </div>
+
+            <div
+              class="rounded-lg bg-slate-50 p-3 text-center dark:bg-slate-800/50"
+            >
+              <div class="flex justify-center">
+                <i data-lucide="credit-card" class="h-6 w-6 text-primary"></i>
+              </div>
+              <p class="mt-1 text-xs font-bold">Secure payment</p>
+            </div>
+          </div>
+
+          <!-- Google sign in -->
+          <button
+            id="googleBtn"
+            type="button"
+            class="group flex w-full items-center justify-center gap-3 rounded-lg border-2 border-primary/30 bg-white px-4 py-4 font-bold text-slate-700 transition-all hover:border-primary hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            <img
+              alt="Google Logo"
+              class="h-5 w-5"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfhYBtTt4_oqUaZlerep04zeaTzKfHSfvUjYyJIyPag-eqSTQWl_iOIGSZOX5sdJc2YRy7GZsmsajFBaoNokP35to5thiSG-iviTPX8j9xBrKcbyWUMF8vZPIxlMp8stu_p5nA852zS_BpMJiuHLLjQdme8S6407HA3J4VOZgMPI7X1dS20CUg7oA5bqApD2E1vfOy70QaYlmS5qqx3O7FunsRHfULBWh4FZGf6IQc46J3wfGSxZ7jiyAwdEiGAjwnoe0F-lL0CPc"
+            />
+            <span id="btnText">Sign in with Google</span>
+          </button>
+
+          <!-- Stats -->
+          <div class="mt-8 grid grid-cols-3 gap-3 text-center">
+            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+              <p class="text-xl font-black text-primary">15k+</p>
+              <p class="text-xs text-slate-500">Happy customers</p>
+            </div>
+            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+              <p class="text-xl font-black text-primary">30min</p>
+              <p class="text-xs text-slate-500">Avg. delivery</p>
+            </div>
+            <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+              <p class="text-xl font-black text-primary">4.9</p>
+              <p class="text-xs text-slate-500">App store rating</p>
+            </div>
+          </div>
+
+          <!-- Register -->
+          <p
+            class="mt-8 text-center text-sm text-slate-500 dark:text-slate-400"
+          >
+            New to Flanorx?
+            <a
+              href="register.html"
+              class="font-bold text-primary transition-colors hover:underline"
+            >
+              Create an account
+            </a>
+          </p>
+        </div>
+
+        <!-- Footer text -->
+        <p class="px-8 text-center text-xs text-slate-400 dark:text-slate-600">
+          By signing in, you agree to our
+          <a href="#" class="underline transition-colors hover:text-primary">
+            Terms of Service
+          </a>
+          and
+          <a href="#" class="underline transition-colors hover:text-primary">
+            Privacy Policy </a
+          >.
+        </p>
+      </div>
+    </main>
+
+    <!-- Bottom accent bar -->
+    <div
+      class="fixed bottom-0 left-0 h-1 w-full bg-gradient-to-r from-primary via-yellow-400 to-primary/50 opacity-50"
+    ></div>
+
+    <script>
+      const GOOGLE_CLIENT_ID =
+        "139378208657-0fujugnuiosdv9moc909vfm1328ouodb.apps.googleusercontent.com";
+
+      const API_BASE_URL =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000"
+          : "https://flanorx-api.onrender.com";
+
+      const googleBtn = document.getElementById("googleBtn");
+      const btnText = document.getElementById("btnText");
+      const authMsg = document.getElementById("authMsg");
+      const pageLoader = document.getElementById("pageLoader");
+
+      function hidePageLoader() {
+        if (!pageLoader) return;
+        pageLoader.classList.add("hidden-loader");
+      }
+
+      function redirectToDashboard() {
+        window.location.href = "customer-dashboard.html";
+      }
+
+      function showMsg(message, type = "info") {
+        authMsg.classList.remove("hidden");
+        authMsg.className =
+          "mb-4 text-sm " +
+          (type === "error"
+            ? "text-red-600 dark:text-red-400"
+            : type === "success"
+              ? "text-green-700 dark:text-green-400"
+              : "text-slate-600 dark:text-slate-300");
+        authMsg.textContent = message;
+      }
+
+      function setLoading(isLoading) {
+        googleBtn.disabled = isLoading;
+        btnText.textContent = isLoading
+          ? "Signing in..."
+          : "Sign in with Google";
+      }
+
+      async function sendTokenToBackend(googleToken) {
+        const res = await fetch(`${API_BASE_URL}/api/users/google`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            token: googleToken,
+            userType: "customer",
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data?.message || `Backend error (${res.status})`);
+        }
+
+        return data;
+      }
+
+      let tokenClient;
+
+      window.addEventListener("load", () => {
+        setTimeout(hidePageLoader, 900);
+
+        if (!window.google?.accounts?.oauth2) {
+          showMsg(
+            "Google OAuth library failed to load. Check internet.",
+            "error",
+          );
+          lucide.createIcons();
+          return;
+        }
+
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: "openid email profile",
+          callback: async (resp) => {
+            try {
+              if (!resp || !resp.access_token) {
+                throw new Error("No access token returned");
+              }
+
+              setLoading(true);
+              showMsg("Verifying credentials...", "info");
+
+              const serverData = await sendTokenToBackend(resp.access_token);
+
+              localStorage.setItem(
+                "flanorx_auth",
+                JSON.stringify({
+                  _id: serverData._id,
+                  name: serverData.name,
+                  email: serverData.email,
+                  profile: serverData.profile,
+                  authMethod: serverData.authMethod,
+                  userType: "customer",
+                  loggedInAt: Date.now(),
+                }),
+              );
+
+              showMsg(
+                "Login successful! Redirecting to dashboard...",
+                "success",
+              );
+              setTimeout(redirectToDashboard, 1500);
+            } catch (error) {
+              console.error(error);
+              showMsg(error.message || "Login failed", "error");
+              setLoading(false);
+            }
+          },
+        });
+
+        googleBtn.addEventListener("click", () => {
+          authMsg.classList.add("hidden");
+          setLoading(true);
+          tokenClient.requestAccessToken({ prompt: "select_account" });
+        });
+
+        lucide.createIcons();
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Place Fuel Order · Flanorx</title>
+
+    <!-- Tailwind with plugins -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <!-- Leaflet JS -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <!-- Google Font: Manrope -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Material Symbols -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="images/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="images/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="images/favicon-16x16.png"
+    />
+    <link rel="manifest" href="images/site.webmanifest" />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#13ec5b",
+              "brand-yellow": "#FFD700",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102216",
+            },
+            fontFamily: {
+              display: ["Manrope", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        font-family: "Manrope", sans-serif;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 24px;
+        height: 24px;
+        background: #13ec5b;
+        cursor: pointer;
+        border-radius: 50%;
+        border: 4px solid white;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      }
+      .sidebar-active {
+        background-color: rgba(19, 236, 91, 0.1);
+        border-right: 4px solid #13ec5b;
+        color: #111813;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(8px);
+      }
+
+      /* Map container - give it a fixed height */
+      #deliveryMap {
+        height: 350px;
+        width: 100%;
+        border-radius: 12px;
+        z-index: 1;
+        border: 2px solid #e2e8f0;
+      }
+
+      .dark #deliveryMap {
+        border-color: #334155;
+      }
+
+      .custom-marker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+      }
+
+      /* Override Leaflet's default z-index for controls */
+      .leaflet-top,
+      .leaflet-bottom {
+        z-index: 5;
+      }
+
+      .bottom-nav-item.active {
+        color: #13ec5b;
+        background: rgba(19, 236, 91, 0.1);
+        border-radius: 12px;
+        padding: 4px 0;
+      }
+      .bottom-nav-item.active .material-symbols-outlined {
+        font-variation-settings: "FILL" 1;
+        color: #13ec5b;
+      }
+      .bottom-nav-item {
+        transition: all 0.2s;
+        padding: 4px 0;
+        margin: 0 2px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #64748b;
+        flex: 1;
+        max-width: 80px;
+      }
+      .bottom-nav-item .material-symbols-outlined {
+        font-size: 24px;
+        transition: all 0.2s;
+      }
+      .bottom-nav-item span:last-child {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .dark .bottom-nav-item {
+        color: #94a3b8;
+      }
+      .dark .bottom-nav-item.active {
+        background: rgba(19, 236, 91, 0.15);
+        color: #13ec5b;
+      }
+      .dark .bottom-nav-item.active .material-symbols-outlined {
+        color: #13ec5b;
+      }
+
+      .mobile-bottom-nav {
+        display: none;
+      }
+
+      @media (max-width: 1023px) {
+        .mobile-bottom-nav {
+          display: flex;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 72px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-top: 1px solid rgba(226, 232, 240, 0.8);
+          z-index: 40;
+          padding-bottom: env(safe-area-inset-bottom, 0);
+          align-items: center;
+          justify-content: space-around;
+          box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.03);
+        }
+        .dark .mobile-bottom-nav {
+          background: rgba(15, 23, 42, 0.95);
+          border-top-color: rgba(30, 41, 59, 0.8);
+        }
+        main {
+          padding-bottom: calc(72px + env(safe-area-inset-bottom, 0));
+        }
+        #menuToggle {
+          display: none;
+        }
+        #sidebar {
+          transform: translateX(-100%);
+        }
+        #deliveryMap {
+          height: 280px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        #sidebar {
+          transform: translateX(0) !important;
+        }
+        #menuToggle {
+          display: block;
+        }
+        main {
+          padding-bottom: 0;
+        }
+      }
+
+      /* tiny toast */
+      .toast {
+        position: fixed;
+        right: 16px;
+        top: 16px;
+        z-index: 60;
+        max-width: 360px;
+      }
+
+      /* Map loading state */
+      .map-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 14px;
+        gap: 8px;
+      }
+      .dark .map-loading {
+        background: #1e293b;
+        color: #94a3b8;
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen"
+  >
+    <div class="flex min-h-screen">
+      <!-- Sidebar -->
+      <aside
+        id="sidebar"
+        class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 fixed lg:static inset-y-0 left-0 z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
+      >
+        <div class="p-6 flex items-center">
+          <div class="flex items-center gap-2">
+            <img
+              src="flanorx.png"
+              alt="Flanorx Logo"
+              class="h-6 w-auto object-contain transition-transform duration-300 hover:scale-105"
+            />
+          </div>
+        </div>
+
+        <nav class="flex-1 px-4 py-4 space-y-1">
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="customer-dashboard.html"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >dashboard</span
+            >
+            <span class="font-medium text-sm">Dashboard</span>
+          </a>
+
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="customer-order-history.html"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >history</span
+            >
+            <span class="font-medium text-sm">Order History</span>
+          </a>
+
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
+            href="place-order.html"
+          >
+            <span class="material-symbols-outlined text-primary"
+              >local_gas_station</span
+            >
+            <span class="font-semibold text-sm">Place Order</span>
+          </a>
+
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="tracking.html"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >near_me</span
+            >
+            <span class="font-medium text-sm">Tracking</span>
+          </a>
+
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="customer-settings.html"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >settings</span
+            >
+            <span class="font-medium text-sm">Settings</span>
+          </a>
+        </nav>
+
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+          <div class="bg-red-500/10 rounded-2xl p-4">
+            <p class="text-xs font-bold text-red-500 uppercase mb-3">Account</p>
+            <button
+              id="logoutBtn"
+              class="w-full py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div
+        id="backdrop"
+        class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden transition-opacity duration-300"
+      ></div>
+
+      <!-- Main -->
+      <main class="flex-1 flex flex-col overflow-y-auto">
+        <header
+          class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              id="menuToggle"
+              class="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <span class="material-symbols-outlined text-2xl">menu</span>
+            </button>
+
+            <div class="relative">
+              <span
+                class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xl"
+                >search</span
+              >
+              <input
+                class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-40 lg:w-64 transition-all"
+                placeholder="Search orders, invoices..."
+                type="text"
+              />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4 lg:gap-6">
+            <button
+              class="relative text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <span class="material-symbols-outlined">notifications</span>
+              <span
+                class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
+              ></span>
+            </button>
+
+            <div class="h-8 w-px bg-slate-200 dark:border-slate-800"></div>
+
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <p
+                  id="userNameTop"
+                  class="text-sm font-bold text-slate-900 dark:text-white"
+                >
+                  Customer
+                </p>
+              </div>
+              <div
+                id="userAvatar"
+                class="size-10 rounded-full bg-slate-200 bg-cover bg-center border-2 border-primary shrink-0"
+                style="background-image: url(&quot;&quot;)"
+                title="User"
+              ></div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Toast -->
+        <div id="toast" class="toast hidden">
+          <div
+            id="toastInner"
+            class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur p-4 shadow-xl"
+          >
+            <p id="toastTitle" class="text-sm font-extrabold">Notice</p>
+            <p
+              id="toastMsg"
+              class="text-xs text-slate-600 dark:text-slate-400 mt-1"
+            ></p>
+          </div>
+        </div>
+
+        <div class="p-4 lg:p-8">
+          <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Left wizard -->
+            <div class="flex-1 space-y-8">
+              <div>
+                <h1 class="text-3xl font-extrabold mb-2">Place Your Order</h1>
+                <p class="text-slate-500 dark:text-slate-400">
+                  Fill in the details below to schedule your fuel delivery.
+                </p>
+              </div>
+
+              <!-- Step 1: Fuel Type -->
+              <section
+                class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
+              >
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary"
+                    >local_gas_station</span
+                  >
+                  Step 1: Select Fuel Type
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label class="relative group cursor-pointer">
+                    <input
+                      checked
+                      class="peer sr-only"
+                      name="fuel_type"
+                      type="radio"
+                      value="Petrol (95 Octane)"
+                    />
+                    <div
+                      class="p-6 border-2 border-slate-100 dark:border-slate-800 rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 transition-all group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50"
+                    >
+                      <div class="flex justify-between items-start mb-4">
+                        <div class="bg-primary/20 p-3 rounded-lg text-primary">
+                          <span class="material-symbols-outlined text-3xl"
+                            >oil_barrel</span
+                          >
+                        </div>
+                        <div class="peer-checked:block hidden">
+                          <span class="material-symbols-outlined text-primary"
+                            >check_circle</span
+                          >
+                        </div>
+                      </div>
+                      <h3 class="text-lg font-bold">Petrol (95 Octane)</h3>
+                      <p class="text-slate-500 dark:text-slate-400 text-sm">
+                        Optimal for passenger cars and high-performance engines.
+                      </p>
+                      <p class="mt-4 font-bold text-primary">₦2/L</p>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <!-- Step 2: Station -->
+              <section
+                class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
+              >
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary"
+                    >local_gas_station</span
+                  >
+                  Step 2: Select Preferred Filling Station
+                </h2>
+
+                <div class="mb-6">
+                  <div class="relative">
+                    <span
+                      class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      >search</span
+                    >
+                    <input
+                      class="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary border-none"
+                      placeholder="Search for a filling station..."
+                      type="text"
+                      id="stationSearch"
+                    />
+                  </div>
+                </div>
+
+                <div class="mb-6">
+                  <h3
+                    class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3"
+                  >
+                    Major Stations
+                  </h3>
+                  <div
+                    class="grid grid-cols-2 md:grid-cols-3 gap-3"
+                    id="stationGrid"
+                  >
+                    <!-- Stations rendered by JS -->
+                  </div>
+                </div>
+
+                <details class="group">
+                  <summary
+                    class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg cursor-pointer list-none"
+                  >
+                    <span class="text-sm font-bold text-primary"
+                      >View all 30 filling stations</span
+                    >
+                    <span
+                      class="material-symbols-outlined group-open:rotate-180 transition-transform text-primary"
+                      >expand_more</span
+                    >
+                  </summary>
+                  <div
+                    class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-2"
+                    id="allStationsGrid"
+                  >
+                    <!-- More stations rendered by JS -->
+                  </div>
+                </details>
+
+                <div
+                  class="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >info</span
+                  >
+                  <span class="text-sm"
+                    >Fuel will be sourced from:
+                    <span class="font-bold" id="selectedStation"
+                      >NNPC</span
+                    ></span
+                  >
+                </div>
+              </section>
+
+              <!-- Step 3: Quantity -->
+              <section
+                class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
+              >
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary"
+                    >straighten</span
+                  >
+                  Step 3: How much do you need?
+                </h2>
+
+                <div class="space-y-8 py-4">
+                  <div class="flex items-end justify-between">
+                    <div class="w-full">
+                      <input
+                        id="qtyRange"
+                        class="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary"
+                        max="500"
+                        min="5"
+                        type="range"
+                        value="45"
+                      />
+                      <div
+                        class="flex justify-between mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest"
+                      >
+                        <span>5L</span><span>250L</span><span>500L</span>
+                      </div>
+                    </div>
+
+                    <div class="ml-8 shrink-0">
+                      <div class="relative">
+                        <input
+                          id="qtyInput"
+                          class="w-28 text-center text-2xl font-black bg-slate-50 dark:bg-slate-800 border-none rounded-lg focus:ring-2 focus:ring-primary py-3"
+                          type="number"
+                          value="45"
+                          min="5"
+                          max="500"
+                        />
+                        <span
+                          class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold"
+                          >L</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Step 4: Location -->
+              <section
+                class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
+              >
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary"
+                    >location_on</span
+                  >
+                  Step 4: Where should we deliver?
+                </h2>
+
+                <div class="space-y-4">
+                  <div class="relative">
+                    <span
+                      class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      >search</span
+                    >
+                    <input
+                      id="addressInput"
+                      class="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary border-none"
+                      placeholder="Enter delivery address..."
+                      type="text"
+                    />
+                    <button
+                      id="useCurrentLocationBtn"
+                      type="button"
+                      class="absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-slate-700 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm flex items-center gap-1 hover:bg-slate-50"
+                    >
+                      <span class="material-symbols-outlined text-sm"
+                        >my_location</span
+                      >
+                      Current Location
+                    </button>
+                  </div>
+
+                  <!-- Interactive Map -->
+                  <div id="deliveryMap">
+                    <div class="map-loading">
+                      <span class="material-symbols-outlined animate-spin"
+                        >sync</span
+                      >
+                      Loading map...
+                    </div>
+                  </div>
+
+                  <p
+                    id="coordsHint"
+                    class="text-xs text-slate-500 dark:text-slate-400"
+                  >
+                    Click on the map or use "Current Location" to set your
+                    delivery point
+                  </p>
+                </div>
+              </section>
+
+              <!-- Step 5: Schedule -->
+              <section
+                class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
+              >
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary"
+                    >schedule</span
+                  >
+                  Step 5: When should we arrive?
+                </h2>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <label class="cursor-pointer">
+                    <input
+                      checked
+                      class="peer sr-only"
+                      name="schedule"
+                      type="radio"
+                      value="now"
+                    />
+                    <div
+                      class="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-xl peer-checked:border-primary text-center"
+                    >
+                      <span class="material-symbols-outlined text-2xl mb-2"
+                        >bolt</span
+                      >
+                      <p class="font-bold">Deliver Now</p>
+                      <p class="text-xs text-slate-500">
+                        Estimated: 15-30 mins
+                      </p>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input
+                      class="peer sr-only"
+                      name="schedule"
+                      type="radio"
+                      value="scheduled"
+                    />
+                    <div
+                      class="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-xl peer-checked:border-primary text-center"
+                    >
+                      <span class="material-symbols-outlined text-2xl mb-2"
+                        >calendar_today</span
+                      >
+                      <p class="font-bold">Schedule for Later</p>
+                      <p class="text-xs text-slate-500">Pick date &amp; time</p>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="mt-6 flex flex-col md:flex-row gap-4">
+                  <div class="flex-1">
+                    <label
+                      class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
+                      >Select Date</label
+                    >
+                    <input
+                      id="scheduledDate"
+                      class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg focus:ring-2 focus:ring-primary py-3"
+                      type="date"
+                    />
+                  </div>
+                  <div class="flex-1">
+                    <label
+                      class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
+                      >Select Time</label
+                    >
+                    <input
+                      id="scheduledTime"
+                      class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg focus:ring-2 focus:ring-primary py-3"
+                      type="time"
+                    />
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <!-- Right summary -->
+            <div class="lg:w-96">
+              <div class="sticky top-24 space-y-4">
+                <div
+                  class="bg-slate-900 text-white rounded-2xl p-8 shadow-xl overflow-hidden relative"
+                >
+                  <div
+                    class="absolute -top-12 -right-12 w-40 h-40 bg-primary/20 rounded-full blur-3xl"
+                  ></div>
+
+                  <h2 class="text-2xl font-bold mb-6 relative z-10">
+                    Order Summary
+                  </h2>
+
+                  <div class="space-y-4 relative z-10">
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400 text-sm">Fuel Type</span>
+                      <span class="font-semibold" id="summaryFuel"
+                        >Petrol (95 Octane)</span
+                      >
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400 text-sm"
+                        >Filling Station</span
+                      >
+                      <span class="font-semibold" id="summaryStation"
+                        >NNPC</span
+                      >
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400 text-sm">Quantity</span>
+                      <span class="font-semibold" id="summaryQty"
+                        >45 Liters</span
+                      >
+                    </div>
+
+                    <div class="h-px bg-slate-800 my-4"></div>
+
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400 text-sm" id="summarySubLabel"
+                        >Price</span
+                      >
+                      <span class="font-semibold" id="summarySubtotal">₦0</span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400 text-sm">Delivery Fee</span>
+                      <span class="font-semibold" id="summaryDeliveryFee"
+                        >₦0</span
+                      >
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400 text-sm"
+                        >Service Tax (5%)</span
+                      >
+                      <span class="font-semibold" id="summaryTax">₦0</span>
+                    </div>
+
+                    <div class="h-px bg-slate-800 my-4"></div>
+
+                    <div class="flex justify-between items-end pt-2">
+                      <span class="text-slate-400 text-sm pb-1"
+                        >Total Payable</span
+                      >
+                      <span
+                        class="text-4xl font-black text-primary"
+                        id="summaryTotal"
+                        >₦0</span
+                      >
+                    </div>
+                  </div>
+
+                  <button
+                    id="confirmPayBtn"
+                    type="button"
+                    class="w-full mt-8 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 font-extrabold py-4 rounded-xl transition-all shadow-lg shadow-yellow-600/20 active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    Confirm &amp; Pay
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                  </button>
+
+                  <p class="mt-3 text-[11px] text-slate-300/80 leading-snug">
+                    Clicking <b>Confirm &amp; Pay</b> creates the order in the
+                    DB with <b>paid:false</b>, then redirects to Paystack
+                    checkout.
+                  </p>
+                </div>
+
+                <div
+                  class="bg-primary/10 border border-primary/20 rounded-xl p-4 flex gap-4"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >verified</span
+                  >
+                  <div>
+                    <p class="text-sm font-bold">Safe &amp; Reliable</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400">
+                      All our deliveries are handled by certified riders with
+                      real-time tracking.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Bottom Tab Bar -->
+    <nav class="mobile-bottom-nav">
+      <a
+        href="customer-dashboard.html"
+        class="bottom-nav-item"
+        id="bottomDashboard"
+      >
+        <span class="material-symbols-outlined">dashboard</span
+        ><span>Home</span>
+      </a>
+      <a
+        href="customer-order-history.html"
+        class="bottom-nav-item"
+        id="bottomHistory"
+      >
+        <span class="material-symbols-outlined">history</span
+        ><span>History</span>
+      </a>
+      <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder">
+        <span class="material-symbols-outlined">local_gas_station</span
+        ><span>Order</span>
+      </a>
+      <a href="tracking.html" class="bottom-nav-item" id="bottomTracking">
+        <span class="material-symbols-outlined">near_me</span><span>Track</span>
+      </a>
+      <a
+        href="customer-settings.html"
+        class="bottom-nav-item"
+        id="bottomSettings"
+      >
+        <span class="material-symbols-outlined">settings</span
+        ><span>Settings</span>
+      </a>
+    </nav>
+
+    <script>
+      // ========== CONFIG ==========
+      const API_BASE_URL =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000"
+          : "https://flanorx-api.onrender.com";
+
+      // ========== STATIONS DATA ==========
+      const MAJOR_STATIONS = [
+        { name: "NNPC", desc: "Retail" },
+        { name: "TotalEnergies", desc: "Nigeria" },
+        { name: "Mobil", desc: "ExxonMobil" },
+        { name: "Conoil", desc: "Conoil PLC" },
+        { name: "MRS Oil", desc: "MRS" },
+        { name: "Oando", desc: "Oando PLC" },
+        { name: "Chevron", desc: "Texaco" },
+        { name: "Petrolex", desc: "Petrolex" },
+        { name: "Eterna", desc: "Eterna PLC" },
+        { name: "Forte Oil", desc: "Axxela" },
+      ];
+
+      const EXTRA_STATIONS = [
+        { name: "Archoil", desc: "" },
+        { name: "TGI", desc: "Tropical General" },
+        { name: "Enyo Retail", desc: "" },
+        { name: "Tellus Energy", desc: "" },
+        { name: "Energy Fest", desc: "" },
+        { name: "IET", desc: "Integrated Energy" },
+        { name: "Pan Ocean Oil", desc: "" },
+        { name: "African Petroleum", desc: "" },
+        { name: "Panol Nigeria", desc: "" },
+        { name: "Zenon Petroleum", desc: "" },
+        { name: "Oando Downstream", desc: "" },
+        { name: "KAPCO", desc: "" },
+        { name: "DUFIL Prima", desc: "V-Power" },
+        { name: "NIPCO", desc: "" },
+        { name: "Capital Oil", desc: "" },
+        { name: "Prime Energy", desc: "" },
+        { name: "Freedom Oil", desc: "" },
+        { name: "Chief Oil & Gas", desc: "" },
+        { name: "Damto Oil", desc: "" },
+        { name: "Gaslink Nigeria", desc: "" },
+      ];
+
+      // ========== MAP STATE ==========
+      let deliveryMap = null;
+      let deliveryMarker = null;
+      let deliveryCoordinates = null;
+
+      // ========== HELPERS ==========
+      function formatNaira(n) {
+        const num = Number(n || 0);
+        return "₦" + num.toLocaleString("en-NG");
+      }
+
+      function showToast(title, msg) {
+        const wrap = document.getElementById("toast");
+        const t = document.getElementById("toastTitle");
+        const m = document.getElementById("toastMsg");
+        if (!wrap || !t || !m) return;
+        t.textContent = title || "Notice";
+        m.textContent = msg || "";
+        wrap.classList.remove("hidden");
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => wrap.classList.add("hidden"), 4500);
+      }
+
+      function safeJSONParse(s) {
+        try {
+          return JSON.parse(s);
+        } catch {
+          return null;
+        }
+      }
+
+      function requireAuthOrRedirect() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) {
+          window.location.href = "login.html";
+          return null;
+        }
+        const user = safeJSONParse(raw);
+        if (!user) {
+          localStorage.removeItem("flanorx_auth");
+          window.location.href = "login.html";
+          return null;
+        }
+        return user;
+      }
+
+      // ========== RENDER STATIONS ==========
+      function createStationHTML(station, checked) {
+        return `
+          <label class="relative cursor-pointer group">
+            <input type="radio" name="filling_station" value="${station.name}" class="peer sr-only" ${checked ? "checked" : ""} />
+            <div class="p-3 border-2 border-slate-100 dark:border-slate-800 rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 transition-all group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 text-center">
+              <div class="font-medium text-sm">${station.name}</div>
+              ${station.desc ? `<div class="text-xs text-slate-500">${station.desc}</div>` : ""}
+            </div>
+          </label>
+        `;
+      }
+
+      function renderStations() {
+        const majorGrid = document.getElementById("stationGrid");
+        const allGrid = document.getElementById("allStationsGrid");
+
+        if (majorGrid) {
+          majorGrid.innerHTML = MAJOR_STATIONS.map((s, i) =>
+            createStationHTML(s, i === 0),
+          ).join("");
+        }
+        if (allGrid) {
+          allGrid.innerHTML = EXTRA_STATIONS.map((s) =>
+            createStationHTML(s, false),
+          ).join("");
+        }
+      }
+
+      // ========== MAP INITIALIZATION ==========
+      function initDeliveryMap() {
+        const mapContainer = document.getElementById("deliveryMap");
+        if (!mapContainer) return;
+
+        // Clear the loading placeholder
+        mapContainer.innerHTML = "";
+
+        // Set explicit dimensions
+        const isMobile = window.innerWidth < 1024;
+        mapContainer.style.height = isMobile ? "280px" : "350px";
+        mapContainer.style.width = "100%";
+
+        // Default center: Lagos, Nigeria
+        const defaultLat = 6.5244;
+        const defaultLng = 3.3792;
+
+        deliveryMap = L.map("deliveryMap", {
+          center: [defaultLat, defaultLng],
+          zoom: 17,
+          zoomControl: true,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          dragging: true,
+          attributionControl: true,
+        });
+
+        // Add OpenStreetMap tiles
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+          maxZoom: 19,
+          minZoom: 3,
+          tileSize: 256,
+        }).addTo(deliveryMap);
+
+        // Handle click to place/update marker
+        deliveryMap.on("click", function (e) {
+          const { lat, lng } = e.latlng;
+          updateDeliveryMarker(lat, lng);
+          reverseGeocode(lat, lng);
+        });
+
+        // Force size recalculation
+        setTimeout(() => {
+          if (deliveryMap) {
+            deliveryMap.invalidateSize();
+          }
+        }, 200);
+
+        // Recalculate on resize
+        window.addEventListener("resize", () => {
+          setTimeout(() => {
+            if (deliveryMap) {
+              deliveryMap.invalidateSize();
+            }
+          }, 150);
+        });
+      }
+
+      function createDeliveryMarkerIcon() {
+        return L.divIcon({
+          html: `
+            <div style="
+              background: #13ec5b;
+              border-radius: 50%;
+              border: 3px solid white;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+              width: 40px;
+              height: 40px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <span class="material-symbols-outlined" style="color: white; font-size: 22px; font-variation-settings: 'FILL' 1;">location_on</span>
+            </div>
+          `,
+          className: "",
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -40],
+        });
+      }
+
+      function updateDeliveryMarker(lat, lng) {
+        if (!deliveryMap) return;
+
+        deliveryCoordinates = { lat, lng };
+
+        if (deliveryMarker) {
+          deliveryMarker.setLatLng([lat, lng]);
+        } else {
+          deliveryMarker = L.marker([lat, lng], {
+            icon: createDeliveryMarkerIcon(),
+            draggable: true,
+          })
+            .addTo(deliveryMap)
+            .bindPopup(
+              "<strong>📍 Delivery Location</strong><br><small>Drag to adjust</small>",
+            );
+
+          deliveryMarker.on("dragend", function (e) {
+            const position = e.target.getLatLng();
+            deliveryCoordinates = { lat: position.lat, lng: position.lng };
+            updateCoordsHint();
+            reverseGeocode(position.lat, position.lng);
+          });
+        }
+
+        updateCoordsHint();
+        deliveryMap.setView([lat, lng], 17, { animate: true, duration: 0.5 });
+      }
+
+      function updateCoordsHint() {
+        const coordsHint = document.getElementById("coordsHint");
+        if (coordsHint && deliveryCoordinates) {
+          coordsHint.textContent = `📍 Coordinates: ${deliveryCoordinates.lat.toFixed(6)}, ${deliveryCoordinates.lng.toFixed(6)}`;
+        }
+      }
+
+      async function reverseGeocode(lat, lng) {
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+          const res = await fetch(url);
+          const data = await res.json();
+
+          if (data?.display_name) {
+            const addressInput = document.getElementById("addressInput");
+            if (addressInput && !addressInput.dataset.userTyped) {
+              addressInput.value = data.display_name;
+            }
+          }
+        } catch (error) {
+          console.error("Reverse geocoding failed:", error);
+        }
+      }
+
+      // ========== USER INFO ==========
+      (function () {
+        const user = requireAuthOrRedirect();
+        if (!user) return;
+
+        const fullName = user?.name || user?.email || "Customer";
+        const top = document.getElementById("userNameTop");
+        const avatar = document.getElementById("userAvatar");
+
+        if (top) top.textContent = fullName;
+        if (avatar && user?.profile) {
+          avatar.style.backgroundImage = `url('${user.profile}')`;
+        }
+      })();
+
+      // ========== SIDEBAR TOGGLE ==========
+      (function () {
+        const menuToggle = document.getElementById("menuToggle");
+        const sidebar = document.getElementById("sidebar");
+        const backdrop = document.getElementById("backdrop");
+
+        if (menuToggle && sidebar && backdrop) {
+          menuToggle.addEventListener("click", () => {
+            sidebar.classList.toggle("-translate-x-full");
+            backdrop.classList.toggle("hidden");
+          });
+          backdrop.addEventListener("click", () => {
+            sidebar.classList.add("-translate-x-full");
+            backdrop.classList.add("hidden");
+          });
+        }
+      })();
+
+      // ========== LOGOUT ==========
+      document
+        .getElementById("logoutBtn")
+        ?.addEventListener("click", async () => {
+          try {
+            await fetch(`${API_BASE_URL}/api/users/logout`, {
+              method: "POST",
+              credentials: "include",
+            });
+          } catch (e) {}
+          localStorage.removeItem("flanorx_auth");
+          window.location.href = "login.html";
+        });
+
+      // ========== STATION SELECTION ==========
+      function getSelectedStation() {
+        const selected = document.querySelector(
+          'input[name="filling_station"]:checked',
+        );
+        return selected?.value || "NNPC";
+      }
+
+      function updateSelectedStationDisplay() {
+        const name = getSelectedStation();
+        document.getElementById("selectedStation").textContent = name;
+        document.getElementById("summaryStation").textContent = name;
+      }
+
+      document.addEventListener("change", (e) => {
+        if (e.target.name === "filling_station") updateSelectedStationDisplay();
+      });
+
+      // Station search
+      document
+        .getElementById("stationSearch")
+        ?.addEventListener("input", function (e) {
+          const term = (e.target.value || "").toLowerCase();
+          document
+            .querySelectorAll('[name="filling_station"]')
+            .forEach((input) => {
+              const label = input.closest("label");
+              if (label) {
+                const text = label.textContent.toLowerCase();
+                label.style.display = term
+                  ? text.includes(term)
+                    ? ""
+                    : "none"
+                  : "";
+              }
+            });
+        });
+
+      // ========== FUEL + QUANTITY + PRICE ==========
+      const PRICE_PER_LITER = { "Petrol (95 Octane)": 2 };
+      const qtyRange = document.getElementById("qtyRange");
+      const qtyInput = document.getElementById("qtyInput");
+
+      function clamp(n, min, max) {
+        const x = Number(n);
+        return Number.isNaN(x) ? min : Math.max(min, Math.min(max, x));
+      }
+
+      function getFuelType() {
+        return (
+          document.querySelector('input[name="fuel_type"]:checked')?.value ||
+          "Petrol (95 Octane)"
+        );
+      }
+
+      function getQuantity() {
+        return clamp(qtyInput?.value ?? qtyRange?.value ?? 45, 5, 500);
+      }
+
+      function calculatePrice(fuelType, quantity) {
+        const pricePerLiter = PRICE_PER_LITER[fuelType] || 0;
+        const subtotal = pricePerLiter * quantity;
+        const deliveryFee = 4.99;
+        const serviceTax = subtotal * 0.05;
+        const total = subtotal + deliveryFee + serviceTax;
+        return { pricePerLiter, subtotal, deliveryFee, serviceTax, total };
+      }
+
+      function refreshSummary() {
+        const fuelType = getFuelType();
+        const quantity = getQuantity();
+        const { pricePerLiter, subtotal, deliveryFee, serviceTax, total } =
+          calculatePrice(fuelType, quantity);
+
+        document.getElementById("summaryFuel").textContent = fuelType;
+        document.getElementById("summaryStation").textContent =
+          getSelectedStation();
+        document.getElementById("summaryQty").textContent =
+          `${quantity} Liters`;
+        document.getElementById("summarySubLabel").textContent =
+          `Price (${quantity}L × ₦${pricePerLiter.toLocaleString("en-NG")})`;
+        document.getElementById("summarySubtotal").textContent =
+          formatNaira(subtotal);
+        document.getElementById("summaryDeliveryFee").textContent =
+          formatNaira(deliveryFee);
+        document.getElementById("summaryTax").textContent =
+          formatNaira(serviceTax);
+        document.getElementById("summaryTotal").textContent =
+          formatNaira(total);
+      }
+
+      document
+        .querySelectorAll('input[name="fuel_type"]')
+        .forEach((r) => r.addEventListener("change", refreshSummary));
+
+      qtyRange?.addEventListener("input", () => {
+        qtyInput.value = qtyRange.value;
+        refreshSummary();
+      });
+
+      qtyInput?.addEventListener("input", () => {
+        const v = clamp(qtyInput.value, 5, 500);
+        qtyInput.value = v;
+        qtyRange.value = v;
+        refreshSummary();
+      });
+
+      // ========== LOCATION ==========
+      const addressInput = document.getElementById("addressInput");
+      const useCurrentLocationBtn = document.getElementById(
+        "useCurrentLocationBtn",
+      );
+
+      // Track if user manually typed address
+      if (addressInput) {
+        addressInput.addEventListener("input", () => {
+          addressInput.dataset.userTyped = "true";
+        });
+      }
+
+      useCurrentLocationBtn?.addEventListener("click", () => {
+        if (!navigator.geolocation) {
+          showToast("Location", "Geolocation not supported on this browser.");
+          return;
+        }
+
+        showToast("Location", "Getting your current location...");
+        useCurrentLocationBtn.disabled = true;
+        useCurrentLocationBtn.classList.add("opacity-50");
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            deliveryCoordinates = { lat, lng };
+            updateDeliveryMarker(lat, lng);
+
+            // Reset userTyped flag so reverse geocode can fill address
+            if (addressInput) delete addressInput.dataset.userTyped;
+            reverseGeocode(lat, lng);
+
+            showToast("Location", "Location found! Marker placed on map.");
+            useCurrentLocationBtn.disabled = false;
+            useCurrentLocationBtn.classList.remove("opacity-50");
+          },
+          (err) => {
+            console.error(err);
+            showToast(
+              "Location",
+              "Unable to get location. Click on the map to set your delivery point.",
+            );
+            useCurrentLocationBtn.disabled = false;
+            useCurrentLocationBtn.classList.remove("opacity-50");
+          },
+          { enableHighAccuracy: true, timeout: 15000 },
+        );
+      });
+
+      // ========== SCHEDULE ==========
+      function getScheduleType() {
+        return (
+          document.querySelector('input[name="schedule"]:checked')?.value ||
+          "now"
+        );
+      }
+
+      // ========== CONFIRM & PAY ==========
+      const confirmPayBtn = document.getElementById("confirmPayBtn");
+      const scheduledDateEl = document.getElementById("scheduledDate");
+      const scheduledTimeEl = document.getElementById("scheduledTime");
+
+      async function createOrderAndGetPaystackUrl() {
+        const user = requireAuthOrRedirect();
+        if (!user) throw new Error("Not logged in");
+
+        const fuelType = getFuelType();
+        const fillingStation = getSelectedStation();
+        const quantity = getQuantity();
+        const deliveryAddress = (addressInput?.value || "").trim();
+        const scheduleType = getScheduleType();
+
+        if (
+          !fuelType ||
+          !fillingStation ||
+          !quantity ||
+          !deliveryAddress ||
+          !scheduleType
+        ) {
+          throw new Error(
+            "Please complete all required fields (fuel, station, quantity, address, schedule).",
+          );
+        }
+
+        const scheduledDate = scheduledDateEl?.value || "";
+        const scheduledTime = scheduledTimeEl?.value || "";
+
+        if (
+          scheduleType === "scheduled" &&
+          (!scheduledDate || !scheduledTime)
+        ) {
+          throw new Error(
+            "Please select date and time for scheduled delivery.",
+          );
+        }
+
+        const { subtotal, deliveryFee, serviceTax, total } = calculatePrice(
+          fuelType,
+          quantity,
+        );
+
+        const payload = {
+          fuelType,
+          fillingStation,
+          quantity,
+          deliveryAddress,
+          deliveryCoordinates: deliveryCoordinates || undefined,
+          scheduleType,
+          scheduledDate:
+            scheduleType === "scheduled" ? scheduledDate : undefined,
+          scheduledTime:
+            scheduleType === "scheduled" ? scheduledTime : undefined,
+          subtotal,
+          deliveryFee,
+          serviceTax,
+          totalAmount: total,
+          notes: undefined,
+          estimatedDeliveryMinutes: scheduleType === "now" ? 30 : null,
+        };
+
+        const res = await fetch(`${API_BASE_URL}/api/order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 401) {
+          localStorage.removeItem("flanorx_auth");
+          window.location.href = "login.html";
+          return null;
+        }
+
+        if (!res.ok) {
+          throw new Error(data?.message || "Failed to create order");
+        }
+
+        const payUrl = data?.authorization_url;
+        if (!payUrl) {
+          throw new Error(
+            "Paystack link not returned. Check your createOrder controller response.",
+          );
+        }
+
+        return { payUrl, order: data?.order, reference: data?.reference };
+      }
+
+      confirmPayBtn?.addEventListener("click", async () => {
+        try {
+          confirmPayBtn.disabled = true;
+          confirmPayBtn.classList.add("opacity-70", "cursor-not-allowed");
+          showToast("Order", "Creating your order...");
+
+          const result = await createOrderAndGetPaystackUrl();
+          if (!result) return;
+
+          showToast("Payment", "Redirecting to Paystack...");
+          window.location.href = result.payUrl;
+        } catch (err) {
+          console.error(err);
+          showToast("Error", err?.message || "Something went wrong");
+        } finally {
+          confirmPayBtn.disabled = false;
+          confirmPayBtn.classList.remove("opacity-70", "cursor-not-allowed");
+        }
+      });
+
+      // ========== BOTTOM NAV ACTIVE STATE ==========
+      (function () {
+        const path = window.location.pathname;
+        let currentPage = path.substring(path.lastIndexOf("/") + 1);
+        if (
+          currentPage === "" ||
+          currentPage === "index.html" ||
+          currentPage === "customer-dashboard.html" ||
+          currentPage === "#"
+        ) {
+          currentPage = "home";
+        }
+
+        document.querySelectorAll(".bottom-nav-item").forEach((item) => {
+          item.classList.remove("active");
+          const href = item.getAttribute("href");
+          if (
+            (currentPage === "home" && href === "customer-dashboard.html") ||
+            href === currentPage
+          ) {
+            item.classList.add("active");
+          }
+        });
+
+        document.querySelectorAll("#sidebar nav a").forEach((link) => {
+          link.classList.remove("sidebar-active");
+          const href = link.getAttribute("href");
+          if (
+            (currentPage === "home" && href === "customer-dashboard.html") ||
+            href === currentPage
+          ) {
+            link.classList.add("sidebar-active");
+          }
+        });
+      })();
+
+      // ========== INITIALIZE ==========
+      function init() {
+        renderStations();
+        updateSelectedStationDisplay();
+        refreshSummary();
+
+        // Initialize map with a small delay to ensure container is rendered
+        setTimeout(initDeliveryMap, 300);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    </script>
+  </body>
+</html>

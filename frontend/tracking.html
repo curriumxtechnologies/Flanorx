@@ -1,0 +1,1285 @@
+<!doctype html>
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Order Tracking | Flanorx Fuel Delivery</title>
+
+    <!-- Tailwind CSS with Plugins -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <!-- Leaflet JS -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <!-- Google Fonts: Manrope -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="images/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="images/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="images/favicon-16x16.png"
+    />
+    <link rel="manifest" href="images/site.webmanifest" />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#13ec5b",
+              "brand-yellow": "#FFD700",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102216",
+            },
+            fontFamily: {
+              display: ["Manrope", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      /* Custom marker pulse animation */
+      .pulse-live {
+        box-shadow: 0 0 0 0 rgba(19, 236, 91, 0.7);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        70% {
+          box-shadow: 0 0 0 10px rgba(19, 236, 91, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(19, 236, 91, 0);
+        }
+      }
+
+      .sidebar-active {
+        background-color: rgba(19, 236, 91, 0.1);
+        border-right: 4px solid #13ec5b;
+        color: #111813;
+      }
+
+      .bottom-nav-item.active {
+        color: #13ec5b;
+        background: rgba(19, 236, 91, 0.1);
+        border-radius: 12px;
+        padding: 4px 0;
+      }
+
+      .bottom-nav-item.active svg {
+        stroke: #13ec5b;
+        fill: #13ec5b;
+      }
+
+      .bottom-nav-item {
+        transition: all 0.2s;
+        padding: 4px 0;
+        margin: 0 2px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #64748b;
+        flex: 1;
+        max-width: 80px;
+      }
+
+      .bottom-nav-item svg {
+        width: 24px;
+        height: 24px;
+        transition: all 0.2s;
+      }
+
+      .bottom-nav-item span:last-child {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .dark .bottom-nav-item {
+        color: #94a3b8;
+      }
+      .dark .bottom-nav-item.active {
+        background: rgba(19, 236, 91, 0.15);
+        color: #13ec5b;
+      }
+
+      /* Map styles */
+      #map {
+        height: 100%;
+        width: 100%;
+        z-index: 1;
+      }
+
+      .custom-marker-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .mobile-bottom-nav {
+        display: none;
+      }
+
+      @media (max-width: 1023px) {
+        .mobile-bottom-nav {
+          display: flex;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 72px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-top: 1px solid rgba(226, 232, 240, 0.8);
+          z-index: 50;
+          padding-bottom: env(safe-area-inset-bottom, 0);
+          align-items: center;
+          justify-content: space-around;
+          box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.03);
+        }
+        .dark .mobile-bottom-nav {
+          background: rgba(15, 23, 42, 0.95);
+          border-top-color: rgba(30, 41, 59, 0.8);
+        }
+        main {
+          padding-bottom: calc(72px + env(safe-area-inset-bottom, 0));
+        }
+        #menuToggle {
+          display: none;
+        }
+        #sidebar {
+          transform: translateX(-100%);
+        }
+        .flex-col.md\\:flex-row > section:first-child {
+          height: 55vh;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        #sidebar {
+          transform: translateX(0) !important;
+        }
+        #menuToggle {
+          display: block;
+        }
+        main {
+          padding-bottom: 0;
+        }
+      }
+
+      .loading-spinner {
+        border: 3px solid rgba(19, 236, 91, 0.2);
+        border-top: 3px solid #13ec5b;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .leaflet-top,
+      .leaflet-bottom {
+        z-index: 5;
+      }
+
+      /* Icon container for timeline steps */
+      .step-active .icon-container {
+        background-color: #13ec5b;
+        color: white;
+      }
+
+      .step-completed .icon-container {
+        background-color: #13ec5b20;
+        color: #13ec5b;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen overflow-hidden"
+  >
+    <div class="flex h-screen overflow-hidden">
+      <!-- SIDEBAR -->
+      <aside
+        id="sidebar"
+        class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 fixed lg:static inset-y-0 left-0 z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
+      >
+        <div class="p-6 flex items-center">
+          <div class="flex items-center gap-2">
+            <img
+              src="flanorx.png"
+              alt="Flanorx Logo"
+              class="h-6 w-auto object-contain transition-transform duration-300 hover:scale-105"
+            />
+          </div>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="customer-dashboard.html"
+          >
+            <span
+              class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
+              data-lucide="layout-dashboard"
+            ></span>
+            <span class="font-medium text-sm">Dashboard</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="customer-order-history.html"
+          >
+            <span
+              class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
+              data-lucide="clock"
+            ></span>
+            <span class="font-medium text-sm">Order History</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="place-order.html"
+          >
+            <span
+              class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
+              data-lucide="fuel"
+            ></span>
+            <span class="font-semibold text-sm">Place Order</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
+            href="tracking.html"
+          >
+            <span
+              class="lucide-icon w-5 h-5 text-primary"
+              data-lucide="navigation"
+            ></span>
+            <span class="font-semibold text-sm">Tracking</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            href="customer-settings.html"
+          >
+            <span
+              class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
+              data-lucide="settings"
+            ></span>
+            <span class="font-medium text-sm">Settings</span>
+          </a>
+        </nav>
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+          <div class="bg-red-500/10 rounded-2xl p-4">
+            <p class="text-xs font-bold text-red-500 uppercase mb-3">Account</p>
+            <button
+              id="logoutBtn"
+              class="w-full py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div
+        id="backdrop"
+        class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden transition-opacity duration-300"
+      ></div>
+
+      <!-- MAIN -->
+      <main class="flex-1 flex flex-col overflow-y-auto">
+        <header
+          class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10"
+        >
+          <div class="flex items-center gap-4">
+            <button
+              id="menuToggle"
+              class="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <span class="lucide-icon w-6 h-6" data-lucide="menu"></span>
+            </button>
+            <div class="relative">
+              <span
+                class="lucide-icon w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"
+                data-lucide="search"
+              ></span>
+              <input
+                class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-40 lg:w-64 transition-all"
+                placeholder="Search orders..."
+                type="text"
+              />
+            </div>
+          </div>
+          <div class="flex items-center gap-4 lg:gap-6">
+            <button
+              class="relative text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <span class="lucide-icon w-5 h-5" data-lucide="bell"></span>
+              <span
+                class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
+              ></span>
+            </button>
+            <div class="h-8 w-px bg-slate-200 dark:border-slate-800"></div>
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <p
+                  id="userNameDisplay"
+                  class="text-sm font-bold text-slate-900 dark:text-white"
+                >
+                  Customer
+                </p>
+              </div>
+              <div
+                id="userAvatar"
+                class="size-10 rounded-full bg-slate-200 bg-cover bg-center border-2 border-primary shrink-0"
+              ></div>
+            </div>
+          </div>
+        </header>
+
+        <!-- TRACKING CONTENT -->
+        <div class="flex flex-col md:flex-row h-full w-full">
+          <!-- Map Section -->
+          <section
+            class="relative flex-1 bg-slate-200 overflow-hidden md:h-auto h-[55vh]"
+          >
+            <div id="map"></div>
+
+            <!-- Map Controls -->
+            <div class="absolute bottom-6 right-6 flex flex-col gap-2 z-[1000]">
+              <button
+                id="zoomInBtn"
+                class="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg hover:bg-slate-50 transition-colors"
+                title="Zoom In"
+              >
+                <span class="lucide-icon w-5 h-5" data-lucide="plus"></span>
+              </button>
+              <button
+                id="zoomOutBtn"
+                class="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg hover:bg-slate-50 transition-colors"
+                title="Zoom Out"
+              >
+                <span class="lucide-icon w-5 h-5" data-lucide="minus"></span>
+              </button>
+              <button
+                id="centerMapBtn"
+                class="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg text-primary hover:bg-slate-50 transition-colors mt-2"
+                title="Center on Rider"
+              >
+                <span
+                  class="lucide-icon w-5 h-5"
+                  data-lucide="crosshair"
+                ></span>
+              </button>
+            </div>
+
+            <!-- No Active Order Overlay -->
+            <div
+              id="noActiveOrderOverlay"
+              class="hidden absolute inset-0 z-[999] bg-white/90 dark:bg-slate-900/90 flex items-center justify-center"
+            >
+              <div class="text-center p-8">
+                <span
+                  class="lucide-icon w-16 h-16 text-slate-300 mb-4 mx-auto"
+                  data-lucide="navigation-off"
+                ></span>
+                <h3
+                  class="text-xl font-bold text-slate-600 dark:text-slate-400 mb-2"
+                >
+                  No Active Order
+                </h3>
+                <p class="text-slate-500 mb-6">
+                  You don't have any active orders to track right now.
+                </p>
+                <a
+                  href="place-order.html"
+                  class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-slate-900 font-bold rounded-xl hover:shadow-lg transition-all"
+                >
+                  <span class="lucide-icon w-5 h-5" data-lucide="zap"></span>
+                  Place New Order
+                </a>
+              </div>
+            </div>
+
+            <!-- Rider Info Card (floating on map) -->
+            <div
+              id="riderInfoCard"
+              class="hidden absolute bottom-6 left-6 z-[1000] max-w-sm w-[calc(100%-3rem)] md:w-full bg-white dark:bg-slate-900 rounded-xl shadow-2xl p-4 border border-slate-100 dark:border-slate-800"
+            >
+              <div class="flex items-center gap-4">
+                <img
+                  id="riderAvatar"
+                  alt="Rider"
+                  class="size-14 rounded-full object-cover border-2 border-primary/20"
+                  src=""
+                />
+                <div class="flex-1 min-w-0">
+                  <h4 id="riderNameDisplay" class="font-bold text-lg truncate">
+                    Rider
+                  </h4>
+                  <div
+                    class="flex items-center gap-2 text-sm text-slate-500 flex-wrap"
+                  >
+                    <span
+                      class="flex items-center text-yellow-500 whitespace-nowrap"
+                    >
+                      <span
+                        class="lucide-icon w-3 h-3 fill-yellow-500"
+                        data-lucide="star"
+                      ></span>
+                      <span id="riderRating" class="ml-0.5">--</span>
+                    </span>
+                    <span>•</span>
+                    <span id="riderVehicle" class="truncate">--</span>
+                  </div>
+                </div>
+                <button
+                  id="callRiderBtn"
+                  class="bg-primary hover:bg-primary/90 text-slate-900 font-bold px-4 py-2 rounded-lg text-sm transition-transform active:scale-95 whitespace-nowrap"
+                >
+                  Call
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Right Section: Tracking Details -->
+          <aside
+            class="w-full md:w-[400px] h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col overflow-y-auto"
+          >
+            <div
+              class="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <span
+                  id="orderIdDisplay"
+                  class="text-sm font-bold uppercase tracking-widest text-slate-400"
+                  >Order #---</span
+                >
+                <span
+                  id="orderStatusBadge"
+                  class="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold border border-primary/30 whitespace-nowrap"
+                  >--</span
+                >
+              </div>
+              <div class="flex flex-col">
+                <p
+                  class="text-slate-500 dark:text-slate-400 text-sm font-medium"
+                >
+                  Estimated Arrival
+                </p>
+                <div class="flex items-baseline gap-2">
+                  <h1
+                    id="etaDisplay"
+                    class="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white"
+                  >
+                    --
+                  </h1>
+                  <span
+                    class="text-xl md:text-2xl font-bold text-slate-900 dark:text-white"
+                    >mins</span
+                  >
+                  <div
+                    class="ml-auto bg-primary p-2 rounded-lg flex items-center justify-center text-slate-900"
+                  >
+                    <span
+                      class="lucide-icon w-6 h-6"
+                      data-lucide="timer"
+                    ></span>
+                  </div>
+                </div>
+                <div
+                  class="mt-3 flex items-center gap-2 text-sm text-slate-500"
+                >
+                  <span class="lucide-icon w-5 h-5" data-lucide="route"></span>
+                  <span id="distanceDisplay">-- km</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex-1 p-6">
+              <h3
+                class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-8"
+              >
+                Delivery Status
+              </h3>
+              <div class="relative space-y-0" id="statusTimeline">
+                <div class="text-center py-8">
+                  <div class="loading-spinner mx-auto mb-4"></div>
+                  <p class="text-slate-400 text-sm">Loading tracking data...</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="p-6 bg-background-light dark:bg-slate-800/50 m-4 rounded-xl border border-slate-200 dark:border-slate-700"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span
+                    class="lucide-icon w-5 h-5 text-slate-400"
+                    data-lucide="shopping-cart"
+                  ></span>
+                  <span class="font-bold text-sm">Order Summary</span>
+                </div>
+                <button
+                  id="orderSummaryToggle"
+                  class="text-slate-400 hover:text-primary transition-colors"
+                >
+                  <span
+                    class="lucide-icon w-5 h-5"
+                    data-lucide="chevron-down"
+                  ></span>
+                </button>
+              </div>
+              <div
+                id="orderSummaryContent"
+                class="mt-4 space-y-2 border-t border-slate-200 dark:border-slate-700 pt-4"
+              >
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500">Product</span>
+                  <span id="fuelTypeDisplay" class="font-semibold truncate ml-2"
+                    >--</span
+                  >
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500">Quantity</span>
+                  <span id="quantityDisplay" class="font-semibold"
+                    >-- Liters</span
+                  >
+                </div>
+                <div
+                  class="flex justify-between text-base pt-2 border-t border-dashed border-slate-300 dark:border-slate-600"
+                >
+                  <span class="font-bold">Total</span>
+                  <span id="totalAmountDisplay" class="font-bold text-primary"
+                    >--</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="px-6 pb-6 text-center">
+              <div
+                class="flex items-center justify-center gap-2 text-[10px] text-slate-400 uppercase tracking-widest font-bold"
+              >
+                <span
+                  class="lucide-icon w-3 h-3"
+                  data-lucide="shield-check"
+                ></span>
+                Secure Delivery Protocol Active
+              </div>
+              <p id="lastUpdatedText" class="text-xs text-slate-400 mt-2"></p>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Bottom Nav -->
+    <nav class="mobile-bottom-nav">
+      <a
+        href="customer-dashboard.html"
+        class="bottom-nav-item"
+        id="bottomDashboard"
+      >
+        <span class="lucide-icon" data-lucide="layout-dashboard"></span
+        ><span>Home</span>
+      </a>
+      <a
+        href="customer-order-history.html"
+        class="bottom-nav-item"
+        id="bottomHistory"
+      >
+        <span class="lucide-icon" data-lucide="clock"></span
+        ><span>History</span>
+      </a>
+      <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder">
+        <span class="lucide-icon" data-lucide="fuel"></span><span>Order</span>
+      </a>
+      <a href="tracking.html" class="bottom-nav-item" id="bottomTracking">
+        <span class="lucide-icon" data-lucide="navigation"></span
+        ><span>Track</span>
+      </a>
+      <a
+        href="customer-settings.html"
+        class="bottom-nav-item"
+        id="bottomSettings"
+      >
+        <span class="lucide-icon" data-lucide="settings"></span
+        ><span>Settings</span>
+      </a>
+    </nav>
+
+    <script>
+      // Initialize Lucide Icons
+      lucide.createIcons();
+
+      const API_BASE_URL =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000"
+          : "https://flanorx-api.onrender.com";
+
+      let map = null;
+      let riderMarker = null;
+      let userMarker = null;
+      let routeLine = null;
+      let trackingInterval = null;
+      let currentOrderId = null;
+
+      // ========== HELPERS ==========
+      function formatNaira(n) {
+        return "₦" + Number(n || 0).toLocaleString("en-NG");
+      }
+
+      function fuelLabel(fuelType) {
+        const map = {
+          "Petrol (95 Octane)": "Petrol (95 Octane)",
+          Diesel: "Diesel",
+          Petrol: "Petrol",
+        };
+        return map[fuelType] || fuelType || "--";
+      }
+
+      function prettyStatus(status) {
+        const map = {
+          pending: "Pending",
+          processing: "Processing",
+          completed: "Completed",
+          cancelled: "Cancelled",
+          accepted: "Accepted",
+          picked_up: "Picked Up",
+          in_transit: "In Transit",
+          delivered: "Delivered",
+          confirmed: "Confirmed",
+        };
+        return map[status] || status || "--";
+      }
+
+      function formatTime(isoString) {
+        if (!isoString) return "";
+        const d = new Date(isoString);
+        return d.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      }
+
+      function avatarFromName(name) {
+        return `https://ui-avatars.com/api/?background=102216&color=13ec5b&size=128&name=${encodeURIComponent(name || "Rider")}`;
+      }
+
+      // ========== MAP INIT ==========
+      function initMap() {
+        const defaultLat = 6.5244;
+        const defaultLng = 3.3792;
+
+        map = L.map("map", {
+          center: [defaultLat, defaultLng],
+          zoom: 14,
+          zoomControl: false,
+        });
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          maxZoom: 19,
+        }).addTo(map);
+
+        document
+          .getElementById("zoomInBtn")
+          .addEventListener("click", () => map.zoomIn());
+        document
+          .getElementById("zoomOutBtn")
+          .addEventListener("click", () => map.zoomOut());
+        document
+          .getElementById("centerMapBtn")
+          .addEventListener("click", () => centerMapOnRider());
+
+        window.addEventListener("resize", () => map?.invalidateSize());
+        setTimeout(() => map?.invalidateSize(), 300);
+      }
+
+      function createCustomIcon(type, profilePic) {
+        const color = type === "rider" ? "#13ec5b" : "#3b82f6";
+        if (type === "rider" && profilePic) {
+          return L.divIcon({
+            html: `
+              <div style="position: relative; width: 48px; height: 48px;">
+                <div style="
+                  width: 48px;
+                  height: 48px;
+                  border-radius: 50%;
+                  border: 3px solid #13ec5b;
+                  background-image: url('${profilePic}');
+                  background-size: cover;
+                  background-position: center;
+                  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                  animation: markerPulse 2s infinite;
+                "></div>
+                <div style="
+                  position: absolute;
+                  bottom: -4px;
+                  right: -4px;
+                  background: #13ec5b;
+                  border-radius: 50%;
+                  width: 18px;
+                  height: 18px;
+                  border: 2px solid white;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "></div>
+              </div>
+            `,
+            className: "",
+            iconSize: [48, 52],
+            iconAnchor: [24, 52],
+            popupAnchor: [0, -52],
+          });
+        }
+        return L.divIcon({
+          html: `
+            <div style="
+              background: ${color};
+              border-radius: 50%;
+              border: 3px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              width: 40px;
+              height: 40px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "></div>
+          `,
+          className: "",
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
+          popupAnchor: [0, -20],
+        });
+      }
+
+      function updateRiderMarker(lat, lng, riderData) {
+        if (!map) return;
+        const name = riderData?.name || "Rider";
+        const profilePic =
+          riderData?.profilePicture || riderData?.profile || "";
+        if (riderMarker) {
+          riderMarker.setLatLng([lat, lng]);
+          if (profilePic)
+            riderMarker.setIcon(createCustomIcon("rider", profilePic));
+        } else {
+          riderMarker = L.marker([lat, lng], {
+            icon: createCustomIcon("rider", profilePic),
+          }).addTo(map);
+        }
+        riderMarker.bindPopup(`
+          <div style="text-align: center;">
+            <img src="${profilePic || avatarFromName(name)}" style="width: 40px; height: 40px; border-radius: 50%; margin-bottom: 4px;" />
+            <strong>${name}</strong><br>
+            <span style="color: #13ec5b; font-size: 12px;">● Live</span>
+          </div>
+        `);
+        updateRiderInfoCard(riderData);
+        map.setView([lat, lng], 15, { animate: true, duration: 0.5 });
+      }
+
+      function updateUserMarker(lat, lng) {
+        if (!map) return;
+        if (userMarker) userMarker.setLatLng([lat, lng]);
+        else
+          userMarker = L.marker([lat, lng], { icon: createCustomIcon("user") })
+            .addTo(map)
+            .bindPopup("<strong>Your Location</strong>");
+      }
+
+      function updateRiderInfoCard(riderData) {
+        const card = document.getElementById("riderInfoCard");
+        if (!card || !riderData) return;
+        card.classList.remove("hidden");
+        document.getElementById("riderAvatar").src =
+          riderData?.profilePicture ||
+          riderData?.profile ||
+          avatarFromName(riderData?.name);
+        document.getElementById("riderNameDisplay").textContent =
+          riderData?.name || "Rider";
+        document.getElementById("riderVehicle").textContent =
+          riderData?.username || riderData?.email || "";
+        const callBtn = document.getElementById("callRiderBtn");
+        if (callBtn && riderData?.phone)
+          callBtn.onclick = () =>
+            (window.location.href = `tel:${riderData.phone}`);
+        else if (callBtn)
+          callBtn.classList.add("opacity-50", "cursor-not-allowed");
+      }
+
+      function drawRoute(encodedPolyline) {
+        if (!map || !encodedPolyline) return;
+        if (routeLine) {
+          map.removeLayer(routeLine);
+          routeLine = null;
+        }
+        try {
+          const coordinates =
+            L.Polyline.fromEncoded(encodedPolyline).getLatLngs();
+          routeLine = L.polyline(coordinates, {
+            color: "#13ec5b",
+            weight: 5,
+            opacity: 0.8,
+            dashArray: "10, 10",
+          }).addTo(map);
+          if (coordinates.length > 0)
+            map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+        } catch (error) {
+          console.error("Error drawing route:", error);
+        }
+      }
+
+      function centerMapOnRider() {
+        if (riderMarker && map)
+          map.setView(riderMarker.getLatLng(), 16, {
+            animate: true,
+            duration: 0.5,
+          });
+      }
+
+      // ========== TRACKING DATA ==========
+      async function getActiveOrder() {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/order/active`, {
+            credentials: "include",
+          });
+          if (res.status === 401) {
+            localStorage.removeItem("flanorx_auth");
+            window.location.href = "login.html";
+            return null;
+          }
+          if (!res.ok) return null;
+          return await res.json();
+        } catch (error) {
+          console.error("Error fetching active order:", error);
+          return null;
+        }
+      }
+
+      async function getTrackingData(orderId) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/tracking/${orderId}`, {
+            credentials: "include",
+          });
+          if (!res.ok) return null;
+          return await res.json();
+        } catch (error) {
+          console.error("Error fetching tracking data:", error);
+          return null;
+        }
+      }
+
+      async function updateUserLocation(lat, lng, orderId) {
+        try {
+          await fetch(`${API_BASE_URL}/api/tracking/user-location/${orderId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ lat, lng }),
+          });
+        } catch (error) {
+          console.error("Error updating user location:", error);
+        }
+      }
+
+      function getCurrentPosition() {
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation)
+            reject(new Error("Geolocation not supported"));
+          navigator.geolocation.getCurrentPosition(
+            (position) =>
+              resolve({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              }),
+            (error) => reject(error),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+          );
+        });
+      }
+
+      // ========== UI UPDATES ==========
+      function updateTimeline(deliveryStatus, order) {
+        const timeline = document.getElementById("statusTimeline");
+        if (!timeline) return;
+        const statuses = [
+          {
+            key: "pending",
+            label: "Order Placed",
+            icon: "receipt",
+            detail: "Payment confirmed",
+          },
+          {
+            key: "accepted",
+            label: "Rider Assigned",
+            icon: "user",
+            detail: "Rider is preparing",
+          },
+          {
+            key: "picked_up",
+            label: "Fuel Picked Up",
+            icon: "droplet",
+            detail: "Quality verified",
+          },
+          {
+            key: "in_transit",
+            label: "On the Way",
+            icon: "truck",
+            detail: "Heading to you",
+          },
+          {
+            key: "delivered",
+            label: "Delivered",
+            icon: "check-circle",
+            detail: "Fuel delivered",
+          },
+          {
+            key: "confirmed",
+            label: "Completed",
+            icon: "verified",
+            detail: "Delivery confirmed",
+          },
+        ];
+        const currentStatusIndex = statuses.findIndex(
+          (s) =>
+            s.key === (deliveryStatus || order?.deliveryStatus || "pending"),
+        );
+        let html =
+          '<div class="relative space-y-0"><div class="absolute left-6 top-2 bottom-2 w-0.5 bg-slate-100 dark:bg-slate-800 z-0"></div>';
+        statuses.forEach((status, index) => {
+          let stepClass = "";
+          if (index < currentStatusIndex) stepClass = "step-completed";
+          else if (index === currentStatusIndex) stepClass = "step-active";
+          const timeStr = getTimeForStatus(order, status.key);
+          html += `<div class="relative z-10 flex gap-6 pb-8 ${stepClass}"><div class="icon-container size-12 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900 ring-1 ring-slate-100 dark:ring-slate-800 flex-shrink-0 ${index <= currentStatusIndex ? "" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}"><span class="lucide-icon w-5 h-5" data-lucide="${status.icon}"></span></div><div class="flex flex-col justify-center min-w-0"><h4 class="font-bold text-slate-900 dark:text-white truncate">${status.label}</h4><p class="text-xs ${index === currentStatusIndex ? "text-primary font-semibold" : "text-slate-500"} truncate">${timeStr ? timeStr + " • " : ""}${status.detail}</p></div></div>`;
+        });
+        html += "</div>";
+        timeline.innerHTML = html;
+        lucide.createIcons({ root: timeline });
+      }
+
+      function getTimeForStatus(order, statusKey) {
+        const timeMap = {
+          pending: order?.createdAt || order?.date,
+          accepted: order?.acceptedAt,
+          picked_up: order?.pickedUpAt,
+          in_transit: order?.acceptedAt,
+          delivered: order?.deliveredAt,
+          confirmed: order?.completedAt || order?.customerConfirmedAt,
+        };
+        const time = timeMap[statusKey];
+        return time ? formatTime(time) : "";
+      }
+
+      function updateETAInfo(tracking) {
+        const etaDisplay = document.getElementById("etaDisplay"),
+          distanceDisplay = document.getElementById("distanceDisplay");
+        if (tracking?.route?.durationValue)
+          etaDisplay.textContent = Math.round(
+            tracking.route.durationValue / 60,
+          );
+        else if (tracking?.route?.durationText)
+          etaDisplay.textContent = tracking.route.durationText;
+        else etaDisplay.textContent = "--";
+        if (tracking?.route?.distanceText)
+          distanceDisplay.textContent = tracking.route.distanceText;
+        else if (tracking?.route?.distanceValue)
+          distanceDisplay.textContent = `${(tracking.route.distanceValue / 1000).toFixed(1)} km`;
+        else distanceDisplay.textContent = "--";
+      }
+
+      function updateOrderSummary(order) {
+        document.getElementById("fuelTypeDisplay").textContent = fuelLabel(
+          order?.fuelType,
+        );
+        document.getElementById("quantityDisplay").textContent =
+          `${order?.quantity || 0} Liters`;
+        document.getElementById("totalAmountDisplay").textContent = formatNaira(
+          order?.totalAmount,
+        );
+      }
+
+      function setUserInfo() {
+        try {
+          const raw = localStorage.getItem("flanorx_auth");
+          if (!raw) return;
+          const user = JSON.parse(raw);
+          document.getElementById("userNameDisplay").textContent =
+            user?.name || user?.email || "Customer";
+          const avatar = document.getElementById("userAvatar");
+          if (avatar && user?.profile)
+            avatar.style.backgroundImage = `url('${user.profile}')`;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      function showNoActiveOrder() {
+        document
+          .getElementById("noActiveOrderOverlay")
+          .classList.remove("hidden");
+        document.getElementById("riderInfoCard").classList.add("hidden");
+        document.getElementById("orderIdDisplay").textContent = "Order #---";
+        document.getElementById("orderStatusBadge").textContent = "No Order";
+        document.getElementById("etaDisplay").textContent = "--";
+        document.getElementById("distanceDisplay").textContent = "--";
+        document.getElementById("fuelTypeDisplay").textContent = "--";
+        document.getElementById("quantityDisplay").textContent = "-- Liters";
+        document.getElementById("totalAmountDisplay").textContent = "--";
+        document.getElementById("lastUpdatedText").textContent = "";
+        if (riderMarker) {
+          map?.removeLayer(riderMarker);
+          riderMarker = null;
+        }
+        if (userMarker) {
+          map?.removeLayer(userMarker);
+          userMarker = null;
+        }
+        if (routeLine) {
+          map?.removeLayer(routeLine);
+          routeLine = null;
+        }
+        const timeline = document.getElementById("statusTimeline");
+        if (timeline)
+          timeline.innerHTML = `<div class="text-center py-8"><span class="lucide-icon w-12 h-12 text-slate-300 mb-2 mx-auto" data-lucide="inbox"></span><p class="text-slate-400 text-sm">No active delivery</p></div>`;
+        lucide.createIcons();
+      }
+
+      async function loadTracking() {
+        try {
+          const order = await getActiveOrder();
+          if (!order || !order._id) {
+            showNoActiveOrder();
+            return;
+          }
+          currentOrderId = order._id;
+          document
+            .getElementById("noActiveOrderOverlay")
+            .classList.add("hidden");
+          document.getElementById("orderIdDisplay").textContent =
+            `Order #${order.orderId || order._id.slice(-6)}`;
+          document.getElementById("orderStatusBadge").textContent =
+            prettyStatus(order.deliveryStatus).toUpperCase();
+          updateOrderSummary(order);
+          updateTimeline(order.deliveryStatus, order);
+          const tracking = await getTrackingData(currentOrderId);
+          if (tracking) {
+            updateETAInfo(tracking);
+            if (tracking.riderLocation?.lat && tracking.riderLocation?.lng) {
+              const riderData = {
+                name: tracking.rider?.name || "Rider",
+                profilePicture:
+                  tracking.rider?.profilePicture ||
+                  tracking.rider?.profile ||
+                  "",
+                email: tracking.rider?.email || "",
+                phone: tracking.rider?.phone || "",
+                username: tracking.rider?.username || "",
+              };
+              updateRiderMarker(
+                tracking.riderLocation.lat,
+                tracking.riderLocation.lng,
+                riderData,
+              );
+              if (tracking.route?.polyline) drawRoute(tracking.route.polyline);
+            } else
+              document.getElementById("riderInfoCard").classList.add("hidden");
+            if (tracking.userLocation?.lat && tracking.userLocation?.lng)
+              updateUserMarker(
+                tracking.userLocation.lat,
+                tracking.userLocation.lng,
+              );
+            document.getElementById("lastUpdatedText").textContent =
+              `Last updated: ${new Date(tracking.lastUpdatedAt || Date.now()).toLocaleTimeString()}`;
+          }
+          try {
+            const position = await getCurrentPosition();
+            if (currentOrderId && position.lat && position.lng) {
+              await updateUserLocation(
+                position.lat,
+                position.lng,
+                currentOrderId,
+              );
+              updateUserMarker(position.lat, position.lng);
+            }
+          } catch (geoError) {
+            console.log("Geolocation not available:", geoError.message);
+          }
+          if (riderMarker && userMarker && map) {
+            const bounds = L.latLngBounds([
+              riderMarker.getLatLng(),
+              userMarker.getLatLng(),
+            ]);
+            map.fitBounds(bounds, { padding: [50, 50] });
+          } else if (riderMarker && map)
+            map.setView(riderMarker.getLatLng(), 15);
+        } catch (error) {
+          console.error("Error loading tracking:", error);
+          showNoActiveOrder();
+        }
+      }
+
+      function startTrackingUpdates() {
+        if (trackingInterval) clearInterval(trackingInterval);
+        trackingInterval = setInterval(() => loadTracking(), 10000);
+      }
+
+      function initSidebar() {
+        const menuToggle = document.getElementById("menuToggle"),
+          sidebar = document.getElementById("sidebar"),
+          backdrop = document.getElementById("backdrop");
+        if (menuToggle && sidebar && backdrop) {
+          menuToggle.addEventListener("click", () => {
+            sidebar.classList.remove("-translate-x-full");
+            backdrop.classList.remove("hidden");
+            document.body.classList.add("overflow-hidden");
+          });
+          backdrop.addEventListener("click", () => {
+            sidebar.classList.add("-translate-x-full");
+            backdrop.classList.add("hidden");
+            document.body.classList.remove("overflow-hidden");
+          });
+          window.addEventListener("keydown", (e) => {
+            if (
+              e.key === "Escape" &&
+              !sidebar.classList.contains("-translate-x-full")
+            ) {
+              sidebar.classList.add("-translate-x-full");
+              backdrop.classList.add("hidden");
+              document.body.classList.remove("overflow-hidden");
+            }
+          });
+          window.addEventListener("resize", () => {
+            if (window.innerWidth >= 1024) {
+              sidebar.classList.remove("-translate-x-full");
+              backdrop.classList.add("hidden");
+              document.body.classList.remove("overflow-hidden");
+            }
+          });
+        }
+      }
+
+      function setActiveNavigation() {
+        const path = window.location.pathname;
+        let currentPage = path.substring(path.lastIndexOf("/") + 1);
+        if (currentPage === "" || currentPage === "index.html")
+          currentPage = "home";
+        document.querySelectorAll(".bottom-nav-item").forEach((item) => {
+          item.classList.remove("active");
+          const href = item.getAttribute("href");
+          if (
+            (currentPage === "home" && href === "customer-dashboard.html") ||
+            href === currentPage
+          )
+            item.classList.add("active");
+        });
+      }
+
+      function initOrderSummaryToggle() {
+        const toggleBtn = document.getElementById("orderSummaryToggle"),
+          content = document.getElementById("orderSummaryContent");
+        if (toggleBtn && content) {
+          toggleBtn.addEventListener("click", () => {
+            const isHidden = content.style.display === "none";
+            content.style.display = isHidden ? "block" : "none";
+            const icon = toggleBtn.querySelector("[data-lucide]");
+            if (icon)
+              icon.setAttribute(
+                "data-lucide",
+                isHidden ? "chevron-up" : "chevron-down",
+              );
+            lucide.createIcons({ root: toggleBtn });
+          });
+        }
+      }
+
+      function init() {
+        setUserInfo();
+        initMap();
+        initSidebar();
+        setActiveNavigation();
+        initOrderSummaryToggle();
+        loadTracking();
+        startTrackingUpdates();
+        document
+          .getElementById("logoutBtn")
+          ?.addEventListener("click", async () => {
+            try {
+              await fetch(`${API_BASE_URL}/api/users/logout`, {
+                method: "POST",
+                credentials: "include",
+              });
+            } catch (err) {}
+            localStorage.removeItem("flanorx_auth");
+            window.location.href = "login.html";
+          });
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) {
+            if (trackingInterval) clearInterval(trackingInterval);
+          } else {
+            loadTracking();
+            startTrackingUpdates();
+          }
+        });
+        lucide.createIcons();
+      }
+
+      if (document.readyState === "loading")
+        document.addEventListener("DOMContentLoaded", init);
+      else init();
+    </script>
+  </body>
+</html>
