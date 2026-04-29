@@ -756,6 +756,17 @@
         pageLoader.classList.add("hidden-loader");
       }
 
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw).token;
+        } catch {
+          return null;
+        }
+      }
+
       function monthName(m) {
         const names = [
           "Jan",
@@ -898,9 +909,13 @@
 
       async function logout() {
         try {
+          const token = getToken();
+
           await fetch(`${API_BASE_URL}/api/users/logout`, {
             method: "POST",
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
         } catch (err) {
           console.error(err);
@@ -962,8 +977,12 @@
         }
 
         try {
+          const token = getToken();
+
           const res = await fetch(`${API_BASE_URL}/api/order/my`, {
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
 
           if (res.status === 401) {
@@ -1121,11 +1140,15 @@
             buttonEl.textContent = "Confirming...";
           }
 
+          const token = getToken();
+
           const res = await fetch(
             `${API_BASE_URL}/api/delivery/${orderId}/confirm`,
             {
               method: "PUT",
-              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
             },
           );
 
@@ -1192,8 +1215,12 @@
         }
 
         try {
+          const token = getToken();
+
           const res = await fetch(`${API_BASE_URL}/api/order/active`, {
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
 
           const data = await res.json().catch(() => null);
