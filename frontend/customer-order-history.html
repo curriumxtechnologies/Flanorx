@@ -754,6 +754,18 @@
           return null;
         }
       }
+
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw)?.token || null;
+        } catch {
+          return null;
+        }
+      }
+
       function formatNaira(n) {
         const num = Number(n || 0);
         return "₦" + num.toLocaleString("en-NG");
@@ -840,12 +852,19 @@
       document
         .getElementById("logoutBtn")
         ?.addEventListener("click", async () => {
+          const token = getToken();
+
           try {
             await fetch(`${API_BASE_URL}/api/users/logout`, {
               method: "POST",
-              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
             });
-          } catch (e) {}
+          } catch (e) {
+            console.error(e);
+          }
+
           localStorage.removeItem("flanorx_auth");
           window.location.href = "login.html";
         });
@@ -892,22 +911,28 @@
       let allOrders = [];
       let lastFiltered = [];
 
-      // ---------------------------
-      // Fetch order history from backend
-      // GET /api/order/my
-      // ---------------------------
       async function fetchMyOrders(params = {}) {
         const user = requireAuthOrRedirect();
         if (!user) return [];
+
+        const token = getToken();
 
         const qs = new URLSearchParams();
         if (params.status && params.status !== "all")
           qs.set("status", params.status);
         if (params.paid && params.paid !== "all") qs.set("paid", params.paid);
 
-        const url = `${API_BASE_URL}/api/order/my${qs.toString() ? `?${qs.toString()}` : ""}`;
+        const url = `${API_BASE_URL}/api/order/my${
+          qs.toString() ? `?${qs.toString()}` : ""
+        }`;
 
-        const res = await fetch(url, { method: "GET", credentials: "include" });
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         const data = await res.json().catch(() => []);
 
         if (res.status === 401) {
@@ -957,11 +982,15 @@
 
         showToast("Payment", "Opening Paystack checkout...");
 
+        const token = getToken();
+
         const r = await fetch(
           `${API_BASE_URL}/api/order/${encodeURIComponent(orderMongoId)}/initialize-payment`,
           {
             method: "POST",
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
         );
 

@@ -201,13 +201,19 @@
               class="size-10 rounded-full bg-slate-700 overflow-hidden bg-cover bg-center"
             ></div>
             <div class="flex flex-col">
-              <span id="sidebarRiderName" class="text-sm font-semibold">Rider</span>
+              <span id="sidebarRiderName" class="text-sm font-semibold"
+                >Rider</span
+              >
               <div class="flex items-center gap-1">
                 <span
                   id="sidebarStatusDot"
                   class="size-2 bg-primary rounded-full animate-pulse"
                 ></span>
-                <span id="sidebarStatusText" class="text-xs text-primary font-medium">Online</span>
+                <span
+                  id="sidebarStatusText"
+                  class="text-xs text-primary font-medium"
+                  >Online</span
+                >
               </div>
             </div>
           </div>
@@ -256,7 +262,9 @@
             id="logoutBtn"
             class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-red-500/20 hover:text-red-400 transition-colors py-3 rounded-lg text-sm font-bold"
           >
-            <span class="material-symbols-outlined text-sm">power_settings_new</span>
+            <span class="material-symbols-outlined text-sm"
+              >power_settings_new</span
+            >
             Go Offline
           </button>
         </div>
@@ -281,7 +289,10 @@
             <div
               class="hidden sm:flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-1.5 rounded-full shadow-sm"
             >
-              <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Settings</span>
+              <span
+                class="text-xs font-bold text-slate-400 uppercase tracking-widest"
+                >Settings</span
+              >
               <div
                 class="flex items-center gap-2 bg-primary/20 text-slate-900 dark:text-primary px-3 py-0.5 rounded-full text-sm font-bold"
               >
@@ -300,10 +311,15 @@
                 class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
               ></span>
             </button>
-            <div class="h-8 w-px bg-slate-200 dark:border-slate-800 hidden sm:block"></div>
+            <div
+              class="h-8 w-px bg-slate-200 dark:border-slate-800 hidden sm:block"
+            ></div>
             <div class="flex items-center gap-3">
               <div class="text-right hidden sm:block">
-                <p id="headerRiderName" class="text-sm font-bold text-slate-900 dark:text-white">
+                <p
+                  id="headerRiderName"
+                  class="text-sm font-bold text-slate-900 dark:text-white"
+                >
                   Rider
                 </p>
               </div>
@@ -406,7 +422,9 @@
                   class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
                 >
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">person</span>
+                    <span class="material-symbols-outlined text-primary"
+                      >person</span
+                    >
                     Profile Information
                   </h3>
                 </div>
@@ -512,7 +530,9 @@
                   class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
                 >
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">notifications</span>
+                    <span class="material-symbols-outlined text-primary"
+                      >notifications</span
+                    >
                     Notification Preferences
                   </h3>
                 </div>
@@ -524,8 +544,15 @@
                         Receive alerts about new deliveries
                       </p>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input id="pushNotificationsToggle" type="checkbox" class="sr-only peer" checked />
+                    <label
+                      class="relative inline-flex items-center cursor-pointer"
+                    >
+                      <input
+                        id="pushNotificationsToggle"
+                        type="checkbox"
+                        class="sr-only peer"
+                        checked
+                      />
                       <div
                         class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
                       ></div>
@@ -538,8 +565,14 @@
                         Get text messages for urgent updates
                       </p>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input id="smsNotificationsToggle" type="checkbox" class="sr-only peer" />
+                    <label
+                      class="relative inline-flex items-center cursor-pointer"
+                    >
+                      <input
+                        id="smsNotificationsToggle"
+                        type="checkbox"
+                        class="sr-only peer"
+                      />
                       <div
                         class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
                       ></div>
@@ -552,8 +585,15 @@
                         Receive offers and platform updates
                       </p>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input id="emailMarketingToggle" type="checkbox" class="sr-only peer" checked />
+                    <label
+                      class="relative inline-flex items-center cursor-pointer"
+                    >
+                      <input
+                        id="emailMarketingToggle"
+                        type="checkbox"
+                        class="sr-only peer"
+                        checked
+                      />
                       <div
                         class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
                       ></div>
@@ -570,14 +610,18 @@
                   class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between"
                 >
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">payments</span>
+                    <span class="material-symbols-outlined text-primary"
+                      >payments</span
+                    >
                     Payment Methods
                   </h3>
                   <button
                     id="addPaymentMethodBtn"
                     class="text-primary font-bold text-sm flex items-center gap-1 hover:underline"
                   >
-                    <span class="material-symbols-outlined text-base">add_circle</span>
+                    <span class="material-symbols-outlined text-base"
+                      >add_circle</span
+                    >
                     Add new
                   </button>
                 </div>
@@ -589,11 +633,18 @@
                       <div
                         class="size-10 bg-primary/10 rounded-full flex items-center justify-center text-primary"
                       >
-                        <span class="material-symbols-outlined">account_balance</span>
+                        <span class="material-symbols-outlined"
+                          >account_balance</span
+                        >
                       </div>
                       <div>
-                        <p id="primaryBankTitle" class="font-bold">No bank account added</p>
-                        <p id="primaryBankSubtitle" class="text-xs text-slate-500">
+                        <p id="primaryBankTitle" class="font-bold">
+                          No bank account added
+                        </p>
+                        <p
+                          id="primaryBankSubtitle"
+                          class="text-xs text-slate-500"
+                        >
                           Add your payout details
                         </p>
                       </div>
@@ -612,14 +663,26 @@
                       <div
                         class="size-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500"
                       >
-                        <span class="material-symbols-outlined">account_balance</span>
+                        <span class="material-symbols-outlined"
+                          >account_balance</span
+                        >
                       </div>
                       <div>
-                        <p id="secondaryBankTitle" class="font-bold">No secondary bank</p>
-                        <p id="secondaryBankSubtitle" class="text-xs text-slate-500">Optional backup account</p>
+                        <p id="secondaryBankTitle" class="font-bold">
+                          No secondary bank
+                        </p>
+                        <p
+                          id="secondaryBankSubtitle"
+                          class="text-xs text-slate-500"
+                        >
+                          Optional backup account
+                        </p>
                       </div>
                     </div>
-                    <button id="secondaryBankMoreBtn" class="text-slate-400 hover:text-primary">
+                    <button
+                      id="secondaryBankMoreBtn"
+                      class="text-slate-400 hover:text-primary"
+                    >
                       <span class="material-symbols-outlined">more_vert</span>
                     </button>
                   </div>
@@ -634,7 +697,9 @@
                   class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
                 >
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">two_wheeler</span>
+                    <span class="material-symbols-outlined text-primary"
+                      >two_wheeler</span
+                    >
                     Vehicle Information
                   </h3>
                 </div>
@@ -699,7 +764,9 @@
                   class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
                 >
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">lock</span>
+                    <span class="material-symbols-outlined text-primary"
+                      >lock</span
+                    >
                     Privacy & Security
                   </h3>
                 </div>
@@ -737,8 +804,14 @@
                         Add extra security to your account
                       </p>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input id="twoFactorToggle" type="checkbox" class="sr-only peer" />
+                    <label
+                      class="relative inline-flex items-center cursor-pointer"
+                    >
+                      <input
+                        id="twoFactorToggle"
+                        type="checkbox"
+                        class="sr-only peer"
+                      />
                       <div
                         class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"
                       ></div>
@@ -764,15 +837,20 @@
                   class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
                 >
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">support_agent</span>
+                    <span class="material-symbols-outlined text-primary"
+                      >support_agent</span
+                    >
                     Support
                   </h3>
                 </div>
                 <div class="p-6 space-y-4">
-                  <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+                  <div
+                    class="rounded-xl border border-slate-200 dark:border-slate-700 p-4"
+                  >
                     <p class="font-bold">Need help with your account?</p>
                     <p class="text-sm text-slate-500 mt-1">
-                      Contact the Flanorx rider support team for assistance with payouts, profile updates, or delivery issues.
+                      Contact the Flanorx rider support team for assistance with
+                      payouts, profile updates, or delivery issues.
                     </p>
                   </div>
                   <div class="flex flex-wrap gap-3">
@@ -818,11 +896,19 @@
     </div>
 
     <nav class="mobile-bottom-nav">
-      <a href="rider-dashboard.html" class="bottom-nav-item" id="bottomDashboard">
+      <a
+        href="rider-dashboard.html"
+        class="bottom-nav-item"
+        id="bottomDashboard"
+      >
         <span class="material-symbols-outlined">dashboard</span>
         <span>Home</span>
       </a>
-      <a href="rider-deliveries.html" class="bottom-nav-item" id="bottomDeliveries">
+      <a
+        href="rider-deliveries.html"
+        class="bottom-nav-item"
+        id="bottomDeliveries"
+      >
         <span class="material-symbols-outlined">delivery_dining</span>
         <span>Deliver</span>
       </a>
@@ -841,510 +927,535 @@
     </nav>
 
     <script>
-  (function () {
-    const API_BASE_URL =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"
-        ? "http://127.0.0.1:8000"
-        : "https://flanorx-api.onrender.com";
+      (function () {
+        const API_BASE_URL =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+            ? "http://127.0.0.1:8000"
+            : "https://flanorx-api.onrender.com";
 
-    const menuToggle = document.getElementById("menuToggle");
-    const sidebar = document.getElementById("sidebar");
-    const backdrop = document.getElementById("backdrop");
-    const logoutBtn = document.getElementById("logoutBtn");
+        const menuToggle = document.getElementById("menuToggle");
+        const sidebar = document.getElementById("sidebar");
+        const backdrop = document.getElementById("backdrop");
+        const logoutBtn = document.getElementById("logoutBtn");
 
-    function getStoredAuth() {
-      try {
-        return JSON.parse(localStorage.getItem("flanorx_auth") || "null");
-      } catch {
-        return null;
-      }
-    }
+        function getStoredAuth() {
+          try {
+            return JSON.parse(localStorage.getItem("flanorx_auth") || "null");
+          } catch {
+            return null;
+          }
+        }
 
-    function setStoredAuth(data) {
-      localStorage.setItem("flanorx_auth", JSON.stringify(data));
-    }
+        function setStoredAuth(data) {
+          localStorage.setItem("flanorx_auth", JSON.stringify(data));
+        }
 
-    function redirectToLogin() {
-      window.location.replace("rider-login.html");
-    }
+        function redirectToLogin() {
+          window.location.replace("rider-login.html");
+        }
 
-    async function apiFetch(path, options = {}) {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-          ...(options.body instanceof FormData
-            ? {}
-            : { "Content-Type": "application/json" }),
-          ...(options.headers || {}),
-        },
-        ...options,
-      });
+        function getToken() {
+          const raw = localStorage.getItem("flanorx_auth");
+          if (!raw) return null;
 
-      const data = await response.json().catch(() => ({}));
+          try {
+            return JSON.parse(raw)?.token || null;
+          } catch {
+            return null;
+          }
+        }
 
-      if (!response.ok) {
-        throw new Error(data?.message || `Request failed (${response.status})`);
-      }
+        async function apiFetch(path, options = {}) {
+          const token = getToken();
 
-      return data;
-    }
+          const response = await fetch(`${API_BASE_URL}${path}`, {
+            headers: {
+              Accept: "application/json",
+              ...(options.body instanceof FormData
+                ? {}
+                : { "Content-Type": "application/json" }),
+              ...(options.headers || {}),
+              Authorization: `Bearer ${token}`, // ✅ add token
+            },
+            ...options,
+          });
 
-    function avatarFromName(name = "Rider") {
-      return `https://ui-avatars.com/api/?background=102216&color=13ec5b&name=${encodeURIComponent(
-        name || "Rider"
-      )}`;
-    }
+          const data = await response.json().catch(() => ({}));
 
-    function openSidebar() {
-      sidebar.classList.remove("-translate-x-full");
-      sidebar.classList.add("translate-x-0");
-      backdrop.classList.remove("hidden");
-      document.body.style.overflow = "hidden";
-    }
+          if (!response.ok) {
+            throw new Error(
+              data?.message || `Request failed (${response.status})`,
+            );
+          }
 
-    function closeSidebar() {
-      sidebar.classList.add("-translate-x-full");
-      sidebar.classList.remove("translate-x-0");
-      backdrop.classList.add("hidden");
-      document.body.style.overflow = "";
-    }
+          return data;
+        }
 
-    if (menuToggle) {
-      menuToggle.addEventListener("click", (e) => {
-        e.stopPropagation();
-        sidebar.classList.contains("-translate-x-full")
-          ? openSidebar()
-          : closeSidebar();
-      });
-    }
+        function avatarFromName(name = "Rider") {
+          return `https://ui-avatars.com/api/?background=102216&color=13ec5b&name=${encodeURIComponent(
+            name || "Rider",
+          )}`;
+        }
 
-    if (backdrop) backdrop.addEventListener("click", closeSidebar);
+        function openSidebar() {
+          sidebar.classList.remove("-translate-x-full");
+          sidebar.classList.add("translate-x-0");
+          backdrop.classList.remove("hidden");
+          document.body.style.overflow = "hidden";
+        }
 
-    window.addEventListener("keydown", (e) => {
-      if (
-        e.key === "Escape" &&
-        sidebar &&
-        !sidebar.classList.contains("-translate-x-full") &&
-        window.innerWidth < 1024
-      ) {
-        closeSidebar();
-      }
-    });
-
-    window.addEventListener("resize", () => {
-      if (window.innerWidth >= 1024) {
-        sidebar.classList.remove("-translate-x-full");
-        backdrop.classList.add("hidden");
-        document.body.style.overflow = "";
-      } else {
-        if (!sidebar.classList.contains("translate-x-0")) {
+        function closeSidebar() {
           sidebar.classList.add("-translate-x-full");
+          sidebar.classList.remove("translate-x-0");
+          backdrop.classList.add("hidden");
+          document.body.style.overflow = "";
         }
-      }
-    });
 
-    if (window.innerWidth < 1024) {
-      sidebar.classList.add("-translate-x-full");
-      backdrop.classList.add("hidden");
-    } else {
-      sidebar.classList.remove("-translate-x-full");
-    }
-
-    (function setActiveNavigation() {
-      const path = window.location.pathname;
-      let currentPage = path.substring(path.lastIndexOf("/") + 1);
-
-      if (
-        currentPage === "" ||
-        currentPage === "index.html" ||
-        currentPage === "#" ||
-        currentPage === "rider-dashboard.html"
-      ) {
-        currentPage = "home";
-      }
-
-      const navItems = document.querySelectorAll(".bottom-nav-item");
-      navItems.forEach((item) => item.classList.remove("active"));
-
-      navItems.forEach((item) => {
-        const href = item.getAttribute("href");
-
-        if (currentPage === "home" && href === "rider-dashboard.html") {
-          item.classList.add("active");
-        } else if (href === currentPage) {
-          item.classList.add("active");
+        if (menuToggle) {
+          menuToggle.addEventListener("click", (e) => {
+            e.stopPropagation();
+            sidebar.classList.contains("-translate-x-full")
+              ? openSidebar()
+              : closeSidebar();
+          });
         }
-      });
 
-      const sidebarLinks = document.querySelectorAll("#sidebar nav a");
-      sidebarLinks.forEach((link) => {
-        link.classList.remove("active-nav");
-        const href = link.getAttribute("href");
+        if (backdrop) backdrop.addEventListener("click", closeSidebar);
 
-        if (currentPage === "home" && href === "rider-dashboard.html") {
-          link.classList.add("active-nav");
-        } else if (href === currentPage) {
-          link.classList.add("active-nav");
+        window.addEventListener("keydown", (e) => {
+          if (
+            e.key === "Escape" &&
+            sidebar &&
+            !sidebar.classList.contains("-translate-x-full") &&
+            window.innerWidth < 1024
+          ) {
+            closeSidebar();
+          }
+        });
+
+        window.addEventListener("resize", () => {
+          if (window.innerWidth >= 1024) {
+            sidebar.classList.remove("-translate-x-full");
+            backdrop.classList.add("hidden");
+            document.body.style.overflow = "";
+          } else {
+            if (!sidebar.classList.contains("translate-x-0")) {
+              sidebar.classList.add("-translate-x-full");
+            }
+          }
+        });
+
+        if (window.innerWidth < 1024) {
+          sidebar.classList.add("-translate-x-full");
+          backdrop.classList.add("hidden");
+        } else {
+          sidebar.classList.remove("-translate-x-full");
         }
-      });
-    })();
 
-    function updateStatusUI(status) {
-      const normalized = status === "online" ? "online" : "offline";
-      const label = normalized === "online" ? "Online" : "Offline";
+        (function setActiveNavigation() {
+          const path = window.location.pathname;
+          let currentPage = path.substring(path.lastIndexOf("/") + 1);
 
-      const sidebarStatusText = document.getElementById("sidebarStatusText");
-      const sidebarStatusDot = document.getElementById("sidebarStatusDot");
+          if (
+            currentPage === "" ||
+            currentPage === "index.html" ||
+            currentPage === "#" ||
+            currentPage === "rider-dashboard.html"
+          ) {
+            currentPage = "home";
+          }
 
-      if (sidebarStatusText) {
-        sidebarStatusText.textContent = label;
-        sidebarStatusText.className =
-          normalized === "online"
-            ? "text-xs text-primary font-medium"
-            : "text-xs text-red-400 font-medium";
-      }
+          const navItems = document.querySelectorAll(".bottom-nav-item");
+          navItems.forEach((item) => item.classList.remove("active"));
 
-      if (sidebarStatusDot) {
-        sidebarStatusDot.className =
-          normalized === "online"
-            ? "size-2 bg-primary rounded-full animate-pulse"
-            : "size-2 bg-red-500 rounded-full";
-      }
+          navItems.forEach((item) => {
+            const href = item.getAttribute("href");
 
-      if (logoutBtn) {
-        logoutBtn.innerHTML =
-          normalized === "online"
-            ? `
+            if (currentPage === "home" && href === "rider-dashboard.html") {
+              item.classList.add("active");
+            } else if (href === currentPage) {
+              item.classList.add("active");
+            }
+          });
+
+          const sidebarLinks = document.querySelectorAll("#sidebar nav a");
+          sidebarLinks.forEach((link) => {
+            link.classList.remove("active-nav");
+            const href = link.getAttribute("href");
+
+            if (currentPage === "home" && href === "rider-dashboard.html") {
+              link.classList.add("active-nav");
+            } else if (href === currentPage) {
+              link.classList.add("active-nav");
+            }
+          });
+        })();
+
+        function updateStatusUI(status) {
+          const normalized = status === "online" ? "online" : "offline";
+          const label = normalized === "online" ? "Online" : "Offline";
+
+          const sidebarStatusText =
+            document.getElementById("sidebarStatusText");
+          const sidebarStatusDot = document.getElementById("sidebarStatusDot");
+
+          if (sidebarStatusText) {
+            sidebarStatusText.textContent = label;
+            sidebarStatusText.className =
+              normalized === "online"
+                ? "text-xs text-primary font-medium"
+                : "text-xs text-red-400 font-medium";
+          }
+
+          if (sidebarStatusDot) {
+            sidebarStatusDot.className =
+              normalized === "online"
+                ? "size-2 bg-primary rounded-full animate-pulse"
+                : "size-2 bg-red-500 rounded-full";
+          }
+
+          if (logoutBtn) {
+            logoutBtn.innerHTML =
+              normalized === "online"
+                ? `
               <span class="material-symbols-outlined text-sm">power_settings_new</span>
               Go Offline
             `
-            : `
+                : `
               <span class="material-symbols-outlined text-sm">power_settings_new</span>
               Go Online
             `;
-      }
-    }
-
-    function fillProfileUI(rider) {
-      const riderName = rider?.name || "Rider";
-      const riderPhoto =
-        rider?.profilePicture ||
-        rider?.profile ||
-        avatarFromName(riderName);
-
-      const sidebarName = document.getElementById("sidebarRiderName");
-      const headerName = document.getElementById("headerRiderName");
-      const sidebarImage = document.getElementById("sidebarProfileImage");
-      const headerImage = document.getElementById("headerProfileImage");
-
-      if (sidebarName) sidebarName.textContent = riderName;
-      if (headerName) headerName.textContent = riderName;
-
-      if (sidebarImage) {
-        sidebarImage.style.backgroundImage = `url("${riderPhoto}")`;
-      }
-
-      if (headerImage) {
-        headerImage.style.backgroundImage = `url("${riderPhoto}")`;
-      }
-
-      updateStatusUI(rider?.status || "offline");
-    }
-
-    async function loadRiderProfile() {
-      const auth = getStoredAuth();
-
-      if (!auth || auth.userType !== "rider") {
-        redirectToLogin();
-        return null;
-      }
-
-      try {
-        const rider = await apiFetch("/api/riders/me");
-
-        if (rider?.verificationStatus && rider.verificationStatus !== "approved") {
-          window.location.replace("rider-complete-registration.html");
-          return null;
-        }
-
-        const refreshedAuth = {
-          ...auth,
-          _id: rider._id || auth._id,
-          name: rider.name || auth.name,
-          email: rider.email || auth.email,
-          profilePicture:
-            rider.profilePicture || rider.profile || auth.profilePicture || "",
-          status: rider.status || auth.status || "offline",
-          verificationStatus:
-            rider.verificationStatus || auth.verificationStatus || "none",
-          isVerified:
-            rider.isVerified === true ||
-            rider.verificationStatus === "approved",
-          userType: "rider",
-          loggedInAt: auth.loggedInAt || Date.now(),
-        };
-
-        setStoredAuth(refreshedAuth);
-        fillProfileUI(rider);
-
-        return rider;
-      } catch (error) {
-        console.error(error);
-
-        const msg = String(error?.message || "").toLowerCase();
-        if (
-          msg.includes("not authorized") ||
-          msg.includes("401") ||
-          msg.includes("jwt") ||
-          msg.includes("token")
-        ) {
-          localStorage.removeItem("flanorx_auth");
-          redirectToLogin();
-          return null;
-        }
-
-        alert(error.message || "Failed to load rider profile");
-        return null;
-      }
-    }
-
-    function fillSettingsForm(rider) {
-      if (!rider) return;
-
-      const profileSection = document.getElementById("profile");
-      if (!profileSection) return;
-
-      const textInputs = profileSection.querySelectorAll("input");
-      const profilePhoto = profileSection.querySelector(".size-20");
-
-      if (profilePhoto) {
-        const image =
-          rider.profilePicture ||
-          rider.profile ||
-          avatarFromName(rider.name || "Rider");
-        profilePhoto.style.backgroundImage = `url("${image}")`;
-      }
-
-      if (textInputs[0]) textInputs[0].value = rider.name || "";
-      if (textInputs[1]) textInputs[1].value = rider.email || "";
-      if (textInputs[2]) textInputs[2].value = rider.phone || rider.phoneNumber || "";
-      if (textInputs[3]) textInputs[3].value = rider.dateOfBirth || "";
-      if (textInputs[4]) textInputs[4].value = rider.address || "";
-
-      const paymentSection = document.getElementById("payment");
-      if (paymentSection) {
-        const paymentCards = paymentSection.querySelectorAll(".rounded-xl");
-
-        if (paymentCards[0]) {
-          const title = paymentCards[0].querySelector("p.font-bold");
-          const sub = paymentCards[0].querySelector("p.text-xs");
-          if (title) {
-            title.textContent = rider.bankName
-              ? `${rider.bankName} · ${rider.bankAccountNumber || ""}`
-              : "No bank account added";
-          }
-          if (sub) {
-            sub.textContent = rider.accountName
-              ? `${rider.accountName} · Primary`
-              : "Add your payout details";
           }
         }
-      }
 
-      const vehicleSection = document.getElementById("vehicle");
-      if (vehicleSection) {
-        const vehicleInputs = vehicleSection.querySelectorAll("input");
-        const vehicleSelect = vehicleSection.querySelector("select");
+        function fillProfileUI(rider) {
+          const riderName = rider?.name || "Rider";
+          const riderPhoto =
+            rider?.profilePicture ||
+            rider?.profile ||
+            avatarFromName(riderName);
 
-        if (vehicleSelect && rider.vehicleType) {
-          vehicleSelect.value = rider.vehicleType;
+          const sidebarName = document.getElementById("sidebarRiderName");
+          const headerName = document.getElementById("headerRiderName");
+          const sidebarImage = document.getElementById("sidebarProfileImage");
+          const headerImage = document.getElementById("headerProfileImage");
+
+          if (sidebarName) sidebarName.textContent = riderName;
+          if (headerName) headerName.textContent = riderName;
+
+          if (sidebarImage) {
+            sidebarImage.style.backgroundImage = `url("${riderPhoto}")`;
+          }
+
+          if (headerImage) {
+            headerImage.style.backgroundImage = `url("${riderPhoto}")`;
+          }
+
+          updateStatusUI(rider?.status || "offline");
         }
-        if (vehicleInputs[0]) vehicleInputs[0].value = rider.licensePlate || "";
-        if (vehicleInputs[1]) vehicleInputs[1].value = rider.insurancePolicyNumber || "";
-      }
-    }
 
-    async function toggleRiderStatus() {
-      const auth = getStoredAuth();
-      if (!auth) return redirectToLogin();
+        async function loadRiderProfile() {
+          const auth = getStoredAuth();
 
-      const current = auth.status === "online" ? "online" : "offline";
-      const next = current === "online" ? "offline" : "online";
+          if (!auth || auth.userType !== "rider") {
+            redirectToLogin();
+            return null;
+          }
 
-      logoutBtn.disabled = true;
-      logoutBtn.classList.add("opacity-60", "cursor-not-allowed");
+          try {
+            const rider = await apiFetch("/api/riders/me");
 
-      try {
-        const res = await apiFetch("/api/riders/status", {
-          method: "PATCH",
-          body: JSON.stringify({ status: next }),
-        });
+            if (
+              rider?.verificationStatus &&
+              rider.verificationStatus !== "approved"
+            ) {
+              window.location.replace("rider-complete-registration.html");
+              return null;
+            }
 
-        const updated = {
-          ...auth,
-          status: res?.status || next,
-        };
-
-        setStoredAuth(updated);
-        updateStatusUI(updated.status);
-      } catch (error) {
-        console.error(error);
-        alert(error.message || "Failed to update rider status");
-      } finally {
-        logoutBtn.disabled = false;
-        logoutBtn.classList.remove("opacity-60", "cursor-not-allowed");
-      }
-    }
-
-    async function logoutRider() {
-      try {
-        await apiFetch("/api/riders/logout", {
-          method: "POST",
-        });
-      } catch (error) {
-        console.error("Logout error:", error);
-      } finally {
-        localStorage.removeItem("flanorx_auth");
-        redirectToLogin();
-      }
-    }
-
-    function bindSettingsActions() {
-      const buttons = document.querySelectorAll("button");
-
-      buttons.forEach((btn) => {
-        const text = btn.textContent.trim().toLowerCase();
-
-        if (text.includes("save changes")) {
-          btn.addEventListener("click", async () => {
-            const profileSection = document.getElementById("profile");
-            const inputs = profileSection.querySelectorAll("input");
-
-            const payload = {
-              name: inputs[0]?.value?.trim() || "",
-              email: inputs[1]?.value?.trim() || "",
-              phone: inputs[2]?.value?.trim() || "",
-              dateOfBirth: inputs[3]?.value || "",
-              address: inputs[4]?.value?.trim() || "",
+            const refreshedAuth = {
+              ...auth,
+              _id: rider._id || auth._id,
+              name: rider.name || auth.name,
+              email: rider.email || auth.email,
+              profilePicture:
+                rider.profilePicture ||
+                rider.profile ||
+                auth.profilePicture ||
+                "",
+              status: rider.status || auth.status || "offline",
+              verificationStatus:
+                rider.verificationStatus || auth.verificationStatus || "none",
+              isVerified:
+                rider.isVerified === true ||
+                rider.verificationStatus === "approved",
+              userType: "rider",
+              loggedInAt: auth.loggedInAt || Date.now(),
             };
 
-            btn.disabled = true;
-            const oldText = btn.textContent;
-            btn.textContent = "Saving...";
+            setStoredAuth(refreshedAuth);
+            fillProfileUI(rider);
 
-            try {
-              await apiFetch("/api/riders/me", {
-                method: "PATCH",
-                body: JSON.stringify(payload),
-              });
+            return rider;
+          } catch (error) {
+            console.error(error);
 
-              await loadRiderProfile();
-              alert("Profile updated successfully");
-            } catch (error) {
-              console.error(error);
-              alert(error.message || "Failed to save profile");
-            } finally {
-              btn.disabled = false;
-              btn.textContent = oldText;
+            const msg = String(error?.message || "").toLowerCase();
+            if (
+              msg.includes("not authorized") ||
+              msg.includes("401") ||
+              msg.includes("jwt") ||
+              msg.includes("token")
+            ) {
+              localStorage.removeItem("flanorx_auth");
+              redirectToLogin();
+              return null;
             }
-          });
+
+            alert(error.message || "Failed to load rider profile");
+            return null;
+          }
         }
 
-        if (text.includes("update vehicle")) {
-          btn.addEventListener("click", async () => {
-            const vehicleSection = document.getElementById("vehicle");
-            const inputs = vehicleSection.querySelectorAll("input");
+        function fillSettingsForm(rider) {
+          if (!rider) return;
+
+          const profileSection = document.getElementById("profile");
+          if (!profileSection) return;
+
+          const textInputs = profileSection.querySelectorAll("input");
+          const profilePhoto = profileSection.querySelector(".size-20");
+
+          if (profilePhoto) {
+            const image =
+              rider.profilePicture ||
+              rider.profile ||
+              avatarFromName(rider.name || "Rider");
+            profilePhoto.style.backgroundImage = `url("${image}")`;
+          }
+
+          if (textInputs[0]) textInputs[0].value = rider.name || "";
+          if (textInputs[1]) textInputs[1].value = rider.email || "";
+          if (textInputs[2])
+            textInputs[2].value = rider.phone || rider.phoneNumber || "";
+          if (textInputs[3]) textInputs[3].value = rider.dateOfBirth || "";
+          if (textInputs[4]) textInputs[4].value = rider.address || "";
+
+          const paymentSection = document.getElementById("payment");
+          if (paymentSection) {
+            const paymentCards = paymentSection.querySelectorAll(".rounded-xl");
+
+            if (paymentCards[0]) {
+              const title = paymentCards[0].querySelector("p.font-bold");
+              const sub = paymentCards[0].querySelector("p.text-xs");
+              if (title) {
+                title.textContent = rider.bankName
+                  ? `${rider.bankName} · ${rider.bankAccountNumber || ""}`
+                  : "No bank account added";
+              }
+              if (sub) {
+                sub.textContent = rider.accountName
+                  ? `${rider.accountName} · Primary`
+                  : "Add your payout details";
+              }
+            }
+          }
+
+          const vehicleSection = document.getElementById("vehicle");
+          if (vehicleSection) {
+            const vehicleInputs = vehicleSection.querySelectorAll("input");
             const vehicleSelect = vehicleSection.querySelector("select");
 
-            const payload = {
-              vehicleType: vehicleSelect?.value || "",
-              licensePlate: inputs[0]?.value?.trim() || "",
-              insurancePolicyNumber: inputs[1]?.value?.trim() || "",
+            if (vehicleSelect && rider.vehicleType) {
+              vehicleSelect.value = rider.vehicleType;
+            }
+            if (vehicleInputs[0])
+              vehicleInputs[0].value = rider.licensePlate || "";
+            if (vehicleInputs[1])
+              vehicleInputs[1].value = rider.insurancePolicyNumber || "";
+          }
+        }
+
+        async function toggleRiderStatus() {
+          const auth = getStoredAuth();
+          if (!auth) return redirectToLogin();
+
+          const current = auth.status === "online" ? "online" : "offline";
+          const next = current === "online" ? "offline" : "online";
+
+          logoutBtn.disabled = true;
+          logoutBtn.classList.add("opacity-60", "cursor-not-allowed");
+
+          try {
+            const res = await apiFetch("/api/riders/status", {
+              method: "PATCH",
+              body: JSON.stringify({ status: next }),
+            });
+
+            const updated = {
+              ...auth,
+              status: res?.status || next,
             };
 
-            btn.disabled = true;
-            const oldText = btn.textContent;
-            btn.textContent = "Updating...";
+            setStoredAuth(updated);
+            updateStatusUI(updated.status);
+          } catch (error) {
+            console.error(error);
+            alert(error.message || "Failed to update rider status");
+          } finally {
+            logoutBtn.disabled = false;
+            logoutBtn.classList.remove("opacity-60", "cursor-not-allowed");
+          }
+        }
 
-            try {
-              await apiFetch("/api/riders/me", {
-                method: "PATCH",
-                body: JSON.stringify(payload),
+        async function logoutRider() {
+          try {
+            await apiFetch("/api/riders/logout", {
+              method: "POST",
+            });
+          } catch (error) {
+            console.error("Logout error:", error);
+          } finally {
+            localStorage.removeItem("flanorx_auth");
+            redirectToLogin();
+          }
+        }
+
+        function bindSettingsActions() {
+          const buttons = document.querySelectorAll("button");
+
+          buttons.forEach((btn) => {
+            const text = btn.textContent.trim().toLowerCase();
+
+            if (text.includes("save changes")) {
+              btn.addEventListener("click", async () => {
+                const profileSection = document.getElementById("profile");
+                const inputs = profileSection.querySelectorAll("input");
+
+                const payload = {
+                  name: inputs[0]?.value?.trim() || "",
+                  email: inputs[1]?.value?.trim() || "",
+                  phone: inputs[2]?.value?.trim() || "",
+                  dateOfBirth: inputs[3]?.value || "",
+                  address: inputs[4]?.value?.trim() || "",
+                };
+
+                btn.disabled = true;
+                const oldText = btn.textContent;
+                btn.textContent = "Saving...";
+
+                try {
+                  await apiFetch("/api/riders/me", {
+                    method: "PATCH",
+                    body: JSON.stringify(payload),
+                  });
+
+                  await loadRiderProfile();
+                  alert("Profile updated successfully");
+                } catch (error) {
+                  console.error(error);
+                  alert(error.message || "Failed to save profile");
+                } finally {
+                  btn.disabled = false;
+                  btn.textContent = oldText;
+                }
               });
+            }
 
-              alert("Vehicle information updated successfully");
-            } catch (error) {
-              console.error(error);
-              alert(error.message || "Failed to update vehicle");
-            } finally {
-              btn.disabled = false;
-              btn.textContent = oldText;
+            if (text.includes("update vehicle")) {
+              btn.addEventListener("click", async () => {
+                const vehicleSection = document.getElementById("vehicle");
+                const inputs = vehicleSection.querySelectorAll("input");
+                const vehicleSelect = vehicleSection.querySelector("select");
+
+                const payload = {
+                  vehicleType: vehicleSelect?.value || "",
+                  licensePlate: inputs[0]?.value?.trim() || "",
+                  insurancePolicyNumber: inputs[1]?.value?.trim() || "",
+                };
+
+                btn.disabled = true;
+                const oldText = btn.textContent;
+                btn.textContent = "Updating...";
+
+                try {
+                  await apiFetch("/api/riders/me", {
+                    method: "PATCH",
+                    body: JSON.stringify(payload),
+                  });
+
+                  alert("Vehicle information updated successfully");
+                } catch (error) {
+                  console.error(error);
+                  alert(error.message || "Failed to update vehicle");
+                } finally {
+                  btn.disabled = false;
+                  btn.textContent = oldText;
+                }
+              });
+            }
+
+            if (text.includes("update password")) {
+              btn.addEventListener("click", async () => {
+                const privacySection = document.getElementById("privacy");
+                const inputs = privacySection.querySelectorAll("input");
+
+                const currentPassword = inputs[0]?.value || "";
+                const newPassword = inputs[1]?.value || "";
+                const confirmPassword = inputs[2]?.value || "";
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                  alert("Fill all password fields");
+                  return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                  alert("New passwords do not match");
+                  return;
+                }
+
+                btn.disabled = true;
+                const oldText = btn.textContent;
+                btn.textContent = "Updating...";
+
+                try {
+                  await apiFetch("/api/riders/me", {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                      currentPassword,
+                      password: newPassword,
+                    }),
+                  });
+
+                  inputs.forEach((input) => (input.value = ""));
+                  alert("Password updated successfully");
+                } catch (error) {
+                  console.error(error);
+                  alert(error.message || "Failed to update password");
+                } finally {
+                  btn.disabled = false;
+                  btn.textContent = oldText;
+                }
+              });
             }
           });
         }
 
-        if (text.includes("update password")) {
-          btn.addEventListener("click", async () => {
-            const privacySection = document.getElementById("privacy");
-            const inputs = privacySection.querySelectorAll("input");
+        logoutBtn?.addEventListener("click", toggleRiderStatus);
+        logoutBtn?.addEventListener("contextmenu", function (e) {
+          e.preventDefault();
+          logoutRider();
+        });
 
-            const currentPassword = inputs[0]?.value || "";
-            const newPassword = inputs[1]?.value || "";
-            const confirmPassword = inputs[2]?.value || "";
+        loadRiderProfile().then((rider) => {
+          if (rider) {
+            fillSettingsForm(rider);
+          }
+        });
 
-            if (!currentPassword || !newPassword || !confirmPassword) {
-              alert("Fill all password fields");
-              return;
-            }
-
-            if (newPassword !== confirmPassword) {
-              alert("New passwords do not match");
-              return;
-            }
-
-            btn.disabled = true;
-            const oldText = btn.textContent;
-            btn.textContent = "Updating...";
-
-            try {
-              await apiFetch("/api/riders/me", {
-                method: "PATCH",
-                body: JSON.stringify({
-                  currentPassword,
-                  password: newPassword,
-                }),
-              });
-
-              inputs.forEach((input) => (input.value = ""));
-              alert("Password updated successfully");
-            } catch (error) {
-              console.error(error);
-              alert(error.message || "Failed to update password");
-            } finally {
-              btn.disabled = false;
-              btn.textContent = oldText;
-            }
-          });
-        }
-      });
-    }
-
-    logoutBtn?.addEventListener("click", toggleRiderStatus);
-    logoutBtn?.addEventListener("contextmenu", function (e) {
-      e.preventDefault();
-      logoutRider();
-    });
-
-    loadRiderProfile().then((rider) => {
-      if (rider) {
-        fillSettingsForm(rider);
-      }
-    });
-
-    bindSettingsActions();
-  })();
-</script>
+        bindSettingsActions();
+      })();
+    </script>
   </body>
 </html>

@@ -305,6 +305,17 @@
         pageLoader.classList.add("hidden-loader");
       }
 
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw)?.token || null;
+        } catch {
+          return null;
+        }
+      }
+
       function redirectToDashboard() {
         window.location.href = "customer-dashboard.html";
       }
@@ -332,7 +343,6 @@
         const res = await fetch(`${API_BASE_URL}/api/users/google`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({
             token: googleToken,
             userType: "customer",

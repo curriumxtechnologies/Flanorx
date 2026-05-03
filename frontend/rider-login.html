@@ -246,12 +246,24 @@
         btn.classList.toggle("cursor-not-allowed", isLoading);
       }
 
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw)?.token || null;
+        } catch {
+          return null;
+        }
+      }
+
       // ✅ Connect to RIDER backend route (NOT /api/users/google)
       async function sendTokenToBackend(googleToken) {
         const res = await fetch(`${API_BASE_URL}/api/riders/auth/google`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({ token: googleToken }),
         });
 
@@ -267,7 +279,7 @@
         if (!window.google?.accounts?.oauth2) {
           showMsg(
             "Google OAuth library failed to load. Check your internet.",
-            "error"
+            "error",
           );
           return;
         }
@@ -289,6 +301,7 @@
               localStorage.setItem(
                 "flanorx_auth",
                 JSON.stringify({
+                  token: serverData.token,
                   _id: serverData._id,
                   name: serverData.name,
                   email: serverData.email,
@@ -297,7 +310,7 @@
                   userType: "rider",
                   isVerified: !!serverData.isVerified,
                   loggedInAt: Date.now(),
-                })
+                }),
               );
 
               showMsg("Login successful! Redirecting...", "success");

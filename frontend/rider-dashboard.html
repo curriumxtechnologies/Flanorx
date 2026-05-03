@@ -876,601 +876,661 @@
       </a>
     </nav>
 
-  <script>
-  (function () {
-    const API_BASE_URL =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"
-        ? "http://127.0.0.1:8000"
-        : "https://flanorx-api.onrender.com";
+    <script>
+      (function () {
+        const API_BASE_URL =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+            ? "http://127.0.0.1:8000"
+            : "https://flanorx-api.onrender.com";
 
-    const menuToggle = document.getElementById("menuToggle");
-    const sidebar = document.getElementById("sidebar");
-    const backdrop = document.getElementById("backdrop");
+        const menuToggle = document.getElementById("menuToggle");
+        const sidebar = document.getElementById("sidebar");
+        const backdrop = document.getElementById("backdrop");
 
-    const sidebarProfileImage = document.querySelector("#sidebar .bg-cover.bg-center");
-    const headerProfileImage = document.querySelector(
-      "header .size-10.rounded-full.bg-slate-200"
-    );
+        const sidebarProfileImage = document.querySelector(
+          "#sidebar .bg-cover.bg-center",
+        );
+        const headerProfileImage = document.querySelector(
+          "header .size-10.rounded-full.bg-slate-200",
+        );
 
-    const sidebarName = document.querySelector("#sidebar .text-sm.font-semibold");
-    const headerName = document.querySelector("header .text-right .text-sm.font-bold");
-    const welcomeTitle = document.querySelector("section h1.text-2xl");
-    const statusBadgeText = document.querySelector(
-      "header .bg-primary\\/15 span:last-child"
-    );
-    const sidebarStatusText = document.querySelector(
-      "#sidebar .text-xs.text-primary.font-medium"
-    );
+        const sidebarName = document.querySelector(
+          "#sidebar .text-sm.font-semibold",
+        );
+        const headerName = document.querySelector(
+          "header .text-right .text-sm.font-bold",
+        );
+        const welcomeTitle = document.querySelector("section h1.text-2xl");
+        const statusBadgeText = document.querySelector(
+          "header .bg-primary\\/15 span:last-child",
+        );
+        const sidebarStatusText = document.querySelector(
+          "#sidebar .text-xs.text-primary.font-medium",
+        );
 
-    const offlineBtn = document.querySelector(
-      "#sidebar button"
-    );
+        const offlineBtn = document.querySelector("#sidebar button");
 
-    const availableJobsHero = document.querySelector(
-      "section p .text-primary.font-extrabold"
-    );
+        const availableJobsHero = document.querySelector(
+          "section p .text-primary.font-extrabold",
+        );
 
-    const todayEarningsEl = document.querySelectorAll(".text-3xl.font-black")[0];
-    const weekEarningsEl = document.querySelectorAll(".text-3xl.font-black")[1];
-    const completedEl = document.querySelectorAll(".text-3xl.font-black")[2];
-    const weeklyGoalPercentEl = document.querySelectorAll(".text-3xl.font-black")[3];
+        const todayEarningsEl = document.querySelectorAll(
+          ".text-3xl.font-black",
+        )[0];
+        const weekEarningsEl = document.querySelectorAll(
+          ".text-3xl.font-black",
+        )[1];
+        const completedEl = document.querySelectorAll(
+          ".text-3xl.font-black",
+        )[2];
+        const weeklyGoalPercentEl = document.querySelectorAll(
+          ".text-3xl.font-black",
+        )[3];
 
-    const quickAccessCards = document.querySelectorAll(".dashboard-shortcut");
-    const jobsAcceptedEl = document.querySelectorAll(".text-2xl.font-black")[0];
-    const completionRateEl = document.querySelectorAll(".text-2xl.font-black")[1];
-    const averageTimeEl = document.querySelectorAll(".text-2xl.font-black")[2];
+        const quickAccessCards = document.querySelectorAll(
+          ".dashboard-shortcut",
+        );
+        const jobsAcceptedEl = document.querySelectorAll(
+          ".text-2xl.font-black",
+        )[0];
+        const completionRateEl = document.querySelectorAll(
+          ".text-2xl.font-black",
+        )[1];
+        const averageTimeEl = document.querySelectorAll(
+          ".text-2xl.font-black",
+        )[2];
 
-    const defaultAvatar =
-      "https://ui-avatars.com/api/?background=102216&color=13ec5b&name=Rider";
+        const defaultAvatar =
+          "https://ui-avatars.com/api/?background=102216&color=13ec5b&name=Rider";
 
-    function getStoredAuth() {
-      try {
-        return JSON.parse(localStorage.getItem("flanorx_auth") || "null");
-      } catch {
-        return null;
-      }
-    }
-
-    function setStoredAuth(data) {
-      localStorage.setItem("flanorx_auth", JSON.stringify(data));
-    }
-
-    function redirectToLogin() {
-      window.location.replace("rider-login.html");
-    }
-
-    function openSidebar() {
-      sidebar.classList.remove("-translate-x-full");
-      sidebar.classList.add("translate-x-0");
-      backdrop.classList.remove("hidden");
-      document.body.style.overflow = "hidden";
-    }
-
-    function closeSidebar() {
-      sidebar.classList.add("-translate-x-full");
-      sidebar.classList.remove("translate-x-0");
-      backdrop.classList.add("hidden");
-      document.body.style.overflow = "";
-    }
-
-    if (menuToggle) {
-      menuToggle.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (sidebar.classList.contains("-translate-x-full")) {
-          openSidebar();
-        } else {
-          closeSidebar();
+        function getStoredAuth() {
+          try {
+            return JSON.parse(localStorage.getItem("flanorx_auth") || "null");
+          } catch {
+            return null;
+          }
         }
-      });
-    }
 
-    if (backdrop) {
-      backdrop.addEventListener("click", closeSidebar);
-    }
+        function getToken() {
+          const raw = localStorage.getItem("flanorx_auth");
+          if (!raw) return null;
 
-    window.addEventListener("keydown", function (e) {
-      if (
-        e.key === "Escape" &&
-        sidebar &&
-        !sidebar.classList.contains("-translate-x-full") &&
-        window.innerWidth < 1024
-      ) {
-        closeSidebar();
-      }
-    });
+          try {
+            return JSON.parse(raw)?.token || null;
+          } catch {
+            return null;
+          }
+        }
 
-    window.addEventListener("resize", function () {
-      if (window.innerWidth >= 1024) {
-        sidebar.classList.remove("-translate-x-full");
-        backdrop.classList.add("hidden");
-        document.body.style.overflow = "";
-      } else {
-        if (!sidebar.classList.contains("translate-x-0")) {
+        function setStoredAuth(data) {
+          localStorage.setItem("flanorx_auth", JSON.stringify(data));
+        }
+
+        function redirectToLogin() {
+          window.location.replace("rider-login.html");
+        }
+
+        function openSidebar() {
+          sidebar.classList.remove("-translate-x-full");
+          sidebar.classList.add("translate-x-0");
+          backdrop.classList.remove("hidden");
+          document.body.style.overflow = "hidden";
+        }
+
+        function closeSidebar() {
           sidebar.classList.add("-translate-x-full");
+          sidebar.classList.remove("translate-x-0");
+          backdrop.classList.add("hidden");
+          document.body.style.overflow = "";
         }
-      }
-    });
 
-    if (window.innerWidth < 1024) {
-      sidebar.classList.add("-translate-x-full");
-      backdrop.classList.add("hidden");
-    } else {
-      sidebar.classList.remove("-translate-x-full");
-    }
-
-    (function setActiveNavigation() {
-      const path = window.location.pathname;
-      let currentPage = path.substring(path.lastIndexOf("/") + 1);
-
-      if (
-        currentPage === "" ||
-        currentPage === "index.html" ||
-        currentPage === "#" ||
-        currentPage === "rider-dashboard.html"
-      ) {
-        currentPage = "home";
-      }
-
-      const navItems = document.querySelectorAll(".bottom-nav-item");
-      navItems.forEach((item) => item.classList.remove("active"));
-
-      navItems.forEach((item) => {
-        const href = item.getAttribute("href");
-
-        if (currentPage === "home" && href === "#") {
-          item.classList.add("active");
-        } else if (href === currentPage) {
-          item.classList.add("active");
+        if (menuToggle) {
+          menuToggle.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (sidebar.classList.contains("-translate-x-full")) {
+              openSidebar();
+            } else {
+              closeSidebar();
+            }
+          });
         }
-      });
 
-      const sidebarLinks = document.querySelectorAll("#sidebar nav a");
-      sidebarLinks.forEach((link) => {
-        link.classList.remove("active-nav");
-        const href = link.getAttribute("href");
-
-        if (currentPage === "home" && href === "#") {
-          link.classList.add("active-nav");
-        } else if (href === currentPage) {
-          link.classList.add("active-nav");
+        if (backdrop) {
+          backdrop.addEventListener("click", closeSidebar);
         }
-      });
-    })();
 
-    async function apiFetch(path, options = {}) {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-          ...(options.body instanceof FormData
-            ? {}
-            : { "Content-Type": "application/json" }),
-          ...(options.headers || {}),
-        },
-        ...options,
-      });
+        window.addEventListener("keydown", function (e) {
+          if (
+            e.key === "Escape" &&
+            sidebar &&
+            !sidebar.classList.contains("-translate-x-full") &&
+            window.innerWidth < 1024
+          ) {
+            closeSidebar();
+          }
+        });
 
-      const data = await response.json().catch(() => ({}));
+        window.addEventListener("resize", function () {
+          if (window.innerWidth >= 1024) {
+            sidebar.classList.remove("-translate-x-full");
+            backdrop.classList.add("hidden");
+            document.body.style.overflow = "";
+          } else {
+            if (!sidebar.classList.contains("translate-x-0")) {
+              sidebar.classList.add("-translate-x-full");
+            }
+          }
+        });
 
-      if (!response.ok) {
-        throw new Error(data?.message || `Request failed (${response.status})`);
-      }
+        if (window.innerWidth < 1024) {
+          sidebar.classList.add("-translate-x-full");
+          backdrop.classList.add("hidden");
+        } else {
+          sidebar.classList.remove("-translate-x-full");
+        }
 
-      return data;
-    }
+        (function setActiveNavigation() {
+          const path = window.location.pathname;
+          let currentPage = path.substring(path.lastIndexOf("/") + 1);
 
-    function formatMoney(value) {
-      const num = Number(value || 0);
-      return `₦${num.toLocaleString("en-NG", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      })}`;
-    }
+          if (
+            currentPage === "" ||
+            currentPage === "index.html" ||
+            currentPage === "#" ||
+            currentPage === "rider-dashboard.html"
+          ) {
+            currentPage = "home";
+          }
 
-    function getInitials(name = "Rider") {
-      return name
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join("");
-    }
+          const navItems = document.querySelectorAll(".bottom-nav-item");
+          navItems.forEach((item) => item.classList.remove("active"));
 
-    function avatarFromName(name = "Rider") {
-      return `https://ui-avatars.com/api/?background=102216&color=13ec5b&name=${encodeURIComponent(
-        name || "Rider"
-      )}`;
-    }
+          navItems.forEach((item) => {
+            const href = item.getAttribute("href");
 
-    function setBgImage(el, url) {
-      if (!el) return;
-      el.style.backgroundImage = `url("${url}")`;
-    }
+            if (currentPage === "home" && href === "#") {
+              item.classList.add("active");
+            } else if (href === currentPage) {
+              item.classList.add("active");
+            }
+          });
 
-    function updateStatusUI(status) {
-      const normalized = status === "online" ? "online" : "offline";
-      const label = normalized === "online" ? "Online" : "Offline";
-      const dotClass =
-        normalized === "online" ? "bg-primary" : "bg-red-500";
+          const sidebarLinks = document.querySelectorAll("#sidebar nav a");
+          sidebarLinks.forEach((link) => {
+            link.classList.remove("active-nav");
+            const href = link.getAttribute("href");
 
-      if (statusBadgeText) {
-        statusBadgeText.textContent = label;
-      }
+            if (currentPage === "home" && href === "#") {
+              link.classList.add("active-nav");
+            } else if (href === currentPage) {
+              link.classList.add("active-nav");
+            }
+          });
+        })();
 
-      const statusWrapper = document.querySelector(
-        "header .bg-primary\\/15, header .bg-red-500\\/15"
-      );
+        async function apiFetch(path, options = {}) {
+          const token = getToken();
 
-      if (statusWrapper) {
-        statusWrapper.className =
-          normalized === "online"
-            ? "flex items-center gap-2 bg-primary/15 text-slate-900 dark:text-primary px-3 py-0.5 rounded-full text-sm font-bold"
-            : "flex items-center gap-2 bg-red-500/15 text-red-600 dark:text-red-400 px-3 py-0.5 rounded-full text-sm font-bold";
+          const response = await fetch(`${API_BASE_URL}${path}`, {
+            headers: {
+              Accept: "application/json",
+              ...(options.body instanceof FormData
+                ? {}
+                : { "Content-Type": "application/json" }),
+              ...(options.headers || {}),
+              Authorization: `Bearer ${token}`, // ✅ added
+            },
+            ...options,
+          });
 
-        statusWrapper.innerHTML = `
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            throw new Error(
+              data?.message || `Request failed (${response.status})`,
+            );
+          }
+
+          return data;
+        }
+
+        function formatMoney(value) {
+          const num = Number(value || 0);
+          return `₦${num.toLocaleString("en-NG", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}`;
+        }
+
+        function getInitials(name = "Rider") {
+          return name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase())
+            .join("");
+        }
+
+        function avatarFromName(name = "Rider") {
+          return `https://ui-avatars.com/api/?background=102216&color=13ec5b&name=${encodeURIComponent(
+            name || "Rider",
+          )}`;
+        }
+
+        function setBgImage(el, url) {
+          if (!el) return;
+          el.style.backgroundImage = `url("${url}")`;
+        }
+
+        function updateStatusUI(status) {
+          const normalized = status === "online" ? "online" : "offline";
+          const label = normalized === "online" ? "Online" : "Offline";
+          const dotClass =
+            normalized === "online" ? "bg-primary" : "bg-red-500";
+
+          if (statusBadgeText) {
+            statusBadgeText.textContent = label;
+          }
+
+          const statusWrapper = document.querySelector(
+            "header .bg-primary\\/15, header .bg-red-500\\/15",
+          );
+
+          if (statusWrapper) {
+            statusWrapper.className =
+              normalized === "online"
+                ? "flex items-center gap-2 bg-primary/15 text-slate-900 dark:text-primary px-3 py-0.5 rounded-full text-sm font-bold"
+                : "flex items-center gap-2 bg-red-500/15 text-red-600 dark:text-red-400 px-3 py-0.5 rounded-full text-sm font-bold";
+
+            statusWrapper.innerHTML = `
           <span class="size-2 ${dotClass} rounded-full"></span>
           <span>${label}</span>
         `;
-      }
+          }
 
-      if (sidebarStatusText) {
-        sidebarStatusText.textContent = label;
-        sidebarStatusText.className =
-          normalized === "online"
-            ? "text-xs text-primary font-medium"
-            : "text-xs text-red-400 font-medium";
-      }
+          if (sidebarStatusText) {
+            sidebarStatusText.textContent = label;
+            sidebarStatusText.className =
+              normalized === "online"
+                ? "text-xs text-primary font-medium"
+                : "text-xs text-red-400 font-medium";
+          }
 
-      const sidebarDot = document.querySelector("#sidebar .size-2.rounded-full");
-      if (sidebarDot) {
-        sidebarDot.className =
-          normalized === "online"
-            ? "size-2 bg-primary rounded-full animate-pulse"
-            : "size-2 bg-red-500 rounded-full";
-      }
+          const sidebarDot = document.querySelector(
+            "#sidebar .size-2.rounded-full",
+          );
+          if (sidebarDot) {
+            sidebarDot.className =
+              normalized === "online"
+                ? "size-2 bg-primary rounded-full animate-pulse"
+                : "size-2 bg-red-500 rounded-full";
+          }
 
-      if (offlineBtn) {
-        offlineBtn.innerHTML =
-          normalized === "online"
-            ? `
+          if (offlineBtn) {
+            offlineBtn.innerHTML =
+              normalized === "online"
+                ? `
               <span class="material-symbols-outlined text-sm">power_settings_new</span>
               Go Offline
             `
-            : `
+                : `
               <span class="material-symbols-outlined text-sm">power_settings_new</span>
               Go Online
             `;
-      }
-    }
-
-    function updateProfileUI(rider) {
-      const riderName = rider?.name || "Rider";
-      const avatar =
-        rider?.profilePicture ||
-        rider?.profile ||
-        avatarFromName(riderName) ||
-        defaultAvatar;
-
-      if (sidebarName) sidebarName.textContent = riderName;
-      if (headerName) headerName.textContent = riderName;
-      if (welcomeTitle) {
-        const firstName = riderName.split(" ")[0] || "Rider";
-        welcomeTitle.textContent = `Welcome back, ${firstName}!`;
-      }
-
-      setBgImage(sidebarProfileImage, avatar);
-      setBgImage(headerProfileImage, avatar);
-
-      updateStatusUI(rider?.status || "offline");
-    }
-
-    function updateDashboardStats({
-      availableJobs = 0,
-      walletBalance = 0,
-      totalEarnings = 0,
-      completedDeliveries = 0,
-      activeDeliveries = 0,
-      completionRate = 0,
-      averageTime = 0,
-    }) {
-      if (availableJobsHero) {
-        availableJobsHero.textContent = `${availableJobs} available jobs`;
-      }
-
-      if (todayEarningsEl) {
-        todayEarningsEl.textContent = formatMoney(walletBalance);
-      }
-
-      if (weekEarningsEl) {
-        weekEarningsEl.textContent = formatMoney(totalEarnings);
-      }
-
-      if (completedEl) {
-        completedEl.textContent = String(completedDeliveries);
-      }
-
-      if (weeklyGoalPercentEl) {
-        const goal = 20;
-        const percent = Math.min(
-          100,
-          Math.round((Number(completedDeliveries || 0) / goal) * 100)
-        );
-        weeklyGoalPercentEl.textContent = `${percent}%`;
-
-        const weeklyGoalText = weeklyGoalPercentEl
-          .closest(".rounded-3xl")
-          ?.querySelector(".mt-2.text-sm.text-slate-300");
-        if (weeklyGoalText) {
-          weeklyGoalText.textContent = `${String(
-            completedDeliveries || 0
-          )} / ${goal} target`;
+          }
         }
 
-        const weeklyGoalBar = weeklyGoalPercentEl
-          .closest(".rounded-3xl")
-          ?.querySelector(".h-full.bg-primary.rounded-full");
-        if (weeklyGoalBar) {
-          weeklyGoalBar.style.width = `${percent}%`;
+        function updateProfileUI(rider) {
+          const riderName = rider?.name || "Rider";
+          const avatar =
+            rider?.profilePicture ||
+            rider?.profile ||
+            avatarFromName(riderName) ||
+            defaultAvatar;
+
+          if (sidebarName) sidebarName.textContent = riderName;
+          if (headerName) headerName.textContent = riderName;
+          if (welcomeTitle) {
+            const firstName = riderName.split(" ")[0] || "Rider";
+            welcomeTitle.textContent = `Welcome back, ${firstName}!`;
+          }
+
+          setBgImage(sidebarProfileImage, avatar);
+          setBgImage(headerProfileImage, avatar);
+
+          updateStatusUI(rider?.status || "offline");
         }
-      }
 
-      if (jobsAcceptedEl) {
-        jobsAcceptedEl.textContent = String(
-          Number(completedDeliveries || 0) + Number(activeDeliveries || 0)
-        );
-      }
+        function updateDashboardStats({
+          availableJobs = 0,
+          walletBalance = 0,
+          totalEarnings = 0,
+          completedDeliveries = 0,
+          activeDeliveries = 0,
+          completionRate = 0,
+          averageTime = 0,
+        }) {
+          if (availableJobsHero) {
+            availableJobsHero.textContent = `${availableJobs} available jobs`;
+          }
 
-      if (completionRateEl) {
-        completionRateEl.textContent = `${Number(completionRate || 0)}%`;
-      }
+          if (todayEarningsEl) {
+            todayEarningsEl.textContent = formatMoney(walletBalance);
+          }
 
-      if (averageTimeEl) {
-        averageTimeEl.textContent = `${Number(averageTime || 0)}m`;
-      }
+          if (weekEarningsEl) {
+            weekEarningsEl.textContent = formatMoney(totalEarnings);
+          }
 
-      if (quickAccessCards[0]) {
-        const text = quickAccessCards[0].querySelector(".text-sm.text-slate-500");
-        if (text) text.textContent = `${availableJobs} nearby jobs`;
-      }
+          if (completedEl) {
+            completedEl.textContent = String(completedDeliveries);
+          }
 
-      if (quickAccessCards[1]) {
-        const text = quickAccessCards[1].querySelector(".text-sm.text-slate-500");
-        if (text) {
-          text.textContent =
-            activeDeliveries > 0
-              ? `${activeDeliveries} in progress`
-              : "No active delivery";
+          if (weeklyGoalPercentEl) {
+            const goal = 20;
+            const percent = Math.min(
+              100,
+              Math.round((Number(completedDeliveries || 0) / goal) * 100),
+            );
+            weeklyGoalPercentEl.textContent = `${percent}%`;
+
+            const weeklyGoalText = weeklyGoalPercentEl
+              .closest(".rounded-3xl")
+              ?.querySelector(".mt-2.text-sm.text-slate-300");
+            if (weeklyGoalText) {
+              weeklyGoalText.textContent = `${String(
+                completedDeliveries || 0,
+              )} / ${goal} target`;
+            }
+
+            const weeklyGoalBar = weeklyGoalPercentEl
+              .closest(".rounded-3xl")
+              ?.querySelector(".h-full.bg-primary.rounded-full");
+            if (weeklyGoalBar) {
+              weeklyGoalBar.style.width = `${percent}%`;
+            }
+          }
+
+          if (jobsAcceptedEl) {
+            jobsAcceptedEl.textContent = String(
+              Number(completedDeliveries || 0) + Number(activeDeliveries || 0),
+            );
+          }
+
+          if (completionRateEl) {
+            completionRateEl.textContent = `${Number(completionRate || 0)}%`;
+          }
+
+          if (averageTimeEl) {
+            averageTimeEl.textContent = `${Number(averageTime || 0)}m`;
+          }
+
+          if (quickAccessCards[0]) {
+            const text = quickAccessCards[0].querySelector(
+              ".text-sm.text-slate-500",
+            );
+            if (text) text.textContent = `${availableJobs} nearby jobs`;
+          }
+
+          if (quickAccessCards[1]) {
+            const text = quickAccessCards[1].querySelector(
+              ".text-sm.text-slate-500",
+            );
+            if (text) {
+              text.textContent =
+                activeDeliveries > 0
+                  ? `${activeDeliveries} in progress`
+                  : "No active delivery";
+            }
+          }
+
+          if (quickAccessCards[5]) {
+            const text = quickAccessCards[5].querySelector(
+              ".text-sm.text-slate-500",
+            );
+            if (text)
+              text.textContent = `${formatMoney(walletBalance)} available`;
+          }
         }
-      }
 
-      if (quickAccessCards[5]) {
-        const text = quickAccessCards[5].querySelector(".text-sm.text-slate-500");
-        if (text) text.textContent = `${formatMoney(walletBalance)} available`;
-      }
-    }
+        async function fetchRiderProfile() {
+          return apiFetch("/api/riders/me");
+        }
 
-    async function fetchRiderProfile() {
-      return apiFetch("/api/riders/me");
-    }
+        async function fetchAvailableDeliveries() {
+          try {
+            const data = await apiFetch("/api/delivery/available");
+            return Array.isArray(data) ? data : [];
+          } catch {
+            return [];
+          }
+        }
 
-    async function fetchAvailableDeliveries() {
-      try {
-        const data = await apiFetch("/api/delivery/available");
-        return Array.isArray(data) ? data : [];
-      } catch {
-        return [];
-      }
-    }
+        async function fetchMyDeliveries() {
+          try {
+            const data = await apiFetch("/api/delivery/my-deliveries");
+            return Array.isArray(data) ? data : [];
+          } catch {
+            return [];
+          }
+        }
 
-    async function fetchMyDeliveries() {
-      try {
-        const data = await apiFetch("/api/delivery/my-deliveries");
-        return Array.isArray(data) ? data : [];
-      } catch {
-        return [];
-      }
-    }
+        async function fetchRiderEarnings() {
+          try {
+            return await apiFetch("/api/delivery/rider/earnings");
+          } catch {
+            return {
+              walletBalance: 0,
+              totalEarnings: 0,
+              completedDeliveries: 0,
+              history: [],
+            };
+          }
+        }
 
-    async function fetchRiderEarnings() {
-      try {
-        return await apiFetch("/api/delivery/rider/earnings");
-      } catch {
-        return {
-          walletBalance: 0,
-          totalEarnings: 0,
-          completedDeliveries: 0,
-          history: [],
-        };
-      }
-    }
-
-    function calculateCompletionRate(history = [], completedDeliveries = 0, activeDeliveries = 0) {
-      const accepted = Number(completedDeliveries || 0) + Number(activeDeliveries || 0);
-      if (!accepted) return 0;
-      return Math.min(100, Math.round((Number(completedDeliveries || 0) / accepted) * 100));
-    }
-
-    function calculateAverageTime(history = []) {
-      if (!Array.isArray(history) || !history.length) return 0;
-
-      const valid = history
-        .map((item) => {
-          if (!item?.completedAt || !item?.createdAt) return null;
-          const start = new Date(item.createdAt).getTime();
-          const end = new Date(item.completedAt).getTime();
-          if (!start || !end || end <= start) return null;
-          return Math.round((end - start) / 60000);
-        })
-        .filter((v) => Number.isFinite(v) && v > 0);
-
-      if (!valid.length) return 0;
-      return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
-    }
-
-    async function hydrateDashboard() {
-      const auth = getStoredAuth();
-
-      if (!auth || auth.userType !== "rider") {
-        redirectToLogin();
-        return;
-      }
-
-      try {
-        const rider = await fetchRiderProfile();
-
-        if (
-          rider?.verificationStatus &&
-          rider.verificationStatus !== "approved"
+        function calculateCompletionRate(
+          history = [],
+          completedDeliveries = 0,
+          activeDeliveries = 0,
         ) {
-          window.location.replace("rider-complete-registration.html");
-          return;
+          const accepted =
+            Number(completedDeliveries || 0) + Number(activeDeliveries || 0);
+          if (!accepted) return 0;
+          return Math.min(
+            100,
+            Math.round((Number(completedDeliveries || 0) / accepted) * 100),
+          );
         }
 
-        const refreshedAuth = {
-          ...auth,
-          _id: rider._id || auth._id,
-          name: rider.name || auth.name,
-          email: rider.email || auth.email,
-          profilePicture:
-            rider.profilePicture || rider.profile || auth.profilePicture || "",
-          status: rider.status || auth.status || "offline",
-          verificationStatus:
-            rider.verificationStatus || auth.verificationStatus || "none",
-          isVerified:
-            rider.isVerified === true ||
-            rider.verificationStatus === "approved",
-          userType: "rider",
-          loggedInAt: auth.loggedInAt || Date.now(),
-        };
+        function calculateAverageTime(history = []) {
+          if (!Array.isArray(history) || !history.length) return 0;
 
-        setStoredAuth(refreshedAuth);
-        updateProfileUI({
-          ...rider,
-          profilePicture: refreshedAuth.profilePicture,
-          status: refreshedAuth.status,
-        });
+          const valid = history
+            .map((item) => {
+              if (!item?.completedAt || !item?.createdAt) return null;
+              const start = new Date(item.createdAt).getTime();
+              const end = new Date(item.completedAt).getTime();
+              if (!start || !end || end <= start) return null;
+              return Math.round((end - start) / 60000);
+            })
+            .filter((v) => Number.isFinite(v) && v > 0);
 
-        const [availableDeliveries, myDeliveries, earnings] = await Promise.all([
-          fetchAvailableDeliveries(),
-          fetchMyDeliveries(),
-          fetchRiderEarnings(),
-        ]);
-
-        const activeDeliveries = Array.isArray(myDeliveries)
-          ? myDeliveries.filter((item) =>
-              ["accepted", "picked_up", "in_transit", "delivered"].includes(
-                item.deliveryStatus
-              )
-            ).length
-          : 0;
-
-        const completedDeliveries = Number(earnings?.completedDeliveries || 0);
-        const history = Array.isArray(earnings?.history) ? earnings.history : [];
-
-        updateDashboardStats({
-          availableJobs: availableDeliveries.length,
-          walletBalance: earnings?.walletBalance || 0,
-          totalEarnings: earnings?.totalEarnings || 0,
-          completedDeliveries,
-          activeDeliveries,
-          completionRate: calculateCompletionRate(
-            history,
-            completedDeliveries,
-            activeDeliveries
-          ),
-          averageTime: calculateAverageTime(history),
-        });
-      } catch (error) {
-        console.error(error);
-
-        const message = String(error?.message || "").toLowerCase();
-        if (
-          message.includes("not authorized") ||
-          message.includes("401") ||
-          message.includes("jwt") ||
-          message.includes("token")
-        ) {
-          localStorage.removeItem("flanorx_auth");
-          redirectToLogin();
-          return;
+          if (!valid.length) return 0;
+          return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
         }
 
-        alert(error.message || "Failed to load dashboard");
-      }
-    }
+        async function hydrateDashboard() {
+          const auth = getStoredAuth();
 
-    async function toggleRiderStatus() {
-      const auth = getStoredAuth();
-      if (!auth) {
-        redirectToLogin();
-        return;
-      }
+          if (!auth || auth.userType !== "rider") {
+            redirectToLogin();
+            return;
+          }
 
-      const currentStatus = auth.status === "online" ? "online" : "offline";
-      const nextStatus = currentStatus === "online" ? "offline" : "online";
+          try {
+            const rider = await fetchRiderProfile();
 
-      if (offlineBtn) {
-        offlineBtn.disabled = true;
-        offlineBtn.classList.add("opacity-60", "cursor-not-allowed");
-      }
+            if (
+              rider?.verificationStatus &&
+              rider.verificationStatus !== "approved"
+            ) {
+              window.location.replace("rider-complete-registration.html");
+              return;
+            }
 
-      try {
-        const response = await apiFetch("/api/riders/status", {
-          method: "PATCH",
-          body: JSON.stringify({ status: nextStatus }),
-        });
+            const refreshedAuth = {
+              ...auth,
+              _id: rider._id || auth._id,
+              name: rider.name || auth.name,
+              email: rider.email || auth.email,
+              profilePicture:
+                rider.profilePicture ||
+                rider.profile ||
+                auth.profilePicture ||
+                "",
+              status: rider.status || auth.status || "offline",
+              verificationStatus:
+                rider.verificationStatus || auth.verificationStatus || "none",
+              isVerified:
+                rider.isVerified === true ||
+                rider.verificationStatus === "approved",
+              userType: "rider",
+              loggedInAt: auth.loggedInAt || Date.now(),
+            };
 
-        const updated = {
-          ...auth,
-          status: response?.status || nextStatus,
-        };
+            setStoredAuth(refreshedAuth);
+            updateProfileUI({
+              ...rider,
+              profilePicture: refreshedAuth.profilePicture,
+              status: refreshedAuth.status,
+            });
 
-        setStoredAuth(updated);
-        updateStatusUI(updated.status);
-      } catch (error) {
-        console.error(error);
-        alert(error.message || "Failed to update rider status");
-      } finally {
+            const [availableDeliveries, myDeliveries, earnings] =
+              await Promise.all([
+                fetchAvailableDeliveries(),
+                fetchMyDeliveries(),
+                fetchRiderEarnings(),
+              ]);
+
+            const activeDeliveries = Array.isArray(myDeliveries)
+              ? myDeliveries.filter((item) =>
+                  ["accepted", "picked_up", "in_transit", "delivered"].includes(
+                    item.deliveryStatus,
+                  ),
+                ).length
+              : 0;
+
+            const completedDeliveries = Number(
+              earnings?.completedDeliveries || 0,
+            );
+            const history = Array.isArray(earnings?.history)
+              ? earnings.history
+              : [];
+
+            updateDashboardStats({
+              availableJobs: availableDeliveries.length,
+              walletBalance: earnings?.walletBalance || 0,
+              totalEarnings: earnings?.totalEarnings || 0,
+              completedDeliveries,
+              activeDeliveries,
+              completionRate: calculateCompletionRate(
+                history,
+                completedDeliveries,
+                activeDeliveries,
+              ),
+              averageTime: calculateAverageTime(history),
+            });
+          } catch (error) {
+            console.error(error);
+
+            const message = String(error?.message || "").toLowerCase();
+            if (
+              message.includes("not authorized") ||
+              message.includes("401") ||
+              message.includes("jwt") ||
+              message.includes("token")
+            ) {
+              localStorage.removeItem("flanorx_auth");
+              redirectToLogin();
+              return;
+            }
+
+            alert(error.message || "Failed to load dashboard");
+          }
+        }
+
+        async function toggleRiderStatus() {
+          const auth = getStoredAuth();
+          if (!auth) {
+            redirectToLogin();
+            return;
+          }
+
+          const currentStatus = auth.status === "online" ? "online" : "offline";
+          const nextStatus = currentStatus === "online" ? "offline" : "online";
+
+          if (offlineBtn) {
+            offlineBtn.disabled = true;
+            offlineBtn.classList.add("opacity-60", "cursor-not-allowed");
+          }
+
+          try {
+            const response = await apiFetch("/api/riders/status", {
+              method: "PATCH",
+              body: JSON.stringify({ status: nextStatus }),
+            });
+
+            const updated = {
+              ...auth,
+              status: response?.status || nextStatus,
+            };
+
+            setStoredAuth(updated);
+            updateStatusUI(updated.status);
+          } catch (error) {
+            console.error(error);
+            alert(error.message || "Failed to update rider status");
+          } finally {
+            if (offlineBtn) {
+              offlineBtn.disabled = false;
+              offlineBtn.classList.remove("opacity-60", "cursor-not-allowed");
+            }
+          }
+        }
+
+        async function logoutRider() {
+          try {
+            await apiFetch("/api/riders/logout", {
+              method: "POST",
+            });
+          } catch (error) {
+            console.error("Logout request failed:", error);
+          } finally {
+            localStorage.removeItem("flanorx_auth");
+            redirectToLogin();
+          }
+        }
+
         if (offlineBtn) {
-          offlineBtn.disabled = false;
-          offlineBtn.classList.remove("opacity-60", "cursor-not-allowed");
+          offlineBtn.addEventListener("click", toggleRiderStatus);
+          offlineBtn.addEventListener("contextmenu", function (e) {
+            e.preventDefault();
+            logoutRider();
+          });
         }
-      }
-    }
 
-    async function logoutRider() {
-      try {
-        await apiFetch("/api/riders/logout", {
-          method: "POST",
-        });
-      } catch (error) {
-        console.error("Logout request failed:", error);
-      } finally {
-        localStorage.removeItem("flanorx_auth");
-        redirectToLogin();
-      }
-    }
+        const notificationBtn = document.querySelector(
+          "header button.relative.text-slate-500",
+        );
+        if (notificationBtn) {
+          notificationBtn.addEventListener("dblclick", function () {
+            window.location.href = "rider-notifications.html";
+          });
+        }
 
-    if (offlineBtn) {
-      offlineBtn.addEventListener("click", toggleRiderStatus);
-      offlineBtn.addEventListener("contextmenu", function (e) {
-        e.preventDefault();
-        logoutRider();
-      });
-    }
-
-    const notificationBtn = document.querySelector(
-      "header button.relative.text-slate-500"
-    );
-    if (notificationBtn) {
-      notificationBtn.addEventListener("dblclick", function () {
-        window.location.href = "rider-notifications.html";
-      });
-    }
-
-    hydrateDashboard();
-  })();
-</script>
+        hydrateDashboard();
+      })();
+    </script>
   </body>
 </html>

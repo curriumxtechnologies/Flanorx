@@ -246,117 +246,130 @@
       class="fixed bottom-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-yellow-400 to-primary/50 opacity-50"
     ></div>
 
-   <script>
-  const GOOGLE_CLIENT_ID =
-    "139378208657-0fujugnuiosdv9moc909vfm1328ouodb.apps.googleusercontent.com";
+    <script>
+      const GOOGLE_CLIENT_ID =
+        "139378208657-0fujugnuiosdv9moc909vfm1328ouodb.apps.googleusercontent.com";
 
-  const API_BASE_URL =
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-      ? "http://127.0.0.1:8000"
-      : "https://flanorx-api.onrender.com";
+      const API_BASE_URL =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000"
+          : "https://flanorx-api.onrender.com";
 
-  const btn = document.getElementById("googleSignupBtn");
-  const btnText = document.getElementById("btnText");
-  const authMsg = document.getElementById("authMsg");
+      const btn = document.getElementById("googleSignupBtn");
+      const btnText = document.getElementById("btnText");
+      const authMsg = document.getElementById("authMsg");
 
-  // ✅ Same redirect logic as login
-  function redirectAfterLogin(serverData) {
-    window.location.href = "rider-complete-registration.html";
-  }
+      // ✅ Same redirect logic as login
+      function redirectAfterLogin(serverData) {
+        window.location.href = "rider-complete-registration.html";
+      }
 
-  function showMsg(message, type = "info") {
-    authMsg.classList.remove("hidden");
-    authMsg.className =
-      "mb-4 text-sm " +
-      (type === "error"
-        ? "text-red-600 dark:text-red-400"
-        : type === "success"
-          ? "text-green-700 dark:text-green-400"
-          : "text-slate-600 dark:text-slate-300");
-    authMsg.textContent = message;
-  }
+      function showMsg(message, type = "info") {
+        authMsg.classList.remove("hidden");
+        authMsg.className =
+          "mb-4 text-sm " +
+          (type === "error"
+            ? "text-red-600 dark:text-red-400"
+            : type === "success"
+              ? "text-green-700 dark:text-green-400"
+              : "text-slate-600 dark:text-slate-300");
+        authMsg.textContent = message;
+      }
 
-  function setLoading(isLoading) {
-    btn.disabled = isLoading;
-    btnText.textContent = isLoading
-      ? "Signing up..."
-      : "Sign up with Google as Rider";
-    btn.classList.toggle("opacity-60", isLoading);
-    btn.classList.toggle("cursor-not-allowed", isLoading);
-  }
+      function setLoading(isLoading) {
+        btn.disabled = isLoading;
+        btnText.textContent = isLoading
+          ? "Signing up..."
+          : "Sign up with Google as Rider";
+        btn.classList.toggle("opacity-60", isLoading);
+        btn.classList.toggle("cursor-not-allowed", isLoading);
+      }
 
-  // ✅ Same endpoint as rider login
-  async function sendTokenToBackend(googleToken) {
-    const res = await fetch(`${API_BASE_URL}/api/riders/auth/google`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ token: googleToken }),
-    });
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok)
-      throw new Error(data?.message || `Backend error (${res.status})`);
-    return data;
-  }
-
-  let tokenClient;
-
-  window.addEventListener("load", () => {
-    if (!window.google?.accounts?.oauth2) {
-      showMsg(
-        "Google OAuth library failed to load. Check your internet.",
-        "error"
-      );
-      return;
-    }
-
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: "openid email profile",
-      callback: async (resp) => {
         try {
-          if (!resp || !resp.access_token)
-            throw new Error("No access token returned");
-
-          setLoading(true);
-          showMsg("Verifying credentials...", "info");
-
-          const serverData = await sendTokenToBackend(resp.access_token);
-
-          // ✅ Same localStorage structure as rider login
-          localStorage.setItem(
-            "flanorx_auth",
-            JSON.stringify({
-              _id: serverData._id,
-              name: serverData.name,
-              email: serverData.email,
-              profilePicture: serverData.profilePicture,
-              authMethod: serverData.authMethod,
-              userType: "rider",
-              isVerified: !!serverData.isVerified,
-              loggedInAt: Date.now(),
-            })
-          );
-
-          showMsg("Signup successful! Redirecting...", "success");
-          setTimeout(() => redirectAfterLogin(serverData), 1200);
-        } catch (e) {
-          console.error(e);
-          showMsg(e.message || "Signup failed. Please try again.", "error");
-          setLoading(false);
+          return JSON.parse(raw)?.token || null;
+        } catch {
+          return null;
         }
-      },
-    });
+      }
 
-    btn.addEventListener("click", () => {
-      if (btn.disabled) return;
-      authMsg.classList.add("hidden");
-      setLoading(true);
-      tokenClient.requestAccessToken({ prompt: "select_account" });
-    });
-  });
-</script>
+      // ✅ Same endpoint as rider login
+      async function sendTokenToBackend(googleToken) {
+        const res = await fetch(`${API_BASE_URL}/api/riders/auth/google`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token: googleToken }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok)
+          throw new Error(data?.message || `Backend error (${res.status})`);
+        return data;
+      }
+
+      let tokenClient;
+
+      window.addEventListener("load", () => {
+        if (!window.google?.accounts?.oauth2) {
+          showMsg(
+            "Google OAuth library failed to load. Check your internet.",
+            "error",
+          );
+          return;
+        }
+
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: "openid email profile",
+          callback: async (resp) => {
+            try {
+              if (!resp || !resp.access_token)
+                throw new Error("No access token returned");
+
+              setLoading(true);
+              showMsg("Verifying credentials...", "info");
+
+              const serverData = await sendTokenToBackend(resp.access_token);
+
+              // ✅ Same localStorage structure as rider login
+              localStorage.setItem(
+                "flanorx_auth",
+                JSON.stringify({
+                  token: serverData.token,
+                  _id: serverData._id,
+                  name: serverData.name,
+                  email: serverData.email,
+                  profilePicture: serverData.profilePicture,
+                  authMethod: serverData.authMethod,
+                  userType: "rider",
+                  isVerified: !!serverData.isVerified,
+                  loggedInAt: Date.now(),
+                }),
+              );
+
+              showMsg("Signup successful! Redirecting...", "success");
+              setTimeout(() => redirectAfterLogin(serverData), 1200);
+            } catch (e) {
+              console.error(e);
+              showMsg(e.message || "Signup failed. Please try again.", "error");
+              setLoading(false);
+            }
+          },
+        });
+
+        btn.addEventListener("click", () => {
+          if (btn.disabled) return;
+          authMsg.classList.add("hidden");
+          setLoading(true);
+          tokenClient.requestAccessToken({ prompt: "select_account" });
+        });
+      });
+    </script>
   </body>
 </html>

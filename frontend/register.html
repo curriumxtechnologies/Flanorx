@@ -275,7 +275,6 @@
         const res = await fetch(`${API_BASE_URL}/api/users/google`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({
             token: googleToken,
             userType: "customer",

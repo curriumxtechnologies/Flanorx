@@ -333,6 +333,17 @@
         return url.searchParams.get(name);
       }
 
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw)?.token || null;
+        } catch {
+          return null;
+        }
+      }
+
       function pickPaystackReference() {
         return getQueryParam("reference") || getQueryParam("trxref") || "";
       }
@@ -396,12 +407,16 @@
       }
 
       async function fetchReceiptByReference(reference) {
+        const token = getToken();
+
         const res = await fetch(
           `${API_BASE_URL}/api/order/verify/${encodeURIComponent(reference)}`,
           {
             method: "GET",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           },
         );
         const data = await res.json().catch(() => ({}));

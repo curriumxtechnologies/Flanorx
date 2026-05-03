@@ -931,9 +931,15 @@
         const fuelEl = document.getElementById("totalFuelLiters");
 
         try {
+          const token = getToken();
+
           const res = await fetch(
             `${API_BASE_URL}/api/order/total-spent?month=${month}&year=${year}`,
-            { credentials: "include" },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
           );
 
           const data = await res.json().catch(() => ({}));
