@@ -933,6 +933,17 @@
         return "₦" + num.toLocaleString("en-NG");
       }
 
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw)?.token || null;
+        } catch {
+          return null;
+        }
+      }
+
       function showToast(title, msg) {
         const wrap = document.getElementById("toast");
         const t = document.getElementById("toastTitle");
@@ -1171,12 +1182,19 @@
       document
         .getElementById("logoutBtn")
         ?.addEventListener("click", async () => {
+          const token = getToken();
+
           try {
             await fetch(`${API_BASE_URL}/api/users/logout`, {
               method: "POST",
-              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
             });
-          } catch (e) {}
+          } catch (e) {
+            console.error(e);
+          }
+
           localStorage.removeItem("flanorx_auth");
           window.location.href = "login.html";
         });
@@ -1410,10 +1428,14 @@
           estimatedDeliveryMinutes: scheduleType === "now" ? 30 : null,
         };
 
+        const token = getToken();
+
         const res = await fetch(`${API_BASE_URL}/api/order`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify(payload),
         });
 
