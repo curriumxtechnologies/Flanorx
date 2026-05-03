@@ -702,6 +702,17 @@
         return map[status] || status || "--";
       }
 
+      function getToken() {
+        const raw = localStorage.getItem("flanorx_auth");
+        if (!raw) return null;
+
+        try {
+          return JSON.parse(raw)?.token || null;
+        } catch {
+          return null;
+        }
+      }
+
       function formatTime(isoString) {
         if (!isoString) return "";
         const d = new Date(isoString);
@@ -893,15 +904,22 @@
       // ========== TRACKING DATA ==========
       async function getActiveOrder() {
         try {
+          const token = getToken();
+
           const res = await fetch(`${API_BASE_URL}/api/order/active`, {
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
+
           if (res.status === 401) {
             localStorage.removeItem("flanorx_auth");
             window.location.href = "login.html";
             return null;
           }
+
           if (!res.ok) return null;
+
           return await res.json();
         } catch (error) {
           console.error("Error fetching active order:", error);
@@ -911,10 +929,22 @@
 
       async function getTrackingData(orderId) {
         try {
+          const token = getToken();
+
           const res = await fetch(`${API_BASE_URL}/api/tracking/${orderId}`, {
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
+
+          if (res.status === 401) {
+            localStorage.removeItem("flanorx_auth");
+            window.location.href = "login.html";
+            return null;
+          }
+
           if (!res.ok) return null;
+
           return await res.json();
         } catch (error) {
           console.error("Error fetching tracking data:", error);
@@ -924,10 +954,14 @@
 
       async function updateUserLocation(lat, lng, orderId) {
         try {
+          const token = getToken();
+
           await fetch(`${API_BASE_URL}/api/tracking/user-location/${orderId}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({ lat, lng }),
           });
         } catch (error) {
@@ -1254,18 +1288,27 @@
         initOrderSummaryToggle();
         loadTracking();
         startTrackingUpdates();
+
         document
           .getElementById("logoutBtn")
           ?.addEventListener("click", async () => {
+            const token = getToken();
+
             try {
               await fetch(`${API_BASE_URL}/api/users/logout`, {
                 method: "POST",
-                credentials: "include",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
               });
-            } catch (err) {}
+            } catch (err) {
+              console.error(err);
+            }
+
             localStorage.removeItem("flanorx_auth");
             window.location.href = "login.html";
           });
+
         document.addEventListener("visibilitychange", () => {
           if (document.hidden) {
             if (trackingInterval) clearInterval(trackingInterval);
@@ -1274,6 +1317,7 @@
             startTrackingUpdates();
           }
         });
+
         lucide.createIcons();
       }
 
