@@ -398,7 +398,7 @@
                 <h2
                   class="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight"
                 >
-                  Good morning, <span id="userNameHero">Customer</span>
+                  <span id="greetingText">Good morning</span>, <span id="userNameHero">Customer</span>
                 </h2>
                 <p class="text-slate-500 mt-1 text-sm lg:text-base">
                   Welcome to Flanorx.
@@ -627,7 +627,7 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                   <button
                     class="group bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary transition-all text-left shadow-sm"
                     type="button"
@@ -641,6 +641,20 @@
                     </div>
                     <h4 class="font-bold text-sm">Petrol</h4>
                     <p class="text-xs text-slate-400">₦850 / L</p>
+                  </button>
+                  <button
+                    class="group bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary transition-all text-left shadow-sm"
+                    type="button"
+                  >
+                    <div
+                      class="size-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                    >
+                      <span class="material-symbols-outlined font-bold"
+                        >ev_station</span
+                      >
+                    </div>
+                    <h4 class="font-bold text-sm">Diesel</h4>
+                    <p class="text-xs text-slate-400">₦1,320 / L</p>
                   </button>
                 </div>
               </div>
@@ -740,17 +754,6 @@
       function hidePageLoader() {
         if (!pageLoader) return;
         pageLoader.classList.add("hidden-loader");
-      }
-
-      function getToken() {
-        const raw = localStorage.getItem("flanorx_auth");
-        if (!raw) return null;
-
-        try {
-          return JSON.parse(raw).token;
-        } catch {
-          return null;
-        }
       }
 
       function monthName(m) {
@@ -893,15 +896,27 @@
         }
       }
 
+      // New function: update greeting based on current time
+      function setGreeting() {
+        const greetingEl = document.getElementById("greetingText");
+        if (!greetingEl) return;
+        const hour = new Date().getHours();
+        let greeting;
+        if (hour < 12) {
+          greeting = "Good morning";
+        } else if (hour < 17) {
+          greeting = "Good afternoon";
+        } else {
+          greeting = "Good evening";
+        }
+        greetingEl.textContent = greeting;
+      }
+
       async function logout() {
         try {
-          const token = getToken();
-
           await fetch(`${API_BASE_URL}/api/users/logout`, {
             method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: "include",
           });
         } catch (err) {
           console.error(err);
@@ -917,15 +932,9 @@
         const fuelEl = document.getElementById("totalFuelLiters");
 
         try {
-          const token = getToken();
-
           const res = await fetch(
             `${API_BASE_URL}/api/order/total-spent?month=${month}&year=${year}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
+            { credentials: "include" },
           );
 
           const data = await res.json().catch(() => ({}));
@@ -969,12 +978,8 @@
         }
 
         try {
-          const token = getToken();
-
           const res = await fetch(`${API_BASE_URL}/api/order/my`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: "include",
           });
 
           if (res.status === 401) {
@@ -1132,15 +1137,11 @@
             buttonEl.textContent = "Confirming...";
           }
 
-          const token = getToken();
-
           const res = await fetch(
             `${API_BASE_URL}/api/delivery/${orderId}/confirm`,
             {
               method: "PUT",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
+              credentials: "include",
             },
           );
 
@@ -1207,12 +1208,8 @@
         }
 
         try {
-          const token = getToken();
-
           const res = await fetch(`${API_BASE_URL}/api/order/active`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: "include",
           });
 
           const data = await res.json().catch(() => null);
@@ -1331,6 +1328,7 @@
 
       (function init() {
         setUserInfo();
+        setGreeting(); // Apply time-aware greeting
 
         const logoutBtn = document.getElementById("logoutBtn");
         if (logoutBtn) {
