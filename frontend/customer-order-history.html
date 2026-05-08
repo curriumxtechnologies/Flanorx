@@ -133,12 +133,6 @@
         #backdrop {
           display: none;
         }
-
-        /* Full width for mobile */
-        .mobile-full {
-          padding-left: 0 !important;
-          padding-right: 0 !important;
-        }
       }
 
       @media (min-width: 1024px) {
@@ -247,38 +241,27 @@
         color: #f87171;
       }
 
-      .filter-chip {
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        color: #64748b;
-        transition: all 0.2s;
-        font-size: 12px;
+      /* Simple select style for mobile filter: no background, just text and arrow */
+      .plain-select {
+        appearance: none;
+        background: none;
+        border: none;
+        padding: 0 20px 0 0;
+        font-size: 13px;
         font-weight: 600;
-        padding: 6px 14px;
-        border-radius: 9999px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        white-space: nowrap;
+        color: inherit;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'><path stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/></svg>");
+        background-repeat: no-repeat;
+        background-position: right center;
+        background-size: 12px;
         cursor: pointer;
+        outline: none;
       }
-      .filter-chip.active {
-        background: rgba(19, 236, 91, 0.15);
-        border-color: rgba(19, 236, 91, 0.3);
-        color: #059669;
-      }
-      .dark .filter-chip {
-        background: #1e293b;
-        border-color: #334155;
-        color: #94a3b8;
-      }
-      .dark .filter-chip.active {
-        background: rgba(19, 236, 91, 0.2);
-        border-color: rgba(19, 236, 91, 0.4);
-        color: #34d399;
+      .dark .plain-select {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'><path stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/></svg>");
       }
 
-      /* Full-width transaction row on mobile */
+      /* Full‑width transaction row */
       .txn-row-full {
         display: flex;
         align-items: center;
@@ -369,7 +352,6 @@
 
       <!-- MAIN CONTENT -->
       <main class="flex-1 flex flex-col overflow-hidden">
-        <!-- HEADER with page title -->
         <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10">
           <div class="flex items-center gap-4">
             <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">Order History</h1>
@@ -400,7 +382,7 @@
 
         <!-- Main area -->
         <div class="content-fixed-shell">
-          <div class="p-4 lg:p-8 mobile-full flex flex-col h-full gap-6">
+          <div class="p-4 lg:p-8 flex flex-col h-full gap-6">
             <!-- EMPTY STATE (global) -->
             <div id="emptyState" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center shadow-sm shrink-0">
               <div class="mx-auto size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
@@ -411,7 +393,7 @@
               <a href="place-order.html" class="inline-flex items-center gap-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 font-extrabold px-6 py-3 rounded-xl transition-all shadow-lg shadow-yellow-600/20">Place your order<span class="material-symbols-outlined">arrow_forward</span></a>
             </div>
 
-            <!-- DESKTOP FILTER CARD (hidden on mobile) -->
+            <!-- DESKTOP FILTER CARD (unchanged) -->
             <div class="hidden lg:flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex-wrap items-center gap-3 shrink-0">
               <div class="relative flex-1 min-w-[200px]">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
@@ -438,23 +420,35 @@
               <button id="applyFiltersBtn" class="bg-primary hover:bg-primary/90 text-slate-900 font-bold px-6 py-2.5 rounded-lg transition-all text-sm shadow-lg shadow-primary/20">Apply</button>
             </div>
 
-            <!-- MOBILE FILTER BAR (only mobile, full width) -->
-            <div class="lg:hidden flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 shadow-sm shrink-0 overflow-x-auto no-scrollbar">
-              <select id="statusFilterMobile" class="filter-chip appearance-none pr-6 bg-[length:12px] bg-no-repeat bg-[right_6px_center] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27><path stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/></svg>')]">
-                <option value="all">Status</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="failed">Failed</option>
-              </select>
-              <select id="paidFilterMobile" class="filter-chip appearance-none pr-6 bg-[length:12px] bg-no-repeat bg-[right_6px_center] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27><path stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/></svg>')]">
-                <option value="all">Paid</option>
-                <option value="true">Paid</option>
-                <option value="false">Unpaid</option>
-              </select>
-              <span class="text-xs text-slate-500 whitespace-nowrap ml-1">| <span id="statTotalOrdersMobile" class="font-bold">0</span> orders · <span id="statTotalSpentMobile" class="font-bold text-primary">₦0</span></span>
-              <button id="applyFiltersMobileBtn" class="filter-chip active flex-shrink-0 bg-primary/15 text-primary border-primary/30 ml-auto">Apply</button>
+            <!-- MOBILE FILTER BAR (simplified, no Apply button) -->
+            <div class="lg:hidden flex items-center justify-between gap-3 px-4 py-3 bg-white dark:bg-slate-900 shadow-sm shrink-0">
+              <div class="flex items-center gap-4">
+                <!-- Status filter -->
+                <div class="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                  <span class="text-xs font-medium text-slate-500">Status:</span>
+                  <select id="statusFilterMobile" class="plain-select">
+                    <option value="all">All</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </div>
+                <!-- Paid filter -->
+                <div class="flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                  <span class="text-xs font-medium text-slate-500">Paid:</span>
+                  <select id="paidFilterMobile" class="plain-select">
+                    <option value="all">All</option>
+                    <option value="true">Paid</option>
+                    <option value="false">Unpaid</option>
+                  </select>
+                </div>
+              </div>
+              <!-- Stats -->
+              <span class="text-xs text-slate-500 whitespace-nowrap ml-auto">
+                <span id="statTotalOrdersMobile" class="font-bold">0</span> orders · <span id="statTotalSpentMobile" class="font-bold text-primary">₦0</span>
+              </span>
             </div>
 
             <!-- SCROLLABLE AREA -->
@@ -486,19 +480,17 @@
                 </div>
               </div>
 
-              <!-- Mobile list area -->
-              <div id="mobileWrap" class="flex flex-col h-full">
-                <!-- Sticky month dropdown (only visible on mobile) -->
-                <div class="lg:hidden sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-between">
-                  <select id="monthSelectMobile" class="filter-chip appearance-none pr-6 bg-[length:12px] bg-no-repeat bg-[right_6px_center] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27><path stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/></svg>')]">
+              <!-- Mobile list -->
+              <div id="mobileWrap">
+                <!-- Sticky Month Selector -->
+                <div id="monthSelectorSticky" class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-between">
+                  <select id="monthSelectMobile" class="plain-select font-bold text-slate-900 dark:text-white">
                     <option value="all">All Months</option>
                   </select>
                   <span class="text-xs text-slate-400">Total: <span id="monthlyCount">0</span></span>
                 </div>
-                <!-- Full-width transaction list -->
-                <div id="mobileListContainer" class="flex-1 overflow-y-auto">
-                  <div class="text-center text-slate-400 py-4 px-4">Loading transactions...</div>
-                </div>
+                <!-- Full‑width transaction rows -->
+                <div id="mobileListContainer"></div>
               </div>
 
               <p class="text-xs text-slate-400 text-center pt-6 border-t border-slate-200 dark:border-slate-800 mt-6">© 2026 Flanorx. All rights reserved.</p>
@@ -642,7 +634,7 @@
         const term = (document.getElementById("searchModalInput")?.value || document.getElementById("searchInput")?.value || "").trim();
         const status = document.getElementById("statusFilterMobile")?.value || document.getElementById("statusFilter")?.value || "all";
         const paid = document.getElementById("paidFilterMobile")?.value || document.getElementById("paidFilter")?.value || "all";
-        const monthValue = document.getElementById("monthFilter")?.value || monthSelectMobile?.value || "all";
+        const monthValue = monthSelectMobile?.value || document.getElementById("monthFilter")?.value || "all";
 
         let filtered = [...allOrders];
         if (status !== "all") filtered = filtered.filter(o => (o?.status || "").toLowerCase() === status);
@@ -687,7 +679,7 @@
             monthsSet.set(key, label);
           }
         });
-        const sortedKeys = [...monthsSet.keys()].sort((a, b) => b.localeCompare(a)); // latest first
+        const sortedKeys = [...monthsSet.keys()].sort((a, b) => b.localeCompare(a));
         const currentValue = monthSelectMobile.value;
         monthSelectMobile.innerHTML = '<option value="all">All Months</option>';
         sortedKeys.forEach(key => {
@@ -696,9 +688,13 @@
           option.textContent = monthsSet.get(key);
           monthSelectMobile.appendChild(option);
         });
-        // Restore previously selected if still exists
-        if ([...monthSelectMobile.options].some(opt => opt.value === currentValue)) {
-          monthSelectMobile.value = currentValue;
+        // Default to current month if exists
+        const now = new Date();
+        const thisMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`;
+        if (monthsSet.has(thisMonth)) {
+          monthSelectMobile.value = thisMonth;
+        } else if (sortedKeys.length > 0) {
+          monthSelectMobile.value = sortedKeys[0];
         } else {
           monthSelectMobile.value = "all";
         }
@@ -754,7 +750,6 @@
           mobileListContainer.innerHTML = '<div class="text-center text-slate-400 py-4 px-4">No transactions for this period</div>';
           return;
         }
-        // Full-width rows with dividers
         let html = '';
         list.forEach(o => {
           const isUnpaid = o?.paid === false;
@@ -828,13 +823,15 @@
       searchModalBackdrop?.addEventListener("click", () => { searchModal.classList.add("hidden"); searchModal.setAttribute("aria-hidden", "true"); });
       searchModalSubmit?.addEventListener("click", () => { applyClientFilters(); searchModal.classList.add("hidden"); });
 
-      // Apply buttons
+      // Desktop Apply button (kept)
       document.getElementById("applyFiltersBtn")?.addEventListener("click", applyClientFilters);
-      document.getElementById("applyFiltersMobileBtn")?.addEventListener("click", applyClientFilters);
+      // Desktop search input live filter
       document.getElementById("searchInput")?.addEventListener("input", applyClientFilters);
       document.getElementById("refreshBtn")?.addEventListener("click", loadOrders);
 
-      // Month select dropdown on mobile triggers filter
+      // Mobile auto-filter: any change in status, paid, or month triggers filter immediately
+      document.getElementById("statusFilterMobile")?.addEventListener("change", applyClientFilters);
+      document.getElementById("paidFilterMobile")?.addEventListener("change", applyClientFilters);
       monthSelectMobile?.addEventListener("change", applyClientFilters);
 
       async function loadOrders() {
