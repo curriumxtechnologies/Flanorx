@@ -133,6 +133,12 @@
         #backdrop {
           display: none;
         }
+
+        /* Full width for mobile */
+        .mobile-full {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
       }
 
       @media (min-width: 1024px) {
@@ -241,43 +247,6 @@
         color: #f87171;
       }
 
-      .month-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-      }
-      .month-dropdown {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer;
-        font-weight: 800;
-        font-size: 1.125rem;
-      }
-      .month-dropdown::after {
-        content: '';
-        display: inline-block;
-        width: 0;
-        height: 0;
-        border-left: 4px solid transparent;
-        border-right: 4px solid transparent;
-        border-top: 4px solid currentColor;
-        opacity: 0.6;
-      }
-      .analysis-btn {
-        background: rgba(19, 236, 91, 0.15);
-        color: #059669;
-        padding: 4px 14px;
-        border-radius: 9999px;
-        font-size: 11px;
-        font-weight: 700;
-      }
-      .dark .analysis-btn {
-        background: rgba(19, 236, 91, 0.2);
-        color: #34d399;
-      }
-
       .filter-chip {
         background: #f1f5f9;
         border: 1px solid #e2e8f0;
@@ -309,34 +278,27 @@
         color: #34d399;
       }
 
-      .txn-row {
+      /* Full-width transaction row on mobile */
+      .txn-row-full {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 14px 0;
-        border-bottom: 1px solid #f1f5f9;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e2e8f0;
         cursor: pointer;
         transition: background 0.15s;
       }
-      .txn-row:hover {
-        background: rgba(0,0,0,0.02);
-      }
-      .dark .txn-row {
-        border-bottom-color: #1e293b;
-      }
-      .dark .txn-row:hover {
-        background: rgba(255,255,255,0.02);
-      }
-      .txn-row:last-child {
+      .txn-row-full:last-child {
         border-bottom: none;
       }
-
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
+      .txn-row-full:hover {
+        background: rgba(0,0,0,0.02);
       }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+      .dark .txn-row-full {
+        border-bottom-color: #334155;
+      }
+      .dark .txn-row-full:hover {
+        background: rgba(255,255,255,0.02);
       }
 
       .content-fixed-shell {
@@ -438,7 +400,7 @@
 
         <!-- Main area -->
         <div class="content-fixed-shell">
-          <div class="p-4 lg:p-8 flex flex-col h-full gap-6">
+          <div class="p-4 lg:p-8 mobile-full flex flex-col h-full gap-6">
             <!-- EMPTY STATE (global) -->
             <div id="emptyState" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-10 text-center shadow-sm shrink-0">
               <div class="mx-auto size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
@@ -451,13 +413,10 @@
 
             <!-- DESKTOP FILTER CARD (hidden on mobile) -->
             <div class="hidden lg:flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex-wrap items-center gap-3 shrink-0">
-              <!-- Search -->
               <div class="relative flex-1 min-w-[200px]">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
                 <input id="searchInput" class="w-full pl-10 pr-4 py-2.5 rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 focus:ring-primary focus:border-primary text-sm" placeholder="Search by orderId / fuelType / station..." type="text" />
               </div>
-
-              <!-- Status -->
               <select id="statusFilter" class="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-medium focus:ring-primary focus:border-primary min-w-[110px]">
                 <option value="all">Status: All</option>
                 <option value="pending">pending</option>
@@ -466,30 +425,21 @@
                 <option value="cancelled">cancelled</option>
                 <option value="failed">failed</option>
               </select>
-
-              <!-- Paid -->
               <select id="paidFilter" class="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-medium focus:ring-primary focus:border-primary min-w-[100px]">
                 <option value="all">Paid: All</option>
                 <option value="true">Paid</option>
                 <option value="false">Unpaid</option>
               </select>
-
-              <!-- Month filter -->
               <input type="month" id="monthFilter" class="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-medium focus:ring-primary focus:border-primary min-w-[130px]" />
-
-              <!-- Inline stats -->
               <div class="flex items-center gap-4 ml-auto text-xs">
                 <div class="text-slate-500">Total Orders: <span id="statTotalOrdersDesktop" class="font-bold text-slate-900 dark:text-white">0</span></div>
                 <div class="text-slate-500">Total Spent: <span id="statTotalSpentDesktop" class="font-bold text-primary">₦0</span></div>
               </div>
-
-              <button id="applyFiltersBtn" class="bg-primary hover:bg-primary/90 text-slate-900 font-bold px-6 py-2.5 rounded-lg transition-all text-sm shadow-lg shadow-primary/20">
-                Apply
-              </button>
+              <button id="applyFiltersBtn" class="bg-primary hover:bg-primary/90 text-slate-900 font-bold px-6 py-2.5 rounded-lg transition-all text-sm shadow-lg shadow-primary/20">Apply</button>
             </div>
 
-            <!-- MOBILE FILTER BAR (only mobile) -->
-            <div class="lg:hidden flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 rounded-xl shadow-sm shrink-0 overflow-x-auto no-scrollbar">
+            <!-- MOBILE FILTER BAR (only mobile, full width) -->
+            <div class="lg:hidden flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 shadow-sm shrink-0 overflow-x-auto no-scrollbar">
               <select id="statusFilterMobile" class="filter-chip appearance-none pr-6 bg-[length:12px] bg-no-repeat bg-[right_6px_center] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27><path stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/></svg>')]">
                 <option value="all">Status</option>
                 <option value="pending">Pending</option>
@@ -503,7 +453,6 @@
                 <option value="true">Paid</option>
                 <option value="false">Unpaid</option>
               </select>
-              <input type="month" id="monthFilterMobile" class="filter-chip bg-[length:12px] bg-no-repeat bg-[right_6px_center] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27><path stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/></svg>')]" />
               <span class="text-xs text-slate-500 whitespace-nowrap ml-1">| <span id="statTotalOrdersMobile" class="font-bold">0</span> orders · <span id="statTotalSpentMobile" class="font-bold text-primary">₦0</span></span>
               <button id="applyFiltersMobileBtn" class="filter-chip active flex-shrink-0 bg-primary/15 text-primary border-primary/30 ml-auto">Apply</button>
             </div>
@@ -537,8 +486,20 @@
                 </div>
               </div>
 
-              <!-- Mobile list -->
-              <div id="mobileWrap" class="space-y-6 pb-6"></div>
+              <!-- Mobile list area -->
+              <div id="mobileWrap" class="flex flex-col h-full">
+                <!-- Sticky month dropdown (only visible on mobile) -->
+                <div class="lg:hidden sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-between">
+                  <select id="monthSelectMobile" class="filter-chip appearance-none pr-6 bg-[length:12px] bg-no-repeat bg-[right_6px_center] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27><path stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/></svg>')]">
+                    <option value="all">All Months</option>
+                  </select>
+                  <span class="text-xs text-slate-400">Total: <span id="monthlyCount">0</span></span>
+                </div>
+                <!-- Full-width transaction list -->
+                <div id="mobileListContainer" class="flex-1 overflow-y-auto">
+                  <div class="text-center text-slate-400 py-4 px-4">Loading transactions...</div>
+                </div>
+              </div>
 
               <p class="text-xs text-slate-400 text-center pt-6 border-t border-slate-200 dark:border-slate-800 mt-6">© 2026 Flanorx. All rights reserved.</p>
             </div>
@@ -652,9 +613,10 @@
       let allOrders = [];
       let lastFiltered = [];
       const ordersTbody = document.getElementById("ordersTbody");
-      const mobileWrap = document.getElementById("mobileWrap");
+      const mobileListContainer = document.getElementById("mobileListContainer");
       const emptyState = document.getElementById("emptyState");
       const resultsHint = document.getElementById("resultsHint");
+      const monthSelectMobile = document.getElementById("monthSelectMobile");
 
       async function fetchMyOrders() {
         const user = requireAuthOrRedirect();
@@ -669,7 +631,7 @@
       }
 
       function filterByMonth(order, monthValue) {
-        if (!monthValue) return true;
+        if (!monthValue || monthValue === "all") return true;
         const dt = order?.createdAt || order?.date ? new Date(order.createdAt || order.date) : null;
         if (!dt || isNaN(dt)) return false;
         const [year, month] = monthValue.split("-").map(Number);
@@ -680,12 +642,12 @@
         const term = (document.getElementById("searchModalInput")?.value || document.getElementById("searchInput")?.value || "").trim();
         const status = document.getElementById("statusFilterMobile")?.value || document.getElementById("statusFilter")?.value || "all";
         const paid = document.getElementById("paidFilterMobile")?.value || document.getElementById("paidFilter")?.value || "all";
-        const monthValue = document.getElementById("monthFilterMobile")?.value || document.getElementById("monthFilter")?.value || "";
+        const monthValue = document.getElementById("monthFilter")?.value || monthSelectMobile?.value || "all";
 
         let filtered = [...allOrders];
         if (status !== "all") filtered = filtered.filter(o => (o?.status || "").toLowerCase() === status);
         if (paid !== "all") filtered = filtered.filter(o => String(o?.paid) === paid);
-        if (monthValue) filtered = filtered.filter(o => filterByMonth(o, monthValue));
+        if (monthValue !== "all") filtered = filtered.filter(o => filterByMonth(o, monthValue));
         filtered = filtered.filter(o => {
           if (!term) return true;
           const t = term.toLowerCase();
@@ -700,10 +662,11 @@
         document.getElementById("statTotalSpentDesktop").textContent = formatNaira(totalSpent);
         document.getElementById("statTotalOrdersMobile").textContent = totalOrders;
         document.getElementById("statTotalSpentMobile").textContent = formatNaira(totalSpent);
+        document.getElementById("monthlyCount").textContent = totalOrders;
 
         if (filtered.length === 0) {
           emptyState?.classList.remove("hidden");
-          mobileWrap.innerHTML = "";
+          mobileListContainer.innerHTML = "";
           ordersTbody.innerHTML = "";
           if (resultsHint) resultsHint.textContent = "Showing 0 results";
           return;
@@ -711,6 +674,34 @@
         emptyState?.classList.add("hidden");
         renderDesktopTable(filtered);
         renderMobileList(filtered);
+      }
+
+      function populateMonthDropdown() {
+        if (!monthSelectMobile) return;
+        const monthsSet = new Map();
+        allOrders.forEach(o => {
+          const dt = o?.createdAt || o?.date ? new Date(o.createdAt || o.date) : null;
+          if (dt && !isNaN(dt)) {
+            const key = `${dt.getFullYear()}-${(dt.getMonth() + 1).toString().padStart(2, "0")}`;
+            const label = dt.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+            monthsSet.set(key, label);
+          }
+        });
+        const sortedKeys = [...monthsSet.keys()].sort((a, b) => b.localeCompare(a)); // latest first
+        const currentValue = monthSelectMobile.value;
+        monthSelectMobile.innerHTML = '<option value="all">All Months</option>';
+        sortedKeys.forEach(key => {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = monthsSet.get(key);
+          monthSelectMobile.appendChild(option);
+        });
+        // Restore previously selected if still exists
+        if ([...monthSelectMobile.options].some(opt => opt.value === currentValue)) {
+          monthSelectMobile.value = currentValue;
+        } else {
+          monthSelectMobile.value = "all";
+        }
       }
 
       async function startPaystackForOrder(order) {
@@ -757,52 +748,38 @@
       }
 
       function renderMobileList(list) {
-        if (!mobileWrap) return;
-        mobileWrap.innerHTML = "";
-        if (!list?.length) return;
-        const grouped = {};
+        if (!mobileListContainer) return;
+        mobileListContainer.innerHTML = "";
+        if (!list?.length) {
+          mobileListContainer.innerHTML = '<div class="text-center text-slate-400 py-4 px-4">No transactions for this period</div>';
+          return;
+        }
+        // Full-width rows with dividers
+        let html = '';
         list.forEach(o => {
-          const dt = o?.createdAt || o?.date ? new Date(o.createdAt || o.date) : null;
-          if (!dt || isNaN(dt)) return;
-          const key = dt.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
-          (grouped[key] = grouped[key] || []).push(o);
-        });
-        const monthKeys = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
-        let html = "";
-        monthKeys.forEach(month => {
-          const orders = grouped[month];
-          html += `<div>
-            <div class="month-header">
-              <h3 class="month-dropdown text-slate-900 dark:text-white">${month}</h3>
-              <button class="analysis-btn">Analysis</button>
+          const isUnpaid = o?.paid === false;
+          const amount = formatNaira(o?.totalAmount || 0);
+          const dateLine = `${fmtDate(o?.createdAt || o?.date)}${fmtTime(o?.createdAt || o?.date) ? " · " + fmtTime(o?.createdAt || o?.date) : ""}`;
+          const status = (o?.status || "unknown").toLowerCase();
+          let iconClass = "outgoing", iconName = "arrow_upward";
+          if (o?.paid === true) { iconClass = "incoming"; iconName = "arrow_downward"; }
+          if (status === "pending") { iconClass = "pending"; iconName = "schedule"; }
+          if (status === "processing") { iconClass = "processing"; iconName = "sync"; }
+          html += `<div class="txn-row-full" data-open-order="${o._id}">
+            <div class="txn-icon ${iconClass}"><span class="material-symbols-outlined text-lg">${iconName}</span></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold truncate">${o?.fuelType || "Fuel"} · ${Number(o?.quantity || 0)}L</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${dateLine}</p>
+              <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-1">${o?.fillingStation || "Station"} · ${o?.orderId ? "#" + o.orderId : "#-"}</p>
             </div>
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 shadow-sm">`;
-          orders.forEach(o => {
-            const isUnpaid = o?.paid === false;
-            const amount = formatNaira(o?.totalAmount || 0);
-            const dateLine = `${fmtDate(o?.createdAt || o?.date)}${fmtTime(o?.createdAt || o?.date) ? " · " + fmtTime(o?.createdAt || o?.date) : ""}`;
-            const status = (o?.status || "unknown").toLowerCase();
-            let iconClass = "outgoing", iconName = "arrow_upward";
-            if (o?.paid === true) { iconClass = "incoming"; iconName = "arrow_downward"; }
-            if (status === "pending") { iconClass = "pending"; iconName = "schedule"; }
-            if (status === "processing") { iconClass = "processing"; iconName = "sync"; }
-            html += `<div class="txn-row" data-open-order="${o._id}">
-              <div class="txn-icon ${iconClass}"><span class="material-symbols-outlined text-lg">${iconName}</span></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold truncate">${o?.fuelType || "Fuel"} · ${Number(o?.quantity || 0)}L</p>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${dateLine}</p>
-                <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-1">${o?.fillingStation || "Station"} · ${o?.orderId ? "#" + o.orderId : "#-"}</p>
-              </div>
-              <div class="text-right shrink-0">
-                <p class="text-sm font-bold ${isUnpaid ? 'text-slate-900 dark:text-white' : 'text-primary'}">${isUnpaid ? '-' : '+'}${amount}</p>
-                <span class="status-pill ${status} mt-1 inline-block">${o?.status || "unknown"}</span>
-              </div>
-            </div>`;
-          });
-          html += `</div></div>`;
+            <div class="text-right shrink-0">
+              <p class="text-sm font-bold ${isUnpaid ? 'text-slate-900 dark:text-white' : 'text-primary'}">${isUnpaid ? '-' : '+'}${amount}</p>
+              <span class="status-pill ${status} mt-1 inline-block">${o?.status || "unknown"}</span>
+            </div>
+          </div>`;
         });
-        mobileWrap.innerHTML = html;
-        mobileWrap.querySelectorAll("[data-open-order]").forEach(row => {
+        mobileListContainer.innerHTML = html;
+        mobileListContainer.querySelectorAll("[data-open-order]").forEach(row => {
           row.addEventListener("click", () => { const order = allOrders.find(x => x?._id === row.getAttribute("data-open-order")); if (order) openOrderModal(order); });
         });
       }
@@ -857,10 +834,14 @@
       document.getElementById("searchInput")?.addEventListener("input", applyClientFilters);
       document.getElementById("refreshBtn")?.addEventListener("click", loadOrders);
 
+      // Month select dropdown on mobile triggers filter
+      monthSelectMobile?.addEventListener("change", applyClientFilters);
+
       async function loadOrders() {
         showToast("Orders", "Loading your order history...");
         allOrders = await fetchMyOrders();
-        applyClientFilters(); // initial render with current filters
+        populateMonthDropdown();
+        applyClientFilters();
       }
 
       loadOrders();
