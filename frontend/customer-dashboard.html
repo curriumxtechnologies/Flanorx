@@ -630,18 +630,27 @@
 
                 <div class="grid grid-cols-1 gap-4">
                   <button
-                    class="group bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary transition-all text-left shadow-sm"
+                    class="group bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 hover:border-primary transition-all text-left shadow-sm flex items-center justify-between"
                     type="button"
                   >
+                    <!-- Icon Container (Left) -->
                     <div
-                      class="size-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+                      class="size-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform"
                     >
                       <span class="material-symbols-outlined font-bold"
                         >local_gas_station</span
                       >
                     </div>
-                    <h4 class="font-bold text-sm">Petrol</h4>
-                    <p class="text-xs text-slate-400">₦850 / L</p>
+
+                    <!-- Text Container (Right) -->
+                    <div class="text-right">
+                      <h4
+                        class="font-bold text-sm text-slate-900 dark:text-white"
+                      >
+                        Petrol
+                      </h4>
+                      <p class="text-xs text-slate-400">₦850 / L</p>
+                    </div>
                   </button>
                 </div>
               </div>
