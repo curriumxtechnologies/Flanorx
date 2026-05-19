@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Order Tracking | Flanorx Fuel Delivery</title>
+    <title>Tracking · Flanorx</title>
 
     <!-- Tailwind CSS with Plugins -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -264,13 +264,13 @@
         <nav class="flex-1 px-4 py-4 space-y-1">
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            href="customer-dashboard.html"
+            href="Home.html"
           >
             <span
               class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
-              data-lucide="layout-dashboard"
+              data-lucide="home"
             ></span>
-            <span class="font-medium text-sm">Dashboard</span>
+            <span class="font-medium text-sm">Home</span>
           </a>
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
@@ -623,13 +623,8 @@
 
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-bottom-nav">
-      <a
-        href="customer-dashboard.html"
-        class="bottom-nav-item"
-        id="bottomDashboard"
-      >
-        <span class="lucide-icon" data-lucide="layout-dashboard"></span
-        ><span>Home</span>
+      <a href="Home.html" class="bottom-nav-item" id="bottomDashboard">
+        <span class="lucide-icon" data-lucide="home"></span><span>Home</span>
       </a>
       <a href="Order-history.html" class="bottom-nav-item" id="bottomHistory">
         <span class="lucide-icon" data-lucide="clock"></span
@@ -1251,7 +1246,7 @@
           item.classList.remove("active");
           const href = item.getAttribute("href");
           if (
-            (currentPage === "home" && href === "customer-dashboard.html") ||
+            (currentPage === "home" && href === "Home.html") ||
             href === currentPage
           )
             item.classList.add("active");
