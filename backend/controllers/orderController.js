@@ -81,6 +81,177 @@ const verifyPaystackPayment = async (reference) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PROFILE RELATED FUNCTIONS (Added for user profile)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// @desc    Get user's profile
+// @route   GET /api/users/profile
+// @access  Private
+const getUserProfile = asyncHandler(async (req, res) => {
+  const user = req.user;
+  
+  res.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone || "",
+    profilePhoto: user.profilePhoto || "",
+    addresses: user.addresses || [],
+    memberSince: user.createdAt,
+    createdAt: user.createdAt
+  });
+});
+
+// @desc    Update user profile
+// @route   PUT /api/users/profile
+// @access  Private
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const user = req.user;
+  const { name, phone } = req.body;
+
+  if (name) user.name = name;
+  if (phone) user.phone = phone;
+
+  await user.save();
+
+  res.json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    profilePhoto: user.profilePhoto
+  });
+});
+
+// @desc    Upload profile photo
+// @route   POST /api/users/avatar
+// @access  Private
+const uploadProfilePhoto = asyncHandler(async (req, res) => {
+  const { imageUrl } = req.body;
+  
+  if (imageUrl) {
+    req.user.profilePhoto = imageUrl;
+    await req.user.save();
+  }
+  
+  res.json({ 
+    success: true, 
+    profilePhoto: req.user.profilePhoto,
+    message: "Profile photo updated" 
+  });
+});
+
+// @desc    Add new address
+// @route   POST /api/users/address
+// @access  Private
+const addAddress = asyncHandler(async (req, res) => {
+  const { label, address, coordinates, isDefault } = req.body;
+
+  if (!address) {
+    res.status(400);
+    throw new Error("Address is required");
+  }
+
+  const newAddress = {
+    label: label || "OTHER",
+    address,
+    coordinates: coordinates || { lat: null, lng: null },
+    isDefault: isDefault || false
+  };
+
+  // If this is the first address or isDefault true, set others to false
+  if (newAddress.isDefault || req.user.addresses.length === 0) {
+    req.user.addresses.forEach(addr => { addr.isDefault = false; });
+    newAddress.isDefault = true;
+  }
+
+  req.user.addresses.push(newAddress);
+  await req.user.save();
+
+  res.status(201).json({ 
+    success: true, 
+    address: newAddress,
+    addresses: req.user.addresses 
+  });
+});
+
+// @desc    Get order statistics
+// @route   GET /api/users/orders/stats
+// @access  Private
+const getOrderStats = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1;
+
+  // Total orders
+  const totalOrders = await Order.countDocuments({ user: userId });
+
+  // Orders this month
+  const monthlyOrders = await Order.countDocuments({ 
+    user: userId,
+    orderYear: currentYear,
+    orderMonth: currentMonth
+  });
+
+  res.json({
+    totalOrders,
+    monthlyOrders
+  });
+});
+
+// @desc    Get recent orders (last 3)
+// @route   GET /api/users/orders/recent
+// @access  Private
+const getRecentOrders = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const recentOrders = await Order.find({ user: userId })
+    .sort({ createdAt: -1 })
+    .limit(3)
+    .select("orderId date status totalAmount createdAt");
+
+  res.json(recentOrders);
+});
+
+// @desc    Get all user addresses
+// @route   GET /api/users/addresses
+// @access  Private
+const getUserAddresses = asyncHandler(async (req, res) => {
+  res.json(req.user.addresses || []);
+});
+
+// @desc    Delete address
+// @route   DELETE /api/users/address/:addressId
+// @access  Private
+const deleteAddress = asyncHandler(async (req, res) => {
+  const { addressId } = req.params;
+  
+  req.user.addresses = req.user.addresses.filter(
+    addr => addr._id.toString() !== addressId
+  );
+  
+  await req.user.save();
+  
+  res.json({ success: true, message: "Address deleted" });
+});
+
+// @desc    Set default address
+// @route   PUT /api/users/address/:addressId/default
+// @access  Private
+const setDefaultAddress = asyncHandler(async (req, res) => {
+  const { addressId } = req.params;
+  
+  req.user.addresses.forEach(addr => {
+    addr.isDefault = addr._id.toString() === addressId;
+  });
+  
+  await req.user.save();
+  
+  res.json({ success: true, addresses: req.user.addresses });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // @desc    Create Order (Customer)
 // @route   POST /api/order
 // @access  Private (protect)
@@ -725,7 +896,19 @@ const initializePaymentForOrder = asyncHandler(async (req, res) => {
   });
 });
 
+// Export all functions
 export {
+  // Profile functions
+  getUserProfile,
+  updateUserProfile,
+  uploadProfilePhoto,
+  addAddress,
+  getOrderStats,
+  getRecentOrders,
+  getUserAddresses,
+  deleteAddress,
+  setDefaultAddress,
+  // Order functions
   createOrder,
   getOrder,
   getOrders,
