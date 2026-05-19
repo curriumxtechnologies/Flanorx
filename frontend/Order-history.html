@@ -352,17 +352,17 @@
 
         <nav class="flex-1 px-4 py-4 space-y-1">
           <a
-            href="customer-dashboard.html"
+            href="Home.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
             <span
               class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >dashboard</span
+              >Home</span
             >
-            <span class="font-medium text-sm">Dashboard</span>
+            <span class="font-medium text-sm">Home</span>
           </a>
           <a
-            href="customer-order-history.html"
+            href="Order-history.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
           >
             <span class="material-symbols-outlined text-primary">history</span>
@@ -715,15 +715,11 @@
 
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-bottom-nav">
-      <a
-        href="customer-dashboard.html"
-        class="bottom-nav-item"
-        id="bottomDashboard"
-        ><span class="material-symbols-outlined">dashboard</span
-        ><span>Home</span></a
+      <a href="Home.html" class="bottom-nav-item" id="bottomDashboard"
+        ><span class="material-symbols-outlined">Home</span><span>Home</span></a
       >
       <a
-        href="customer-order-history.html"
+        href="Order-history.html"
         class="bottom-nav-item active"
         id="bottomHistory"
         ><span class="material-symbols-outlined">history</span
@@ -1018,10 +1014,10 @@
           .querySelectorAll(".bottom-nav-item")
           .forEach((i) => i.classList.remove("active"));
         const map = {
-          "": "customer-dashboard.html",
-          "index.html": "customer-dashboard.html",
-          "customer-dashboard.html": "customer-dashboard.html",
-          "customer-order-history.html": "customer-order-history.html",
+          "": "Home.html",
+          "index.html": "Home.html",
+          "Home.html": "Home.html",
+          "Order-history.html": "Order-history.html",
           "place-order.html": "place-order.html",
           "tracking.html": "tracking.html",
           "customer-settings.html": "customer-settings.html",
