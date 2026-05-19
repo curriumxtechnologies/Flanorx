@@ -647,7 +647,10 @@
                   </label>
                 </div>
 
-                <div class="mt-6 flex flex-col md:flex-row gap-4">
+                <div
+                  id="scheduleFields"
+                  class="mt-6 flex flex-col md:flex-row gap-4 hidden"
+                >
                   <div class="flex-1">
                     <label
                       class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2"
@@ -1295,6 +1298,24 @@
           "now"
         );
       }
+
+      const scheduleFields = document.getElementById("scheduleFields");
+
+      function toggleScheduleFields() {
+        const scheduleType = getScheduleType();
+
+        if (scheduleType === "scheduled") {
+          scheduleFields?.classList.remove("hidden");
+        } else {
+          scheduleFields?.classList.add("hidden");
+        }
+      }
+
+      document.querySelectorAll('input[name="schedule"]').forEach((radio) => {
+        radio.addEventListener("change", toggleScheduleFields);
+      });
+
+      toggleScheduleFields();
 
       // ========== CONFIRM & PAY ==========
       const confirmPayBtn = document.getElementById("confirmPayBtn");
