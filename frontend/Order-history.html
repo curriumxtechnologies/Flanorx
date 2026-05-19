@@ -69,7 +69,6 @@
         border-right: 4px solid #13ec5b;
         color: #111813;
       }
-
       .bottom-nav-item.active {
         color: #13ec5b;
         background: rgba(19, 236, 91, 0.1);
@@ -112,43 +111,44 @@
       .dark .bottom-nav-item.active .material-symbols-outlined {
         color: #13ec5b;
       }
-
       .mobile-bottom-nav {
         display: none;
       }
-
       @media (max-width: 1023px) {
+        body {
+          background: #f4f7f5;
+        }
+        .dark body {
+          background: #102216;
+        }
         .mobile-bottom-nav {
           display: flex;
           position: fixed;
           bottom: 0;
           left: 0;
           right: 0;
-          height: 72px;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
-          border-top: 1px solid rgba(226, 232, 240, 0.8);
+          min-height: 72px;
+          background: rgba(255, 255, 255, 0.96);
+          backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(226, 232, 240, 0.9);
           z-index: 40;
-          padding-bottom: env(safe-area-inset-bottom, 0);
+          padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0));
           align-items: center;
           justify-content: space-around;
-          box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.03);
+          box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.06);
         }
         .dark .mobile-bottom-nav {
-          background: rgba(15, 23, 42, 0.95);
+          background: rgba(15, 23, 42, 0.96);
           border-top-color: rgba(30, 41, 59, 0.8);
         }
         main {
           padding-bottom: calc(72px + env(safe-area-inset-bottom, 0));
         }
-        #sidebar {
-          display: none;
-        }
+        #sidebar,
         #backdrop {
           display: none;
         }
       }
-
       @media (min-width: 1024px) {
         #sidebar {
           display: flex !important;
@@ -160,7 +160,6 @@
           display: none;
         }
       }
-
       .toast {
         position: fixed;
         right: 16px;
@@ -168,136 +167,22 @@
         z-index: 60;
         max-width: 360px;
       }
-
-      .txn-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-      .txn-icon.outgoing {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-      }
-      .txn-icon.incoming {
-        background: rgba(19, 236, 91, 0.15);
-        color: #059669;
-      }
-      .txn-icon.pending {
-        background: rgba(245, 158, 11, 0.15);
-        color: #d97706;
-      }
-      .txn-icon.processing {
-        background: rgba(59, 130, 246, 0.15);
-        color: #2563eb;
-      }
-      .dark .txn-icon.outgoing {
-        background: rgba(239, 68, 68, 0.2);
-        color: #f87171;
-      }
-      .dark .txn-icon.incoming {
-        background: rgba(19, 236, 91, 0.2);
-        color: #34d399;
-      }
-      .dark .txn-icon.pending {
-        background: rgba(245, 158, 11, 0.2);
-        color: #fbbf24;
-      }
-      .dark .txn-icon.processing {
-        background: rgba(59, 130, 246, 0.2);
-        color: #60a5fa;
-      }
-
-      .status-pill {
-        font-size: 10px;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-weight: 700;
-        text-transform: capitalize;
-      }
-      .status-pill.success,
-      .status-pill.completed {
-        background: rgba(19, 236, 91, 0.15);
-        color: #059669;
-      }
-      .status-pill.pending {
-        background: rgba(245, 158, 11, 0.15);
-        color: #b45309;
-      }
-      .status-pill.processing {
-        background: rgba(59, 130, 246, 0.15);
-        color: #1d4ed8;
-      }
-      .status-pill.failed,
-      .status-pill.cancelled {
-        background: rgba(239, 68, 68, 0.15);
-        color: #dc2626;
-      }
-      .dark .status-pill.success,
-      .dark .status-pill.completed {
-        background: rgba(19, 236, 91, 0.2);
-        color: #34d399;
-      }
-      .dark .status-pill.pending {
-        background: rgba(245, 158, 11, 0.2);
-        color: #fbbf24;
-      }
-      .dark .status-pill.processing {
-        background: rgba(59, 130, 246, 0.2);
-        color: #60a5fa;
-      }
-      .dark .status-pill.failed,
-      .dark .status-pill.cancelled {
-        background: rgba(239, 68, 68, 0.2);
-        color: #f87171;
-      }
-
-      /* Simple select style for mobile filter: no background, just text and arrow */
       .plain-select {
         appearance: none;
-        background: none;
         border: none;
-        padding: 0 20px 0 0;
-        font-size: 13px;
-        font-weight: 600;
+        outline: none;
         color: inherit;
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'><path stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/></svg>");
+        cursor: pointer;
+        background-color: transparent;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'><path stroke='%2364758b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M6 8l4 4 4-4'/></svg>");
         background-repeat: no-repeat;
         background-position: right center;
-        background-size: 12px;
-        cursor: pointer;
-        outline: none;
+        background-size: 13px;
+        padding-right: 18px;
       }
       .dark .plain-select {
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'><path stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/></svg>");
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'><path stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M6 8l4 4 4-4'/></svg>");
       }
-
-      /* Full‑width transaction row */
-      .txn-row-full {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 16px;
-        border-bottom: 1px solid #e2e8f0;
-        cursor: pointer;
-        transition: background 0.15s;
-      }
-      .txn-row-full:last-child {
-        border-bottom: none;
-      }
-      .txn-row-full:hover {
-        background: rgba(0, 0, 0, 0.02);
-      }
-      .dark .txn-row-full {
-        border-bottom-color: #334155;
-      }
-      .dark .txn-row-full:hover {
-        background: rgba(255, 255, 255, 0.02);
-      }
-
       .content-fixed-shell {
         height: calc(100vh - 4rem);
         overflow: hidden;
@@ -311,13 +196,212 @@
         top: 0;
         z-index: 5;
       }
-
+      .status-pill {
+        font-size: 10px;
+        padding: 4px 9px;
+        border-radius: 9999px;
+        font-weight: 800;
+        text-transform: capitalize;
+        white-space: nowrap;
+      }
+      .status-pill.success,
+      .status-pill.completed {
+        background: rgba(19, 236, 91, 0.13);
+        color: #047857;
+      }
+      .status-pill.pending {
+        background: rgba(245, 158, 11, 0.14);
+        color: #b45309;
+      }
+      .status-pill.processing {
+        background: rgba(59, 130, 246, 0.14);
+        color: #1d4ed8;
+      }
+      .status-pill.failed,
+      .status-pill.cancelled {
+        background: rgba(239, 68, 68, 0.13);
+        color: #dc2626;
+      }
+      .dark .status-pill.success,
+      .dark .status-pill.completed {
+        background: rgba(19, 236, 91, 0.18);
+        color: #34d399;
+      }
+      .dark .status-pill.pending {
+        background: rgba(245, 158, 11, 0.18);
+        color: #fbbf24;
+      }
+      .dark .status-pill.processing {
+        background: rgba(59, 130, 246, 0.18);
+        color: #60a5fa;
+      }
+      .dark .status-pill.failed,
+      .dark .status-pill.cancelled {
+        background: rgba(239, 68, 68, 0.18);
+        color: #f87171;
+      }
+      .mobile-shell {
+        display: none;
+      }
+      .mobile-summary-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 24px;
+        background:
+          radial-gradient(
+            circle at top right,
+            rgba(255, 255, 255, 0.22),
+            transparent 30%
+          ),
+          linear-gradient(135deg, #0b8f43 0%, #13ec5b 100%);
+        color: #07130b;
+        box-shadow: 0 18px 45px rgba(19, 236, 91, 0.22);
+      }
+      .mobile-summary-card::after {
+        content: "";
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        right: -80px;
+        bottom: -100px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.18);
+      }
+      .mobile-filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 38px;
+        padding: 0 12px;
+        border-radius: 9999px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 800;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+      }
+      .dark .mobile-filter-chip {
+        background: #13251a;
+        border-color: #254232;
+        color: #cbd5e1;
+      }
+      .mobile-section-title {
+        position: sticky;
+        top: 0;
+        z-index: 12;
+        background: rgba(246, 248, 246, 0.94);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      }
+      .dark .mobile-section-title {
+        background: rgba(16, 34, 22, 0.94);
+        border-bottom-color: rgba(51, 65, 85, 0.65);
+      }
+      .mobile-transaction-group {
+        background: #fff;
+        border: 1px solid #e6efe9;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(15, 23, 42, 0.035);
+      }
+      .dark .mobile-transaction-group {
+        background: #13251a;
+        border-color: #254232;
+      }
+      .txn-row-full {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px 14px;
+        border-bottom: 1px solid #eef2f1;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          transform 0.15s;
+      }
+      .txn-row-full:last-child {
+        border-bottom: none;
+      }
+      .txn-row-full:active {
+        transform: scale(0.99);
+      }
+      .txn-row-full:hover {
+        background: rgba(15, 23, 42, 0.02);
+      }
+      .dark .txn-row-full {
+        border-bottom-color: rgba(51, 65, 85, 0.7);
+      }
+      .dark .txn-row-full:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .txn-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .txn-icon.outgoing {
+        background: #fff1f2;
+        color: #e11d48;
+      }
+      .txn-icon.incoming {
+        background: rgba(19, 236, 91, 0.16);
+        color: #059669;
+      }
+      .txn-icon.pending {
+        background: #fffbeb;
+        color: #d97706;
+      }
+      .txn-icon.processing {
+        background: #eff6ff;
+        color: #2563eb;
+      }
+      .dark .txn-icon.outgoing {
+        background: rgba(225, 29, 72, 0.16);
+        color: #fb7185;
+      }
+      .dark .txn-icon.incoming {
+        background: rgba(19, 236, 91, 0.18);
+        color: #34d399;
+      }
+      .dark .txn-icon.pending {
+        background: rgba(245, 158, 11, 0.16);
+        color: #fbbf24;
+      }
+      .dark .txn-icon.processing {
+        background: rgba(59, 130, 246, 0.16);
+        color: #60a5fa;
+      }
       @media (max-width: 1023px) {
+        header {
+          height: 58px !important;
+          background: rgba(246, 248, 246, 0.95) !important;
+          border-bottom: 0 !important;
+        }
+        .dark header {
+          background: rgba(16, 34, 22, 0.95) !important;
+        }
+        .content-fixed-shell {
+          height: calc(100vh - 58px);
+        }
+        .mobile-shell {
+          display: block;
+        }
         #tableWrap {
           display: none !important;
         }
         #mobileWrap {
           display: block !important;
+        }
+        .toast {
+          left: 12px;
+          right: 12px;
+          top: 12px;
+          max-width: none;
         }
       }
       @media (min-width: 1024px) {
@@ -424,34 +508,6 @@
             >
               Order History
             </h1>
-          </div>
-
-          <div class="flex items-center gap-4 lg:gap-6">
-            <button
-              class="relative text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              <span class="material-symbols-outlined">notifications</span>
-              <span
-                class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
-              ></span>
-            </button>
-            <div class="h-8 w-px bg-slate-200 dark:border-slate-800"></div>
-            <div class="flex items-center gap-3">
-              <div class="text-right hidden sm:block">
-                <p
-                  id="userNameTop"
-                  class="text-sm font-bold text-slate-900 dark:text-white"
-                >
-                  Customer
-                </p>
-              </div>
-              <div
-                id="userAvatar"
-                class="size-10 rounded-full bg-slate-200 bg-cover bg-center border-2 border-primary shrink-0"
-                style="background-image: url(&quot;&quot;)"
-                title="User"
-              ></div>
-            </div>
           </div>
         </header>
 
@@ -562,48 +618,100 @@
               </button>
             </div>
 
-            <!-- MOBILE FILTER BAR (simplified, no Apply button) -->
-            <div
-              class="lg:hidden flex items-center justify-between gap-3 px-4 py-3 bg-white dark:bg-slate-900 shadow-sm shrink-0"
-            >
-              <div class="flex items-center gap-4">
-                <!-- Status filter -->
-                <div
-                  class="flex items-center gap-1 text-slate-600 dark:text-slate-300"
-                >
-                  <span class="text-xs font-medium text-slate-500"
-                    >Status:</span
+            <!-- MOBILE OPAY-STYLE SUMMARY + FILTERS -->
+            <section class="mobile-shell lg:hidden space-y-4 shrink-0">
+              <div class="mobile-summary-card p-5">
+                <div class="relative z-10">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <p
+                        class="text-[11px] font-extrabold uppercase tracking-[0.18em] opacity-75"
+                      >
+                        Total Spent
+                      </p>
+                      <h2
+                        id="statTotalSpentMobile"
+                        class="mt-2 text-3xl font-black tracking-tight"
+                      >
+                        ₦0
+                      </h2>
+                    </div>
+                    <button
+                      id="mobileRefreshBtn"
+                      class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/25 backdrop-blur active:scale-95 transition-transform"
+                      aria-label="Refresh orders"
+                    >
+                      <span class="material-symbols-outlined text-xl"
+                        >refresh</span
+                      >
+                    </button>
+                  </div>
+                  <div class="mt-5 grid grid-cols-2 gap-3">
+                    <div class="rounded-2xl bg-white/24 p-3 backdrop-blur">
+                      <p class="text-[11px] font-bold opacity-70">Orders</p>
+                      <p
+                        id="statTotalOrdersMobile"
+                        class="mt-1 text-lg font-black"
+                      >
+                        0
+                      </p>
+                    </div>
+                    <div class="rounded-2xl bg-white/24 p-3 backdrop-blur">
+                      <p class="text-[11px] font-bold opacity-70">
+                        Current View
+                      </p>
+                      <p class="mt-1 text-lg font-black">
+                        <span id="monthlyCount">0</span> items
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]"
+              >
+                <label class="mobile-filter-chip shrink-0">
+                  <span class="material-symbols-outlined text-base text-primary"
+                    >calendar_month</span
                   >
-                  <select id="statusFilterMobile" class="plain-select">
-                    <option value="all">All</option>
+                  <select
+                    id="monthSelectMobile"
+                    class="plain-select bg-transparent"
+                  >
+                    <option value="all">All Months</option>
+                  </select>
+                </label>
+                <label class="mobile-filter-chip shrink-0">
+                  <span class="material-symbols-outlined text-base text-primary"
+                    >tune</span
+                  >
+                  <select
+                    id="statusFilterMobile"
+                    class="plain-select bg-transparent"
+                  >
+                    <option value="all">All Status</option>
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                     <option value="failed">Failed</option>
                   </select>
-                </div>
-                <!-- Paid filter -->
-                <div
-                  class="flex items-center gap-1 text-slate-600 dark:text-slate-300"
-                >
-                  <span class="text-xs font-medium text-slate-500">Paid:</span>
-                  <select id="paidFilterMobile" class="plain-select">
-                    <option value="all">All</option>
+                </label>
+                <label class="mobile-filter-chip shrink-0">
+                  <span class="material-symbols-outlined text-base text-primary"
+                    >payments</span
+                  >
+                  <select
+                    id="paidFilterMobile"
+                    class="plain-select bg-transparent"
+                  >
+                    <option value="all">All Payments</option>
                     <option value="true">Paid</option>
                     <option value="false">Unpaid</option>
                   </select>
-                </div>
+                </label>
               </div>
-              <!-- Stats -->
-              <span class="text-xs text-slate-500 whitespace-nowrap ml-auto">
-                <span id="statTotalOrdersMobile" class="font-bold">0</span>
-                orders ·
-                <span id="statTotalSpentMobile" class="font-bold text-primary"
-                  >₦0</span
-                >
-              </span>
-            </div>
+            </section>
 
             <!-- SCROLLABLE AREA -->
             <div class="flex-1 min-h-0 table-scroll-area">
@@ -688,24 +796,37 @@
               </div>
 
               <!-- Mobile list -->
-              <div id="mobileWrap">
-                <!-- Sticky Month Selector -->
+              <div id="mobileWrap" class="px-4 pb-6">
                 <div
-                  id="monthSelectorSticky"
-                  class="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-between"
+                  class="mobile-section-title -mx-4 mb-3 px-4 py-3 flex items-center justify-between"
                 >
-                  <select
-                    id="monthSelectMobile"
-                    class="plain-select font-bold text-slate-900 dark:text-white"
+                  <div>
+                    <p
+                      class="text-sm font-black text-slate-900 dark:text-white"
+                    >
+                      Transactions
+                    </p>
+                    <p
+                      class="text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+                    >
+                      Tap any order to view full details
+                    </p>
+                  </div>
+                  <button
+                    id="mobileSearchInline"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm"
+                    aria-label="Search orders"
                   >
-                    <option value="all">All Months</option>
-                  </select>
-                  <span class="text-xs text-slate-400"
-                    >Total: <span id="monthlyCount">0</span></span
-                  >
+                    <span
+                      class="material-symbols-outlined text-lg text-slate-600 dark:text-slate-300"
+                      >search</span
+                    >
+                  </button>
                 </div>
-                <!-- Full‑width transaction rows -->
-                <div id="mobileListContainer"></div>
+                <div
+                  id="mobileListContainer"
+                  class="mobile-transaction-group"
+                ></div>
               </div>
             </div>
           </div>
@@ -924,6 +1045,18 @@
       function formatNaira(n) {
         return "₦" + Number(n || 0).toLocaleString("en-NG");
       }
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+      function escapeHTML(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
       function fmtDate(d) {
         const dt = d ? new Date(d) : null;
         return dt && !isNaN(dt)
@@ -984,11 +1117,16 @@
       (function initUser() {
         const user = requireAuthOrRedirect();
         if (!user) return;
-        document.getElementById("userNameTop").textContent =
-          user?.name || user?.email || "Customer";
-        const av = document.getElementById("userAvatar");
-        if (av && user?.profile)
-          av.style.backgroundImage = `url('${user.profile}')`;
+
+        const userNameTop = document.getElementById("userNameTop");
+        if (userNameTop) {
+          userNameTop.textContent = user?.name || user?.email || "Customer";
+        }
+
+        const userAvatar = document.getElementById("userAvatar");
+        if (userAvatar && user?.profile) {
+          userAvatar.style.backgroundImage = `url('${user.profile}')`;
+        }
       })();
 
       document
@@ -1112,20 +1250,16 @@
           (sum, o) => sum + Number(o?.totalAmount || 0),
           0,
         );
-        document.getElementById("statTotalOrdersDesktop").textContent =
-          totalOrders;
-        document.getElementById("statTotalSpentDesktop").textContent =
-          formatNaira(totalSpent);
-        document.getElementById("statTotalOrdersMobile").textContent =
-          totalOrders;
-        document.getElementById("statTotalSpentMobile").textContent =
-          formatNaira(totalSpent);
-        document.getElementById("monthlyCount").textContent = totalOrders;
+        setText("statTotalOrdersDesktop", totalOrders);
+        setText("statTotalSpentDesktop", formatNaira(totalSpent));
+        setText("statTotalOrdersMobile", totalOrders);
+        setText("statTotalSpentMobile", formatNaira(totalSpent));
+        setText("monthlyCount", totalOrders);
 
         if (filtered.length === 0) {
           emptyState?.classList.remove("hidden");
-          mobileListContainer.innerHTML = "";
-          ordersTbody.innerHTML = "";
+          if (mobileListContainer) mobileListContainer.innerHTML = "";
+          if (ordersTbody) ordersTbody.innerHTML = "";
           if (resultsHint) resultsHint.textContent = "Showing 0 results";
           return;
         }
@@ -1256,43 +1390,58 @@
         if (!mobileListContainer) return;
         mobileListContainer.innerHTML = "";
         if (!list?.length) {
-          mobileListContainer.innerHTML =
-            '<div class="text-center text-slate-400 py-4 px-4">No transactions for this period</div>';
+          mobileListContainer.classList.remove("mobile-transaction-group");
+          mobileListContainer.innerHTML = `
+            <div class="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
+              <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <span class="material-symbols-outlined">receipt_long</span>
+              </div>
+              <p class="text-sm font-black text-slate-800 dark:text-white">No transactions here</p>
+              <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Try another month, status, or payment filter.</p>
+            </div>`;
           return;
         }
-        let html = "";
-        list.forEach((o) => {
-          const isUnpaid = o?.paid === false;
-          const amount = formatNaira(o?.totalAmount || 0);
-          const dateLine = `${fmtDate(o?.createdAt || o?.date)}${fmtTime(o?.createdAt || o?.date) ? " · " + fmtTime(o?.createdAt || o?.date) : ""}`;
-          const status = (o?.status || "unknown").toLowerCase();
-          let iconClass = "outgoing",
-            iconName = "arrow_upward";
-          if (o?.paid === true) {
-            iconClass = "incoming";
-            iconName = "arrow_downward";
-          }
-          if (status === "pending") {
-            iconClass = "pending";
-            iconName = "schedule";
-          }
-          if (status === "processing") {
-            iconClass = "processing";
-            iconName = "sync";
-          }
-          html += `<div class="txn-row-full" data-open-order="${o._id}">
-            <div class="txn-icon ${iconClass}"><span class="material-symbols-outlined text-lg">${iconName}</span></div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold truncate">${o?.fuelType || "Fuel"} · ${Number(o?.quantity || 0)}L</p>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${dateLine}</p>
-              <p class="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-1">${o?.fillingStation || "Station"} · ${o?.orderId ? "#" + o.orderId : "#-"}</p>
-            </div>
-            <div class="text-right shrink-0">
-              <p class="text-sm font-bold ${isUnpaid ? "text-slate-900 dark:text-white" : "text-primary"}">${isUnpaid ? "-" : "+"}${amount}</p>
-              <span class="status-pill ${status} mt-1 inline-block">${o?.status || "unknown"}</span>
-            </div>
-          </div>`;
-        });
+        mobileListContainer.classList.add("mobile-transaction-group");
+        const html = list
+          .map((o) => {
+            const isUnpaid = o?.paid === false;
+            const amount = formatNaira(o?.totalAmount || 0);
+            const dateLine = `${fmtDate(o?.createdAt || o?.date)}${fmtTime(o?.createdAt || o?.date) ? " · " + fmtTime(o?.createdAt || o?.date) : ""}`;
+            const status = (o?.status || "unknown").toLowerCase();
+            let iconClass = "outgoing";
+            let iconName = "local_gas_station";
+            if (o?.paid === true) {
+              iconClass = "incoming";
+              iconName = "check_circle";
+            }
+            if (status === "pending") {
+              iconClass = "pending";
+              iconName = "schedule";
+            }
+            if (status === "processing") {
+              iconClass = "processing";
+              iconName = "sync";
+            }
+            const orderNo = o?.orderId ? `#${escapeHTML(o.orderId)}` : "#-";
+            const station = escapeHTML(o?.fillingStation || "Filling station");
+            const quantity = Number(o?.quantity || 0);
+            return `<div class="txn-row-full" data-open-order="${escapeHTML(o._id)}">
+              <div class="txn-icon ${iconClass}"><span class="material-symbols-outlined text-xl">${iconName}</span></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <p class="truncate text-sm font-extrabold text-slate-900 dark:text-white">Petrol delivery</p>
+                  <span class="status-pill ${status}">${escapeHTML(o?.status || "unknown")}</span>
+                </div>
+                <p class="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">${dateLine}</p>
+                <p class="mt-1 truncate text-xs text-slate-600 dark:text-slate-300">${station} · ${quantity}L · ${orderNo}</p>
+              </div>
+              <div class="shrink-0 text-right">
+                <p class="text-sm font-black ${isUnpaid ? "text-slate-900 dark:text-white" : "text-emerald-600 dark:text-primary"}">${amount}</p>
+                <p class="mt-1 text-[11px] font-extrabold ${isUnpaid ? "text-red-500" : "text-emerald-600 dark:text-primary"}">${isUnpaid ? "Unpaid" : "Paid"}</p>
+              </div>
+            </div>`;
+          })
+          .join("");
         mobileListContainer.innerHTML = html;
         mobileListContainer
           .querySelectorAll("[data-open-order]")
@@ -1421,6 +1570,12 @@
       document
         .getElementById("refreshBtn")
         ?.addEventListener("click", loadOrders);
+      document
+        .getElementById("mobileRefreshBtn")
+        ?.addEventListener("click", loadOrders);
+      document
+        .getElementById("mobileSearchInline")
+        ?.addEventListener("click", () => searchFab?.click());
 
       // Mobile auto-filter: any change in status, paid, or month triggers filter immediately
       document
@@ -1433,7 +1588,11 @@
 
       async function loadOrders() {
         showToast("Orders", "Loading your order history...");
-        allOrders = await fetchMyOrders();
+        allOrders = (await fetchMyOrders()).sort((a, b) => {
+          const da = new Date(a?.createdAt || a?.date || 0).getTime();
+          const db = new Date(b?.createdAt || b?.date || 0).getTime();
+          return db - da;
+        });
         populateMonthDropdown();
         applyClientFilters();
       }
