@@ -285,7 +285,7 @@ const getOrder = asyncHandler(async (req, res) => {
 
   const order = await Order.findById(req.params.id)
     .populate("user", "name email")
-    .populate("rider", "name email profilePicture");
+    .populate("rider", "name email profilePicture phone");
 
   if (!order) {
     res.status(404);
@@ -327,7 +327,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
 
   const orders = await Order.find(filter)
     .sort({ createdAt: -1 })
-    .populate("rider", "name profilePicture");
+    .populate("rider", "name profilePicture phone");
 
   res.status(200).json(orders);
 });
@@ -401,7 +401,7 @@ const getMyActiveOrder = asyncHandler(async (req, res) => {
     },
   })
     .sort({ createdAt: -1 })
-    .populate("rider", "name profilePicture");
+    .populate("rider", "name profilePicture phone");
 
   res.status(200).json(activeOrder || null);
 });
@@ -436,7 +436,7 @@ const getDeliveryStatus = asyncHandler(async (req, res) => {
         "customerConfirmedAt",
       ].join(" ")
     )
-    .populate("rider", "name email profilePicture");
+    .populate("rider", "name email profilePicture phone");
 
   if (!order) {
     res.status(404);
@@ -487,7 +487,7 @@ const getOrders = asyncHandler(async (req, res) => {
 
   const orders = await Order.find(filter)
     .populate("user", "name email")
-    .populate("rider", "name email profilePicture")
+    .populate("rider", "name email profilePicture phone")
     .sort({ createdAt: -1 });
 
   res.status(200).json(orders);
@@ -615,8 +615,6 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 // @route   GET /api/order/verify/:reference
 // @access  Private (protect)
 // ─────────────────────────────────────────────────────────────────────────────
-// controllers/orderController.js
-
 const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   const { reference } = req.params;
 
@@ -634,7 +632,7 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
 
   const order = await Order.findOne({ paymentReference: reference })
     .populate("user", "name email")
-    .populate("rider", "name email profilePicture");
+    .populate("rider", "name email profilePicture phone");
 
   if (!order) {
     res.status(404);
@@ -666,7 +664,7 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
 
   const refreshedOrder = await Order.findById(order._id)
     .populate("user", "name email")
-    .populate("rider", "name email profilePicture");
+    .populate("rider", "name email profilePicture phone");
 
   res.status(200).json({ order: refreshedOrder });
 });

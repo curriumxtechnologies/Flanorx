@@ -10,6 +10,12 @@ const riderSchema = mongoose.Schema(
 
     password: { type: String, required: true },
 
+    phone: {
+      type: String,
+      default: "",
+      required: false,
+    },
+
     nin: {
       type: String,
       unique: true,

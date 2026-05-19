@@ -1,3 +1,4 @@
+// controllers/riderController.js
 import express from "express";
 import Rider from "../models/riderModel.js";
 import asyncHandler from "express-async-handler";
@@ -139,6 +140,7 @@ const submitRiderVerification = asyncHandler(async (req, res) => {
     bankAccountNumber,
     bankName,
     accountName,
+    phone,
   } = req.body;
 
   // ✅ Files uploaded to Cloudinary (coming from multer)
@@ -196,6 +198,7 @@ const submitRiderVerification = asyncHandler(async (req, res) => {
   if (bankAccountNumber) rider.bankAccountNumber = bankAccountNumber;
   if (bankName) rider.bankName = bankName;
   if (accountName) rider.accountName = accountName;
+  if (phone) rider.phone = phone;
 
   // Always pending until admin verifies
   rider.verificationStatus = "pending";
@@ -216,6 +219,7 @@ const submitRiderVerification = asyncHandler(async (req, res) => {
       bankAccountNumber: rider.bankAccountNumber,
       bankName: rider.bankName,
       accountName: rider.accountName,
+      phone: rider.phone,
       verificationStatus: rider.verificationStatus,
     },
   });
@@ -273,6 +277,7 @@ const getRiderProfile = asyncHandler(async (req, res) => {
     bankAccountNumber: rider.bankAccountNumber,
     bankName: rider.bankName,
     accountName: rider.accountName,
+    phone: rider.phone,
 
     // if your schema has them:
     verificationStatus: rider.verificationStatus,
@@ -297,6 +302,7 @@ const updateRiderProfile = asyncHandler(async (req, res) => {
   rider.name = req.body.name ?? rider.name;
   rider.email = req.body.email ?? rider.email;
   rider.profile = req.body.profile ?? rider.profile;
+  rider.phone = req.body.phone ?? rider.phone;
 
   // Only re-hash if a new password is supplied — pre('save') handles the hashing
   if (req.body.password) {
@@ -312,6 +318,7 @@ const updateRiderProfile = asyncHandler(async (req, res) => {
     email: updated.email,
     profile: updated.profile,
     status: updated.status,
+    phone: updated.phone,
     token,
     cookieSet: true,
   });
