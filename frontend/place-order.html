@@ -346,61 +346,6 @@
 
       <!-- Main -->
       <main class="flex-1 flex flex-col overflow-y-auto">
-        <header
-          class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10"
-        >
-          <div class="flex items-center gap-4">
-            <button
-              id="menuToggle"
-              class="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              <span class="material-symbols-outlined text-2xl">menu</span>
-            </button>
-
-            <div class="relative">
-              <span
-                class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xl"
-                >search</span
-              >
-              <input
-                class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-40 lg:w-64 transition-all"
-                placeholder="Search orders, invoices..."
-                type="text"
-              />
-            </div>
-          </div>
-
-          <div class="flex items-center gap-4 lg:gap-6">
-            <button
-              class="relative text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              <span class="material-symbols-outlined">notifications</span>
-              <span
-                class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
-              ></span>
-            </button>
-
-            <div class="h-8 w-px bg-slate-200 dark:border-slate-800"></div>
-
-            <div class="flex items-center gap-3">
-              <div class="text-right hidden sm:block">
-                <p
-                  id="userNameTop"
-                  class="text-sm font-bold text-slate-900 dark:text-white"
-                >
-                  Customer
-                </p>
-              </div>
-              <div
-                id="userAvatar"
-                class="size-10 rounded-full bg-slate-200 bg-cover bg-center border-2 border-primary shrink-0"
-                style="background-image: url(&quot;&quot;)"
-                title="User"
-              ></div>
-            </div>
-          </div>
-        </header>
-
         <!-- Toast -->
         <div id="toast" class="toast hidden">
           <div
