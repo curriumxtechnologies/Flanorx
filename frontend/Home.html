@@ -1124,7 +1124,6 @@
 
       async function loadActiveOrder() {
         const activeOrderCard = document.getElementById("activeOrderCard");
-        const summaryCards = document.getElementById("summaryCards");
         const activeUI = document.getElementById("activeUI");
         const noActiveUI = document.getElementById("noActiveUI");
         const dot = document.getElementById("activeDot");
@@ -1139,60 +1138,76 @@
         const confirmBtn = document.getElementById("confirmDeliveryBtn");
         const trackBtn = document.getElementById("trackLiveRiderBtn");
 
-        // Hide card and keep summary at default width
-        if (activeOrderCard) activeOrderCard.classList.add("hidden");
-        if (summaryCards) {
-          summaryCards.classList.remove("lg:grid-cols-3");
-          summaryCards.classList.add("lg:grid-cols-2");
-        }
-        if (activeUI) activeUI.classList.add("hidden");
-        if (noActiveUI) noActiveUI.classList.add("hidden");
-        if (dot) dot.className = "size-2 bg-slate-300 rounded-full";
-        if (idEl) idEl.textContent = "ID: --";
-        if (confirmBtn) {
-          confirmBtn.classList.add("hidden");
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = "Confirm Delivery";
-          confirmBtn.onclick = null;
-        }
-        if (trackBtn) {
-          trackBtn.classList.remove("hidden");
-          trackBtn.classList.add("flex-1");
-        }
-
         try {
           const res = await authenticatedFetch(
             `${API_BASE_URL}/api/order/active`,
           );
           const data = await res.json().catch(() => null);
+
           if (res.status === 401) return;
 
-          // No active order - keep card hidden, summary stays at col-span-8 (default)
           if (!res.ok || !data || !data._id) {
+            if (activeOrderCard) activeOrderCard.classList.add("hidden");
+            if (activeUI) activeUI.classList.add("hidden");
+            if (noActiveUI) noActiveUI.classList.add("hidden");
             return;
           }
 
-          // Active order exists - show card as col-span-12, summary also col-span-12
           if (activeOrderCard) activeOrderCard.classList.remove("hidden");
-          if (summaryCards) {
-            summaryCards.classList.remove("lg:grid-cols-2");
-            summaryCards.classList.add("lg:grid-cols-3");
-          }
           if (activeUI) activeUI.classList.remove("hidden");
           if (noActiveUI) noActiveUI.classList.add("hidden");
-          if (dot)
+
+          if (dot) {
             dot.className = "size-2 bg-primary rounded-full animate-pulse";
-          if (idEl)
+          }
+
+          if (idEl) {
             idEl.textContent = `ID: ${data.orderId || data._id || "--"}`;
-          if (statusEl)
+          }
+
+          if (statusEl) {
             statusEl.textContent = prettyStatus(
               data.deliveryStatus || data.status,
             );
-          if (fuelEl) fuelEl.textContent = fuelLabel(data.fuelType);
-          if (amountEl)
+          }
+
+          if (fuelEl) {
+            fuelEl.textContent = fuelLabel(data.fuelType);
+          }
+
+          if (amountEl) {
             amountEl.textContent = formatNaira(data.totalAmount || data.amount);
+          }
+
+          const etaMinutes = Number(data?.etaMinutes);
+          const distanceKm = Number(data?.distanceKm);
+
+          if (etaValueEl) {
+            if (!Number.isNaN(etaMinutes)) {
+              etaValueEl.textContent = `${etaMinutes} mins`;
+            } else if (!Number.isNaN(distanceKm)) {
+              etaValueEl.textContent = `${distanceKm.toFixed(1)} km`;
+            } else if (
+              (data?.deliveryStatus || "").toLowerCase() === "delivered"
+            ) {
+              etaValueEl.textContent = "Arrived";
+            } else {
+              etaValueEl.textContent = "--";
+            }
+          }
+
+          const progress = computeProgress(data);
+
+          if (etaProgress) {
+            etaProgress.style.width = `${progress}%`;
+          }
+
+          if (hint) {
+            hint.textContent = getHintText(data);
+          }
 
           const rider = data?.rider || null;
+
           if (callBtn) {
             if (rider?.phone || rider?.phoneNumber) {
               const phone = rider.phone || rider.phoneNumber;
@@ -1208,36 +1223,24 @@
             }
           }
 
-          const etaMinutes = Number(data?.etaMinutes);
-          const distanceKm = Number(data?.distanceKm);
-          if (etaValueEl) {
-            if (!Number.isNaN(etaMinutes))
-              etaValueEl.textContent = `${etaMinutes} mins`;
-            else if (!Number.isNaN(distanceKm))
-              etaValueEl.textContent = `${distanceKm.toFixed(1)} km`;
-            else if ((data?.deliveryStatus || "").toLowerCase() === "delivered")
-              etaValueEl.textContent = "Arrived";
-            else etaValueEl.textContent = "--";
-          }
-
-          const p = computeProgress(data);
-          if (etaProgress) etaProgress.style.width = `${p}%`;
-          if (hint) hint.textContent = getHintText(data);
-
           if (confirmBtn && trackBtn) {
             if ((data?.deliveryStatus || "").toLowerCase() === "delivered") {
               confirmBtn.classList.remove("hidden");
+              confirmBtn.disabled = false;
+              confirmBtn.textContent = "Confirm Delivery";
               confirmBtn.onclick = () => confirmDelivery(data._id, confirmBtn);
-              trackBtn.classList.remove("flex-1");
+
               trackBtn.classList.add("flex-1");
             } else {
               confirmBtn.classList.add("hidden");
+              confirmBtn.onclick = null;
+
+              trackBtn.classList.remove("hidden");
               trackBtn.classList.add("flex-1");
             }
           }
         } catch (err) {
           console.error("loadActiveOrder error:", err);
-          // Card stays hidden on error, summary stays at col-span-8
         }
       }
 
