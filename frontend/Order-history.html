@@ -1405,7 +1405,6 @@
       monthSelectMobile?.addEventListener("change", applyClientFilters);
 
       async function loadOrders() {
-        showToast("Orders", "Loading your order history...");
         allOrders = await fetchMyOrders();
         populateMonthDropdown();
         applyClientFilters();
