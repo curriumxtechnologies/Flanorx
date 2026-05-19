@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Flanorx Customer Dashboard</title>
+    <title>Flanorx | Home</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -236,13 +236,6 @@
         }
       }
 
-      .scrollable-recent {
-        max-height: 320px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-      }
-
       .scrollable-recent::-webkit-scrollbar {
         width: 4px;
       }
@@ -287,10 +280,8 @@
             href="#"
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
           >
-            <span class="material-symbols-outlined text-primary"
-              >dashboard</span
-            >
-            <span class="font-semibold text-sm">Dashboard</span>
+            <span class="material-symbols-outlined text-primary">Home</span>
+            <span class="font-semibold text-sm">Home</span>
           </a>
           <a
             href="customer-order-history.html"
@@ -390,24 +381,43 @@
         </header>
 
         <!-- Unauthorized Card (hidden by default) -->
-        <div id="unauthorizedState" class="hidden flex-1 overflow-y-auto p-4 lg:p-8 flex items-center justify-center">
-          <div class="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-slate-200 dark:border-slate-800 text-center">
-            <div class="mx-auto size-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6">
-              <span class="material-symbols-outlined text-red-500 text-4xl">lock</span>
+        <div
+          id="unauthorizedState"
+          class="hidden flex-1 overflow-y-auto p-4 lg:p-8 flex items-center justify-center"
+        >
+          <div
+            class="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-2xl border border-slate-200 dark:border-slate-800 text-center"
+          >
+            <div
+              class="mx-auto size-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6"
+            >
+              <span class="material-symbols-outlined text-red-500 text-4xl"
+                >lock</span
+              >
             </div>
-            <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white mb-3">You're not logged in</h2>
-            <p class="text-slate-500 dark:text-slate-400 mb-8">Please log in to access your dashboard, order history, and tracking.</p>
+            <h2
+              class="text-2xl font-extrabold text-slate-900 dark:text-white mb-3"
+            >
+              You're not logged in
+            </h2>
+            <p class="text-slate-500 dark:text-slate-400 mb-8">
+              Please log in to access your dashboard, order history, and
+              tracking.
+            </p>
             <a
               href="login.html"
               class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-slate-900 font-extrabold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary/20"
             >
-              <span class="material-symbols-outlined">login</span> Login to Dashboard
+              <span class="material-symbols-outlined">login</span> Login now
             </a>
           </div>
         </div>
 
         <!-- Dashboard Content (wrapped inside a container) -->
-        <div id="dashboardContent" class="flex-1 overflow-y-auto p-4 lg:p-8 hidden">
+        <div
+          id="dashboardContent"
+          class="flex-1 overflow-y-auto p-4 lg:p-8 hidden"
+        >
           <div class="space-y-8">
             <div
               class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 shrink-0"
@@ -659,7 +669,11 @@
                       >
                     </div>
                     <div class="text-right">
-                      <h4 class="font-bold text-sm text-slate-900 dark:text-white">Petrol</h4>
+                      <h4
+                        class="font-bold text-sm text-slate-900 dark:text-white"
+                      >
+                        Petrol
+                      </h4>
                       <p class="text-xs text-slate-400">₦850 / L</p>
                     </div>
                   </button>
@@ -722,8 +736,7 @@
 
     <nav class="mobile-bottom-nav">
       <a href="#" class="bottom-nav-item" id="bottomHome"
-        ><span class="material-symbols-outlined">dashboard</span
-        ><span>Home</span></a
+        ><span class="material-symbols-outlined">Home</span><span>Home</span></a
       >
       <a
         href="customer-order-history.html"
@@ -764,10 +777,10 @@
       }
 
       // Show the unauthorized card and hide dashboard content
-      function showUnauthorized(reason = '') {
-        if (reason) console.error('Unauthorized access:', reason);
-        document.getElementById('unauthorizedState').classList.remove('hidden');
-        document.getElementById('dashboardContent').classList.add('hidden');
+      function showUnauthorized(reason = "") {
+        if (reason) console.error("Unauthorized access:", reason);
+        document.getElementById("unauthorizedState").classList.remove("hidden");
+        document.getElementById("dashboardContent").classList.add("hidden");
         // Optionally hide the sidebar/mobile nav if needed, but they are still visible.
         // We keep them visible so user can still navigate.
         // Clear any stored auth that may be corrupted
@@ -785,7 +798,7 @@
           if (!user || !user.token) return false;
           return true;
         } catch (e) {
-          console.error('Auth check error:', e);
+          console.error("Auth check error:", e);
           return false;
         }
       }
@@ -797,32 +810,44 @@
             const raw = localStorage.getItem("flanorx_auth");
             if (!raw) return null;
             return JSON.parse(raw)?.token || null;
-          } catch { return null; }
+          } catch {
+            return null;
+          }
         })();
 
         if (!token) {
-          showUnauthorized('No auth token found');
-          throw new Error('Not authenticated');
+          showUnauthorized("No auth token found");
+          throw new Error("Not authenticated");
         }
 
         const headers = {
           ...options.headers,
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         };
 
         const res = await fetch(url, { ...options, headers });
         if (res.status === 401) {
-          console.error('API request unauthorized (401):', url);
-          showUnauthorized('Session expired or unauthorized');
-          throw new Error('Unauthorized');
+          console.error("API request unauthorized (401):", url);
+          showUnauthorized("Session expired or unauthorized");
+          throw new Error("Unauthorized");
         }
         return res;
       }
 
       function monthName(m) {
         const names = [
-          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
         ];
         return names[m - 1] || "Month";
       }
@@ -845,10 +870,14 @@
 
       function statusBadgeClass(status) {
         const s = (status || "").toLowerCase();
-        if (s === "completed") return "bg-primary/10 text-emerald-600 dark:text-primary";
-        if (s === "processing") return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-        if (s === "pending") return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300";
-        if (s === "cancelled") return "bg-slate-100 dark:bg-slate-800 text-slate-500";
+        if (s === "completed")
+          return "bg-primary/10 text-emerald-600 dark:text-primary";
+        if (s === "processing")
+          return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+        if (s === "pending")
+          return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300";
+        if (s === "cancelled")
+          return "bg-slate-100 dark:bg-slate-800 text-slate-500";
         return "bg-slate-100 dark:bg-slate-800 text-slate-500";
       }
 
@@ -877,7 +906,8 @@
 
       function computeProgress(data) {
         const deliveryStatus = (data?.deliveryStatus || "").toLowerCase();
-        if (deliveryStatus === "confirmed" || data?.status === "completed") return 100;
+        if (deliveryStatus === "confirmed" || data?.status === "completed")
+          return 100;
         if (deliveryStatus === "delivered") return 95;
         if (deliveryStatus === "in_transit") return 75;
         if (deliveryStatus === "picked_up") return 55;
@@ -907,7 +937,8 @@
         const etaMinutes = Number(data?.etaMinutes);
         const distanceKm = Number(data?.distanceKm);
         const bits = [];
-        if (!Number.isNaN(distanceKm)) bits.push(`Distance: ${distanceKm.toFixed(1)} km`);
+        if (!Number.isNaN(distanceKm))
+          bits.push(`Distance: ${distanceKm.toFixed(1)} km`);
         if (!Number.isNaN(etaMinutes)) bits.push(`ETA: ${etaMinutes} mins`);
         return bits.join(" • ");
       }
@@ -922,12 +953,13 @@
           const heroName = document.getElementById("userNameHero");
           const avatar = document.getElementById("userAvatar");
           if (topName) topName.textContent = fullName;
-          if (heroName) heroName.textContent = fullName.split(" ")[0] || fullName;
+          if (heroName)
+            heroName.textContent = fullName.split(" ")[0] || fullName;
           if (avatar && user?.profile) {
             avatar.style.backgroundImage = `url('${user.profile}')`;
           }
         } catch (e) {
-          console.error('Error setting user info:', e);
+          console.error("Error setting user info:", e);
         }
       }
 
@@ -949,7 +981,7 @@
             headers: { Authorization: `Bearer ${getToken()}` },
           });
         } catch (err) {
-          console.error('Logout error:', err);
+          console.error("Logout error:", err);
         }
         localStorage.removeItem("flanorx_auth");
         window.location.href = "login.html";
@@ -959,7 +991,9 @@
         try {
           const raw = localStorage.getItem("flanorx_auth");
           return raw ? JSON.parse(raw)?.token : null;
-        } catch { return null; }
+        } catch {
+          return null;
+        }
       }
 
       async function loadTotalSpentAndFuel(month, year) {
@@ -969,15 +1003,17 @@
 
         try {
           const res = await authenticatedFetch(
-            `${API_BASE_URL}/api/order/total-spent?month=${month}&year=${year}`
+            `${API_BASE_URL}/api/order/total-spent?month=${month}&year=${year}`,
           );
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data?.message || "Failed");
           if (valueEl) valueEl.textContent = formatNaira(data.totalSpent || 0);
-          if (fuelEl) fuelEl.textContent = `${(data.totalLiters || 0).toLocaleString()} Liters`;
-          if (titleEl) titleEl.textContent = `Total Spent (${monthName(month)} ${year})`;
+          if (fuelEl)
+            fuelEl.textContent = `${(data.totalLiters || 0).toLocaleString()} Liters`;
+          if (titleEl)
+            titleEl.textContent = `Total Spent (${monthName(month)} ${year})`;
         } catch (err) {
-          console.error('loadTotalSpentAndFuel error:', err);
+          console.error("loadTotalSpentAndFuel error:", err);
           if (valueEl) valueEl.textContent = "₦0";
           if (fuelEl) fuelEl.textContent = "0 Liters";
           if (titleEl) titleEl.textContent = "Total Spent (Unavailable)";
@@ -986,113 +1022,140 @@
 
       async function loadRecentTransactions() {
         const desktopTbody = document.getElementById("recentTransactionsTbody");
-        const mobileContainer = document.getElementById("recentMobileCardsContainer");
+        const mobileContainer = document.getElementById(
+          "recentMobileCardsContainer",
+        );
 
-        if (desktopTbody) desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Loading transactions...</td></tr>`;
-        if (mobileContainer) mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">Loading transactions...</div>`;
+        if (desktopTbody)
+          desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Loading transactions...</td></tr>`;
+        if (mobileContainer)
+          mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">Loading transactions...</div>`;
 
         try {
           const res = await authenticatedFetch(`${API_BASE_URL}/api/order/my`);
-          if (res.status === 401) return; // handled by authenticatedFetch, but just in case
+          if (res.status === 401) return;
           const orders = await res.json().catch(() => []);
           if (!Array.isArray(orders)) {
-            if (desktopTbody) desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No orders found</td></tr>`;
-            if (mobileContainer) mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">No transactions yet</div>`;
-            return;
-          }
-          const sorted = orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          const top3 = sorted.slice(0, 3);
-
-          if (top3.length === 0) {
-            if (desktopTbody) desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No recent transactions</td></tr>`;
-            if (mobileContainer) mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">No transactions yet</div>`;
+            if (desktopTbody)
+              desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No orders found</td></tr>`;
+            if (mobileContainer)
+              mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">No transactions yet</div>`;
             return;
           }
 
+          const sorted = orders.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+          );
+
+          // Take exactly 3 recent transactions
+          const recent3 = sorted.slice(0, 3);
+
+          if (recent3.length === 0) {
+            if (desktopTbody)
+              desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No transactions yet</td></tr>`;
+            if (mobileContainer)
+              mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">No transactions yet</div>`;
+            return;
+          }
+
+          // Desktop table
           if (desktopTbody) {
             let html = "";
-            top3.forEach((o) => {
-              const fuel = o.fuelType || "-";
-              const fuelClass = fuel.includes("Diesel") ? "bg-blue-500" : "bg-orange-500";
+            recent3.forEach((o) => {
+              const fuel = o.fuelType || "Petrol";
               const statusClass = statusBadgeClass(o.status);
               html += `
-                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
-                  <td class="py-4 px-2 font-bold text-sm">#${o.orderId || o._id?.slice(-6) || "—"}</td>
-                  <td class="py-4 px-2 text-sm text-slate-500">${formatDate(o.createdAt || o.date)}</td>
-                  <td class="py-4 px-2">
-                    <div class="flex items-center gap-2">
-                      <div class="size-2 rounded-full ${fuelClass}"></div>
-                      <span class="text-sm font-medium">${fuel}</span>
-                    </div>
-                  </td>
-                  <td class="py-4 px-2 text-sm font-bold">${formatNaira(o.totalAmount || 0)}</td>
-                  <td class="py-4 px-2 text-right">
-                    <span class="px-2 py-1 rounded ${statusClass} text-[10px] font-bold uppercase">${o.status || "—"}</span>
-                  </td>
-                </tr>
-              `;
+          <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+            <td class="py-3 px-2 font-bold text-sm">#${o.orderId || o._id?.slice(-6) || "—"}</td>
+            <td class="py-3 px-2 text-sm text-slate-500">${formatDate(o.createdAt || o.date)}</td>
+            <td class="py-3 px-2">
+              <div class="flex items-center gap-2">
+                <div class="size-2 rounded-full bg-primary"></div>
+                <span class="text-sm font-medium">${fuel}</span>
+              </div>
+            </td>
+            <td class="py-3 px-2 text-sm font-bold">${formatNaira(o.totalAmount || 0)}</td>
+            <td class="py-3 px-2 text-right">
+              <span class="px-2 py-1 rounded ${statusClass} text-[10px] font-bold uppercase">${o.status || "—"}</span>
+            </td>
+          </tr>
+        `;
             });
             desktopTbody.innerHTML = html;
           }
 
+          // Mobile cards
           if (mobileContainer) {
             let cardsHtml = "";
-            top3.forEach((o) => {
-              const fuel = o.fuelType || "-";
-              const fuelColor = fuel.includes("Diesel") ? "bg-blue-500" : "bg-orange-500";
+            recent3.forEach((o) => {
+              const fuel = o.fuelType || "Petrol";
               const statusClass = statusBadgeClass(o.status);
               cardsHtml += `
-                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
-                  <div class="flex items-start justify-between mb-2">
-                    <div>
-                      <p class="text-xs font-bold text-slate-400">ORDER #${o.orderId || o._id?.slice(-6) || "—"}</p>
-                      <p class="text-sm font-bold mt-1">${fuel} · ${Number(o.quantity || 0)}L</p>
-                    </div>
-                    <span class="px-2 py-1 rounded ${statusClass} text-[10px] font-bold uppercase">${o.status || "—"}</span>
-                  </div>
-                  <div class="flex items-center justify-between mt-3">
-                    <div class="flex items-center gap-2">
-                      <div class="size-2 rounded-full ${fuelColor}"></div>
-                      <span class="text-xs text-slate-500">${formatDate(o.createdAt || o.date)}</span>
-                    </div>
-                    <span class="font-bold text-sm">${formatNaira(o.totalAmount || 0)}</span>
-                  </div>
-                </div>
-              `;
+          <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order #${o.orderId || o._id?.slice(-6) || "—"}</p>
+                <p class="text-sm font-bold mt-1">${fuel} · ${Number(o.quantity || 0)}L</p>
+              </div>
+              <span class="px-2 py-1 rounded ${statusClass} text-[10px] font-bold uppercase">${o.status || "—"}</span>
+            </div>
+            <div class="flex items-center justify-between mt-3">
+              <span class="text-xs text-slate-500">${formatDate(o.createdAt || o.date)}</span>
+              <span class="font-bold text-sm">${formatNaira(o.totalAmount || 0)}</span>
+            </div>
+          </div>
+        `;
             });
             mobileContainer.innerHTML = cardsHtml;
           }
         } catch (err) {
-          console.error('loadRecentTransactions error:', err);
-          if (desktopTbody) desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-red-400">Failed to load</td></tr>`;
-          if (mobileContainer) mobileContainer.innerHTML = `<div class="text-center text-red-400 py-4">Failed to load</div>`;
+          console.error("loadRecentTransactions error:", err);
+          if (desktopTbody)
+            desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-red-400">Failed to load</td></tr>`;
+          if (mobileContainer)
+            mobileContainer.innerHTML = `<div class="text-center text-red-400 py-4">Failed to load</div>`;
         }
       }
 
       async function confirmDelivery(orderId, buttonEl) {
         if (!orderId) return;
-        const ok = window.confirm("Confirm that this order has been delivered?");
+        const ok = window.confirm(
+          "Confirm that this order has been delivered?",
+        );
         if (!ok) return;
         const originalText = buttonEl ? buttonEl.textContent : "";
         try {
-          if (buttonEl) { buttonEl.disabled = true; buttonEl.textContent = "Confirming..."; }
-          const res = await authenticatedFetch(`${API_BASE_URL}/api/delivery/${orderId}/confirm`, { method: "PUT" });
+          if (buttonEl) {
+            buttonEl.disabled = true;
+            buttonEl.textContent = "Confirming...";
+          }
+          const res = await authenticatedFetch(
+            `${API_BASE_URL}/api/delivery/${orderId}/confirm`,
+            { method: "PUT" },
+          );
           const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data?.message || "Failed to confirm delivery");
+          if (!res.ok)
+            throw new Error(data?.message || "Failed to confirm delivery");
           alert("Delivery confirmed successfully");
           await Promise.all([
             loadActiveOrder(),
             loadRecentTransactions(),
             (async () => {
               const now = new Date();
-              await loadTotalSpentAndFuel(now.getMonth() + 1, now.getFullYear());
+              await loadTotalSpentAndFuel(
+                now.getMonth() + 1,
+                now.getFullYear(),
+              );
             })(),
           ]);
         } catch (err) {
-          console.error('confirmDelivery error:', err);
+          console.error("confirmDelivery error:", err);
           alert(err.message || "Failed to confirm delivery");
         } finally {
-          if (buttonEl) { buttonEl.disabled = false; buttonEl.textContent = originalText || "Confirm Delivery"; }
+          if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.textContent = originalText || "Confirm Delivery";
+          }
         }
       }
 
@@ -1115,11 +1178,21 @@
         if (noActiveUI) noActiveUI.classList.add("hidden");
         if (dot) dot.className = "size-2 bg-slate-300 rounded-full";
         if (idEl) idEl.textContent = "ID: --";
-        if (confirmBtn) { confirmBtn.classList.add("hidden"); confirmBtn.disabled = false; confirmBtn.textContent = "Confirm Delivery"; confirmBtn.onclick = null; }
-        if (trackBtn) { trackBtn.classList.remove("hidden"); trackBtn.classList.add("flex-1"); }
+        if (confirmBtn) {
+          confirmBtn.classList.add("hidden");
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Confirm Delivery";
+          confirmBtn.onclick = null;
+        }
+        if (trackBtn) {
+          trackBtn.classList.remove("hidden");
+          trackBtn.classList.add("flex-1");
+        }
 
         try {
-          const res = await authenticatedFetch(`${API_BASE_URL}/api/order/active`);
+          const res = await authenticatedFetch(
+            `${API_BASE_URL}/api/order/active`,
+          );
           const data = await res.json().catch(() => null);
           if (res.status === 401) return; // handled
           if (!res.ok || !data) {
@@ -1128,11 +1201,17 @@
             return;
           }
           if (activeUI) activeUI.classList.remove("hidden");
-          if (dot) dot.className = "size-2 bg-primary rounded-full animate-pulse";
-          if (idEl) idEl.textContent = `ID: ${data.orderId || data._id || "--"}`;
-          if (statusEl) statusEl.textContent = prettyStatus(data.deliveryStatus || data.status);
+          if (dot)
+            dot.className = "size-2 bg-primary rounded-full animate-pulse";
+          if (idEl)
+            idEl.textContent = `ID: ${data.orderId || data._id || "--"}`;
+          if (statusEl)
+            statusEl.textContent = prettyStatus(
+              data.deliveryStatus || data.status,
+            );
           if (fuelEl) fuelEl.textContent = fuelLabel(data.fuelType);
-          if (amountEl) amountEl.textContent = formatNaira(data.totalAmount || data.amount);
+          if (amountEl)
+            amountEl.textContent = formatNaira(data.totalAmount || data.amount);
 
           const rider = data?.rider || null;
           if (callBtn) {
@@ -1140,7 +1219,9 @@
               const phone = rider.phone || rider.phoneNumber;
               callBtn.disabled = false;
               callBtn.classList.remove("opacity-60", "cursor-not-allowed");
-              callBtn.onclick = () => { window.location.href = `tel:${phone}`; };
+              callBtn.onclick = () => {
+                window.location.href = `tel:${phone}`;
+              };
             } else {
               callBtn.disabled = true;
               callBtn.classList.add("opacity-60", "cursor-not-allowed");
@@ -1151,9 +1232,12 @@
           const etaMinutes = Number(data?.etaMinutes);
           const distanceKm = Number(data?.distanceKm);
           if (etaValueEl) {
-            if (!Number.isNaN(etaMinutes)) etaValueEl.textContent = `${etaMinutes} mins`;
-            else if (!Number.isNaN(distanceKm)) etaValueEl.textContent = `${distanceKm.toFixed(1)} km`;
-            else if ((data?.deliveryStatus || "").toLowerCase() === "delivered") etaValueEl.textContent = "Arrived";
+            if (!Number.isNaN(etaMinutes))
+              etaValueEl.textContent = `${etaMinutes} mins`;
+            else if (!Number.isNaN(distanceKm))
+              etaValueEl.textContent = `${distanceKm.toFixed(1)} km`;
+            else if ((data?.deliveryStatus || "").toLowerCase() === "delivered")
+              etaValueEl.textContent = "Arrived";
             else etaValueEl.textContent = "--";
           }
 
@@ -1173,7 +1257,7 @@
             }
           }
         } catch (err) {
-          console.error('loadActiveOrder error:', err);
+          console.error("loadActiveOrder error:", err);
           if (noActiveUI) noActiveUI.classList.remove("hidden");
           if (activeUI) activeUI.classList.add("hidden");
           if (dot) dot.className = "size-2 bg-slate-300 rounded-full";
@@ -1183,11 +1267,18 @@
       function setActiveBottomNav() {
         const path = window.location.pathname;
         let current = path.substring(path.lastIndexOf("/") + 1);
-        if (current === "" || current === "index.html" || current === "customer-dashboard.html" || current === "#") {
+        if (
+          current === "" ||
+          current === "index.html" ||
+          current === "Home.html" ||
+          current === "#"
+        ) {
           current = "home";
         }
-        document.querySelectorAll(".bottom-nav-item").forEach(i => i.classList.remove("active"));
-        document.querySelectorAll(".bottom-nav-item").forEach(i => {
+        document
+          .querySelectorAll(".bottom-nav-item")
+          .forEach((i) => i.classList.remove("active"));
+        document.querySelectorAll(".bottom-nav-item").forEach((i) => {
           const href = i.getAttribute("href");
           if ((current === "home" && href === "#") || href === current) {
             i.classList.add("active");
@@ -1198,13 +1289,13 @@
       (function init() {
         // Check authentication first
         if (!isAuthenticated()) {
-          showUnauthorized('User not logged in');
+          showUnauthorized("User not logged in");
           return;
         }
 
         // User is authenticated, show dashboard
-        document.getElementById('dashboardContent').classList.remove('hidden');
-        document.getElementById('unauthorizedState').classList.add('hidden');
+        document.getElementById("dashboardContent").classList.remove("hidden");
+        document.getElementById("unauthorizedState").classList.add("hidden");
 
         setUserInfo();
         setGreeting();
