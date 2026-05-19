@@ -169,58 +169,13 @@
           padding-bottom: 0;
         }
       }
-
-      /* Modal Styles */
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
-      }
-      .modal-overlay.active {
-        display: flex;
-      }
-      .modal-content {
-        background: white;
-        border-radius: 1rem;
-        max-width: 500px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-      }
-      .dark .modal-content {
-        background: #1e293b;
-      }
-      .loading-spinner {
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border: 2px solid #f3f3f3;
-        border-top: 2px solid #13ec5b;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
     </style>
   </head>
   <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen"
   >
     <div class="flex h-screen overflow-hidden">
-      <!-- SIDEBAR -->
+      <!-- ========== SIDEBAR (identical to dashboard, but we'll adjust active state later) ========== -->
       <aside
         id="sidebar"
         class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 fixed lg:static inset-y-0 left-0 z-30 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out"
@@ -236,6 +191,7 @@
         </div>
 
         <nav class="flex-1 px-4 py-4 space-y-1">
+          <!-- DASHBOARD -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="customer-dashboard.html"
@@ -246,6 +202,7 @@
             >
             <span class="font-medium text-sm">Dashboard</span>
           </a>
+          <!-- ORDER HISTORY -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="Order-history.html"
@@ -256,6 +213,7 @@
             >
             <span class="font-medium text-sm">Order History</span>
           </a>
+          <!-- PLACE ORDER -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="place-order.html"
@@ -266,6 +224,7 @@
             >
             <span class="font-semibold text-sm">Place Order</span>
           </a>
+          <!-- TRACKING -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="tracking.html"
@@ -276,13 +235,16 @@
             >
             <span class="font-medium text-sm">Tracking</span>
           </a>
+          <!-- PROFILE (active) -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
             href="Profile.html"
           >
             <span class="material-symbols-outlined text-primary"> person </span>
+
             <span class="font-semibold text-sm"> Profile </span>
           </a>
+          <!-- PROFILE (CURRENT) will be highlighted via script -->
         </nav>
 
         <div class="p-4 border-t border-slate-200 dark:border-slate-800">
@@ -304,252 +266,239 @@
         class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden transition-opacity duration-300"
       ></div>
 
-      <!-- MAIN CONTENT -->
+      <!-- ========== MAIN CONTENT ========== -->
       <main class="flex-1 flex flex-col overflow-y-auto">
+        <!-- ========== PROFILE CONTENT (Normal Profile, no settings forms) ========== -->
         <div class="p-4 lg:p-8 space-y-8 w-full max-w-7xl mx-auto">
-          <!-- Loading State -->
-          <div id="loadingState" class="text-center py-12">
-            <div class="inline-block loading-spinner"></div>
-            <p class="mt-2 text-slate-500">Loading profile...</p>
+          <!-- Page heading: Profile, with subtle hint that settings are one click away -->
+          <div class="flex items-center justify-between">
+            <div>
+              <h2
+                class="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3"
+              >
+                <span class="material-symbols-outlined text-primary text-3xl"
+                  >account_circle</span
+                >
+                My Profile
+              </h2>
+              <p class="text-slate-500 mt-1 text-sm lg:text-base">
+                Your personal details and activity overview.
+              </p>
+            </div>
+            <!-- quick settings link for mobile/desktop (redundant but handy) -->
+            <a
+              href="customer-settings.html"
+              class="lg:hidden flex items-center gap-1 text-sm font-medium text-primary bg-primary/10 px-4 py-2 rounded-full"
+            >
+              <span class="material-symbols-outlined text-base">settings</span>
+              Settings
+            </a>
           </div>
 
-          <!-- Profile Content (hidden initially) -->
-          <div id="profileContent" style="display: none">
-            <div class="flex items-center justify-between">
-              <div>
-                <h2
-                  class="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3"
-                >
-                  <span class="material-symbols-outlined text-primary text-3xl"
-                    >account_circle</span
-                  >
-                  My Profile
-                </h2>
-                <p class="text-slate-500 mt-1 text-sm lg:text-base">
-                  Your personal details and activity overview.
-                </p>
-              </div>
-              <a
-                href="customer-settings.html"
-                class="lg:hidden flex items-center gap-1 text-sm font-medium text-primary bg-primary/10 px-4 py-2 rounded-full"
-              >
-                <span class="material-symbols-outlined text-base"
-                  >settings</span
-                >
-                Settings
-              </a>
-            </div>
-
-            <!-- Profile card -->
+          <!-- Profile card: clean, non-editable, summary style with stats and avatar -->
+          <div
+            class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden"
+          >
+            <!-- Cover / header accent -->
             <div
-              class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden"
-            >
-              <div
-                class="h-24 bg-gradient-to-r from-primary/20 to-primary/5 dark:from-primary/10 dark:to-slate-800"
-              ></div>
+              class="h-24 bg-gradient-to-r from-primary/20 to-primary/5 dark:from-primary/10 dark:to-slate-800"
+            ></div>
 
-              <div class="px-6 pb-6 relative">
+            <div class="px-6 pb-6 relative">
+              <!-- Avatar with upload (same interactive, now purely profile) -->
+              <div class="flex flex-col sm:flex-row sm:items-end gap-6 -mt-12">
                 <div
-                  class="flex flex-col sm:flex-row sm:items-end gap-6 -mt-12"
+                  class="relative avatar-group group cursor-pointer w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 shadow-lg"
                 >
+                  <img
+                    id="profileImage"
+                    src=""
+                    alt="Profile"
+                    class="w-full h-full rounded-full object-cover"
+                  />
                   <div
-                    class="relative avatar-group group cursor-pointer w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 shadow-lg"
+                    class="avatar-upload-overlay absolute inset-0 rounded-full flex items-center justify-center"
                   >
-                    <img
-                      id="profileImage"
-                      src=""
-                      alt="Profile"
-                      class="w-full h-full rounded-full object-cover"
-                    />
-                    <div
-                      class="avatar-upload-overlay absolute inset-0 rounded-full flex items-center justify-center"
+                    <span class="material-symbols-outlined text-white text-3xl"
+                      >photo_camera</span
                     >
-                      <span
-                        class="material-symbols-outlined text-white text-3xl"
-                        >photo_camera</span
-                      >
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      class="hidden"
-                      id="avatarUpload"
-                    />
                   </div>
-                  <div
-                    class="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2"
-                  >
-                    <div>
-                      <h1
-                        id="userName"
-                        class="text-2xl font-extrabold text-slate-900 dark:text-white"
-                      >
-                        Loading...
-                      </h1>
-                      <div
-                        class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm"
-                      >
-                        <span class="flex items-center gap-1 text-slate-500"
-                          ><span class="material-symbols-outlined text-base"
-                            >mail</span
-                          >
-                          <span id="userEmail">-</span></span
-                        >
-                        <span class="flex items-center gap-1 text-slate-500"
-                          ><span class="material-symbols-outlined text-base"
-                            >call</span
-                          >
-                          <span id="userPhone">-</span></span
-                        >
-                        <span class="flex items-center gap-1 text-slate-500"
-                          ><span class="material-symbols-outlined text-base"
-                            >calendar_month</span
-                          >
-                          Member since <span id="memberSince">-</span></span
-                        >
-                      </div>
-                    </div>
-                    <button
-                      onclick="document.getElementById('avatarUpload').click()"
-                      class="text-xs text-primary font-medium hover:underline flex items-center gap-1 self-start sm:self-center"
-                    >
-                      <span class="material-symbols-outlined text-base"
-                        >upload</span
-                      >
-                      change photo
-                    </button>
-                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    id="avatarUpload"
+                  />
                 </div>
+                <div
+                  class="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2"
+                >
+                  <div>
+                    <h1
+                      id="userName"
+                      class="text-2xl font-extrabold text-slate-900 dark:text-white"
+                    >
+                      Loading...
+                    </h1>
+                    <div
+                      class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm"
+                    >
+                      <span class="flex items-center gap-1 text-slate-500">
+                        <span class="material-symbols-outlined text-base"
+                          >mail</span
+                        >
+                        <span id="userEmail">-</span>
+                      </span>
+                      <span class="flex items-center gap-1 text-slate-500"
+                        ><span class="material-symbols-outlined text-base"
+                          >call</span
+                        >
+                        <span id="userPhone">-</span>
+                      </span>
+                      >
+                      <span class="flex items-center gap-1 text-slate-500"
+                        ><span class="material-symbols-outlined text-base"
+                          >calendar_month</span
+                        >
+                        Member since <span id="memberSince">-</span></span
+                      >
+                    </div>
+                  </div>
+                  <!-- hint: photo upload -->
+                  <button
+                    onclick="document.getElementById('avatarUpload').click()"
+                    class="text-xs text-primary font-medium hover:underline flex items-center gap-1 self-start sm:self-center"
+                  >
+                    <span class="material-symbols-outlined text-base"
+                      >upload</span
+                    >
+                    change photo
+                  </button>
+                </div>
+              </div>
 
-                <!-- Profile stats row -->
-                <div class="grid grid-cols-2 sm:grid-cols-2 gap-4 mt-8">
-                  <div
-                    class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
+              <!-- Profile stats row (like dashboard mini) -->
+              <div class="grid grid-cols-2 sm:grid-cols-2 gap-4 mt-8">
+                <div
+                  class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
+                >
+                  <span
+                    id="totalOrders"
+                    class="block text-2xl font-black text-primary"
+                    >0</span
                   >
-                    <span
-                      id="totalOrders"
-                      class="block text-2xl font-black text-primary"
-                      >0</span
-                    >
-                    <span class="text-xs text-slate-500">Total orders</span>
-                  </div>
-                  <div
-                    class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
+                  <span class="text-xs text-slate-500">Total orders</span>
+                </div>
+                <div
+                  class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
+                >
+                  <span
+                    id="monthlyOrders"
+                    class="block text-2xl font-black text-primary"
+                    >0</span
                   >
-                    <span
-                      id="monthlyOrders"
-                      class="block text-2xl font-black text-primary"
-                      >0</span
-                    >
-                    <span class="text-xs text-slate-500">This month</span>
-                  </div>
+                  <span class="text-xs text-slate-500">This month</span>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Additional profile details -->
-            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-              <div class="lg:col-span-4 space-y-6">
-                <div
-                  class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
+          <!-- Additional profile details: personal info (display only, non-editable) + recent activity -->
+          <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <!-- left: personal details card (read-only) -->
+            <div class="lg:col-span-4 space-y-6">
+              <div
+                class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
+              >
+                <h3
+                  class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-4"
                 >
-                  <h3
-                    class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-4"
+                  <span class="material-symbols-outlined text-primary"
+                    >info</span
                   >
-                    <span class="material-symbols-outlined text-primary"
-                      >info</span
-                    >
-                    Personal Information
-                  </h3>
-                  <dl class="space-y-3 text-sm">
-                    <div class="flex justify-between">
-                      <dt class="text-slate-500">Full name</dt>
-                      <dd id="detailName" class="font-medium">-</dd>
-                    </div>
-                    <div class="flex justify-between">
-                      <dt class="text-slate-500">Email address</dt>
-                      <dd id="detailEmail" class="font-medium">-</dd>
-                    </div>
-                    <div class="flex justify-between">
-                      <dt class="text-slate-500">Phone number</dt>
-                      <dd id="detailPhone" class="font-medium">-</dd>
-                    </div>
-                  </dl>
+                  Details
+                </h3>
+                <dl class="space-y-3 text-sm">
+                  <div class="flex justify-between">
+                    <dt class="text-slate-500">Full name</dt>
+                    <dd id="detailName" class="font-medium">-</dd>
+                  </div>
+                  <div class="flex justify-between">
+                    <dt class="text-slate-500">Email address</dt>
+                    <dd id="detailEmail" class="font-medium">-</dd>
+                  </div>
+                  <div class="flex justify-between">
+                    <dt class="text-slate-500">Phone number</dt>
+                    <dd id="detailPhone" class="font-medium">-</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <!-- quick link to settings (desktop) -->
+              <div
+                class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm hidden lg:block"
+              >
+                <a
+                  href="customer-settings.html"
+                  class="flex items-center gap-3 text-primary hover:underline"
+                >
+                  <span class="material-symbols-outlined">settings</span>
+                  <span class="font-medium">Go to Settings</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- right column: recent orders / activity (profile-like) -->
+            <div class="lg:col-span-8 space-y-6">
+              <div
+                class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
+              >
+                <h3
+                  class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-4"
+                >
+                  <span class="material-symbols-outlined text-primary"
+                    >history</span
+                  >
+                  Recent orders
+                </h3>
+                <div
+                  id="recentOrdersList"
+                  class="divide-y divide-slate-100 dark:divide-slate-800"
+                >
+                  <div class="text-center py-4 text-slate-500">
+                    Loading orders...
+                  </div>
                 </div>
-
-                <div
-                  class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm hidden lg:block"
-                >
+                <div class="mt-3 text-right">
                   <a
-                    href="customer-settings.html"
-                    class="flex items-center gap-3 text-primary hover:underline"
+                    href="Order-history.html"
+                    class="text-sm text-primary font-medium hover:underline inline-flex items-center gap-1"
+                    >View all
+                    <span class="material-symbols-outlined text-base"
+                      >arrow_forward</span
+                    ></a
                   >
-                    <span class="material-symbols-outlined">settings</span>
-                    <span class="font-medium">Go to Settings</span>
-                  </a>
                 </div>
               </div>
 
-              <div class="lg:col-span-8 space-y-6">
-                <!-- Recent orders -->
-                <div
-                  class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
+              <!-- Delivery addresses summary (non-editable) -->
+              <div
+                class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
+              >
+                <h3
+                  class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-4"
                 >
-                  <h3
-                    class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-4"
+                  <span class="material-symbols-outlined text-primary"
+                    >home</span
                   >
-                    <span class="material-symbols-outlined text-primary"
-                      >history</span
-                    >
-                    Recent orders
-                  </h3>
-                  <div
-                    id="recentOrdersList"
-                    class="divide-y divide-slate-100 dark:divide-slate-800"
-                  >
-                    <div class="text-center py-4 text-slate-500">
-                      Loading orders...
-                    </div>
-                  </div>
-                  <div class="mt-3 text-right">
-                    <a
-                      href="Order-history.html"
-                      class="text-sm text-primary font-medium hover:underline inline-flex items-center gap-1"
-                      >View all
-                      <span class="material-symbols-outlined text-base"
-                        >arrow_forward</span
-                      ></a
-                    >
-                  </div>
-                </div>
-
-                <!-- Saved addresses -->
+                  Saved addresses
+                </h3>
                 <div
-                  class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
+                  id="addressesList"
+                  class="grid grid-cols-1 sm:grid-cols-2 gap-3"
                 >
-                  <div class="flex justify-between items-center mb-4">
-                    <h3
-                      class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2"
-                    >
-                      <span class="material-symbols-outlined text-primary"
-                        >home</span
-                      >
-                      Saved addresses
-                    </h3>
-                    <button
-                      onclick="openAddressModal()"
-                      class="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium hover:bg-primary/20 transition"
-                    >
-                      + Add Address
-                    </button>
-                  </div>
-                  <div
-                    id="addressesList"
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                  >
-                    <div class="text-center py-4 text-slate-500 col-span-full">
-                      Loading addresses...
-                    </div>
+                  <div class="text-center py-4 text-slate-500 col-span-full">
+                    Loading addresses...
                   </div>
                 </div>
               </div>
@@ -559,7 +508,7 @@
       </main>
     </div>
 
-    <!-- Mobile Bottom Tab Bar -->
+    <!-- Mobile Bottom Tab Bar (consistent with other pages) -->
     <nav class="mobile-bottom-nav">
       <a
         href="customer-dashboard.html"
@@ -580,70 +529,11 @@
         ><span class="material-symbols-outlined">near_me</span
         ><span>Track</span></a
       >
-      <a href="Profile.html" class="bottom-nav-item active" id="bottomProfile">
+      <a href="Profile.html" class="bottom-nav-item" id="bottomProfile">
         <span class="material-symbols-outlined">person</span>
         <span>Profile</span>
       </a>
     </nav>
-
-    <!-- Address Modal -->
-    <div id="addressModal" class="modal-overlay">
-      <div class="modal-content p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-bold">Add New Address</h3>
-          <button
-            onclick="closeAddressModal()"
-            class="text-slate-500 hover:text-slate-700"
-          >
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <form id="addressForm" onsubmit="saveAddress(event)">
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-2">Address Label</label>
-            <select
-              id="addressLabel"
-              class="w-full p-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
-            >
-              <option value="HOME">🏠 Home</option>
-              <option value="WORK">💼 Work</option>
-              <option value="OTHER">📍 Other</option>
-            </select>
-          </div>
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-2">Full Address</label>
-            <textarea
-              id="addressText"
-              rows="3"
-              class="w-full p-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
-              placeholder="Enter your full address..."
-              required
-            ></textarea>
-          </div>
-          <div class="mb-4">
-            <label class="flex items-center">
-              <input type="checkbox" id="setDefault" class="mr-2" />
-              <span class="text-sm">Set as default address</span>
-            </label>
-          </div>
-          <div class="flex gap-2">
-            <button
-              type="submit"
-              class="flex-1 bg-primary text-black font-bold py-2 rounded-lg hover:bg-primary/90"
-            >
-              Save Address
-            </button>
-            <button
-              type="button"
-              onclick="closeAddressModal()"
-              class="flex-1 bg-slate-200 dark:bg-slate-700 py-2 rounded-lg"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
 
     <script>
       // Configuration
