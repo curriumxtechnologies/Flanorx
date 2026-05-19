@@ -274,7 +274,7 @@
         <nav class="flex-1 px-4 py-4 space-y-1">
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            href="customer-dashboard.html"
+            href="Home.html"
           >
             <span
               class="material-symbols-outlined group-hover:text-primary transition-colors"
@@ -844,11 +844,7 @@
 
     <!-- Mobile Bottom Tab Bar -->
     <nav class="mobile-bottom-nav">
-      <a
-        href="customer-dashboard.html"
-        class="bottom-nav-item"
-        id="bottomDashboard"
-      >
+      <a href="Home.html" class="bottom-nav-item" id="bottomDashboard">
         <span class="material-symbols-outlined">dashboard</span
         ><span>Home</span>
       </a>
@@ -1484,7 +1480,7 @@
         if (
           currentPage === "" ||
           currentPage === "index.html" ||
-          currentPage === "customer-dashboard.html" ||
+          currentPage === "Home.html" ||
           currentPage === "#"
         ) {
           currentPage = "home";
@@ -1494,7 +1490,7 @@
           item.classList.remove("active");
           const href = item.getAttribute("href");
           if (
-            (currentPage === "home" && href === "customer-dashboard.html") ||
+            (currentPage === "home" && href === "Home.html") ||
             href === currentPage
           ) {
             item.classList.add("active");
@@ -1505,7 +1501,7 @@
           link.classList.remove("sidebar-active");
           const href = link.getAttribute("href");
           if (
-            (currentPage === "home" && href === "customer-dashboard.html") ||
+            (currentPage === "home" && href === "Home.html") ||
             href === currentPage
           ) {
             link.classList.add("sidebar-active");
