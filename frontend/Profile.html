@@ -235,16 +235,14 @@
             >
             <span class="font-medium text-sm">Tracking</span>
           </a>
-          <!-- SETTINGS (normal, not active here) -->
+          <!-- PROFILE (active) -->
           <a
-            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            href="customer-settings.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
+            href="Profile.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >settings</span
-            >
-            <span class="font-medium text-sm">Settings</span>
+            <span class="material-symbols-outlined text-primary"> person </span>
+
+            <span class="font-semibold text-sm"> Profile </span>
           </a>
           <!-- PROFILE (CURRENT) will be highlighted via script -->
         </nav>
@@ -271,7 +269,7 @@
       <!-- ========== MAIN CONTENT ========== -->
       <main class="flex-1 flex flex-col overflow-y-auto">
         <!-- ========== PROFILE CONTENT (Normal Profile, no settings forms) ========== -->
-        <div class="p-4 lg:p-8 space-y-8 max-w-5xl">
+        <div class="p-4 lg:p-8 space-y-8 w-full max-w-7xl mx-auto">
           <!-- Page heading: Profile, with subtle hint that settings are one click away -->
           <div class="flex items-center justify-between">
             <div>
@@ -377,7 +375,7 @@
               </div>
 
               <!-- Profile stats row (like dashboard mini) -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
+              <div class="grid grid-cols-2 sm:grid-cols-2 gap-4 mt-8">
                 <div
                   class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
                 >
@@ -387,33 +385,17 @@
                 <div
                   class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
                 >
-                  <span class="block text-2xl font-black text-primary"
-                    >2.45k</span
-                  >
-                  <span class="text-xs text-slate-500">Loyalty pts</span>
-                </div>
-                <div
-                  class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
-                >
                   <span class="block text-2xl font-black text-primary">12</span>
                   <span class="text-xs text-slate-500">This month</span>
-                </div>
-                <div
-                  class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 text-center"
-                >
-                  <span class="block text-2xl font-black text-primary"
-                    >⭐ 4.8</span
-                  >
-                  <span class="text-xs text-slate-500">Avg. rating</span>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Additional profile details: personal info (display only, non-editable) + recent activity -->
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
             <!-- left: personal details card (read-only) -->
-            <div class="lg:col-span-1 space-y-6">
+            <div class="lg:col-span-4 space-y-6">
               <div
                 class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
               >
@@ -438,10 +420,6 @@
                     <dt class="text-slate-500">Gender</dt>
                     <dd class="font-medium">Male</dd>
                   </div>
-                  <div class="flex justify-between">
-                    <dt class="text-slate-500">Language</dt>
-                    <dd class="font-medium">English (US)</dd>
-                  </div>
                 </dl>
               </div>
 
@@ -460,7 +438,7 @@
             </div>
 
             <!-- right column: recent orders / activity (profile-like) -->
-            <div class="lg:col-span-2 space-y-6">
+            <div class="lg:col-span-8 space-y-6">
               <div
                 class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm"
               >
@@ -582,13 +560,10 @@
         ><span class="material-symbols-outlined">near_me</span
         ><span>Track</span></a
       >
-      <a
-        href="customer-settings.html"
-        class="bottom-nav-item"
-        id="bottomSettings"
-        ><span class="material-symbols-outlined">settings</span
-        ><span>Settings</span></a
-      >
+      <a href="Profile.html" class="bottom-nav-item" id="bottomProfile">
+        <span class="material-symbols-outlined">person</span>
+        <span>Profile</span>
+      </a>
     </nav>
 
     <!-- Scripts -->
@@ -634,25 +609,32 @@
         (function setActiveNavigation() {
           const path = window.location.pathname;
           let currentPage = path.substring(path.lastIndexOf("/") + 1);
+
           if (
             !currentPage ||
             currentPage === "index.html" ||
             currentPage === "customer-dashboard.html"
           ) {
-            currentPage = "home";
+            currentPage = "Home.html";
           }
-          // For this page (profile), we want bottom nav to highlight something? Actually we want Settings icon, but no bottom nav item for profile. We'll keep Dashboard as active? But this is profile page – best not to force active on bottom nav, but we can set nothing active. However we want consistency: we set active = none, because Profile is not in bottom nav. But if you want, you could activate 'Settings'? No, that's misleading. We'll simply not add active to any bottom nav. Also sidebar active: we'll add a special class for Profile? Not present in sidebar. We'll create a pseudo "Profile" by highlighting maybe Dashboard? Better to keep clean.
-          // Instead, we leave sidebar without active class for this page, because we are not in any of those links.
-          // But we want to show something: we can highlight nothing. That's fine.
-          // However we can add a special "Profile" to sidebar? We don't have that link. For simplicity, we remove all sidebar-active from all links.
-          const sidebarLinks = document.querySelectorAll("#sidebar nav a");
-          sidebarLinks.forEach((link) =>
-            link.classList.remove("sidebar-active"),
-          );
 
-          // Also remove bottom nav active (since we have no profile tab)
+          const sidebarLinks = document.querySelectorAll("#sidebar nav a");
+          sidebarLinks.forEach((link) => {
+            link.classList.remove("sidebar-active");
+
+            if (link.getAttribute("href") === currentPage) {
+              link.classList.add("sidebar-active");
+            }
+          });
+
           const navItems = document.querySelectorAll(".bottom-nav-item");
-          navItems.forEach((item) => item.classList.remove("active"));
+          navItems.forEach((item) => {
+            item.classList.remove("active");
+
+            if (item.getAttribute("href") === currentPage) {
+              item.classList.add("active");
+            }
+          });
         })();
       })();
     </script>
