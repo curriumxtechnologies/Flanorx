@@ -29,11 +29,8 @@
       rel="stylesheet"
     />
 
-    <!-- Material Symbols -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
     <link
       rel="apple-touch-icon"
@@ -137,8 +134,7 @@
         border-radius: 12px;
         padding: 4px 0;
       }
-      .bottom-nav-item.active .material-symbols-outlined {
-        font-variation-settings: "FILL" 1;
+      .bottom-nav-item.active .lucide {
         color: #13ec5b;
       }
       .bottom-nav-item {
@@ -153,8 +149,9 @@
         flex: 1;
         max-width: 80px;
       }
-      .bottom-nav-item .material-symbols-outlined {
-        font-size: 24px;
+      .bottom-nav-item .lucide {
+        width: 24px;
+        height: 24px;
         transition: all 0.2s;
       }
       .bottom-nav-item span:last-child {
@@ -170,7 +167,7 @@
         background: rgba(19, 236, 91, 0.15);
         color: #13ec5b;
       }
-      .dark .bottom-nav-item.active .material-symbols-outlined {
+      .dark .bottom-nav-item.active .lucide {
         color: #13ec5b;
       }
 
@@ -276,10 +273,10 @@
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="Home.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >Home</span
-            >
+            <i
+              data-lucide="home"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Home</span>
           </a>
 
@@ -287,10 +284,10 @@
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="Order-history.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >history</span
-            >
+            <i
+              data-lucide="history"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Order History</span>
           </a>
 
@@ -298,9 +295,7 @@
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
             href="place-order.html"
           >
-            <span class="material-symbols-outlined text-primary"
-              >local_gas_station</span
-            >
+            <i data-lucide="fuel" class="text-primary"></i>
             <span class="font-semibold text-sm">Place Order</span>
           </a>
 
@@ -308,20 +303,20 @@
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="tracking.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >near_me</span
-            >
+            <i
+              data-lucide="navigation"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Tracking</span>
           </a>
           <a
             href="Profile.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >person</span
-            >
+            <i
+              data-lucide="user"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Profile</span>
           </a>
         </nav>
@@ -376,9 +371,7 @@
                 class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
               >
                 <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary"
-                    >local_gas_station</span
-                  >
+                  <i data-lucide="fuel" class="text-primary"></i>
                   Step 1: Select Fuel Type
                 </h2>
 
@@ -396,14 +389,13 @@
                     >
                       <div class="flex justify-between items-start mb-4">
                         <div class="bg-primary/20 p-3 rounded-lg text-primary">
-                          <span class="material-symbols-outlined text-3xl"
-                            >oil_barrel</span
-                          >
+                          <i data-lucide="droplets" class="w-8 h-8"></i>
                         </div>
                         <div class="peer-checked:block hidden">
-                          <span class="material-symbols-outlined text-primary"
-                            >check_circle</span
-                          >
+                          <i
+                            data-lucide="check-circle"
+                            class="text-primary"
+                          ></i>
                         </div>
                       </div>
                       <h3 class="text-lg font-bold">Petrol (95 Octane)</h3>
@@ -421,18 +413,16 @@
                 class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
               >
                 <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary"
-                    >local_gas_station</span
-                  >
+                  <i data-lucide="fuel" class="text-primary"></i>
                   Step 2: Select Preferred Filling Station
                 </h2>
 
                 <div class="mb-6">
                   <div class="relative">
-                    <span
-                      class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                      >search</span
-                    >
+                    <i
+                      data-lucide="search"
+                      class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    ></i>
                     <input
                       class="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary border-none"
                       placeholder="Search for a filling station..."
@@ -463,10 +453,10 @@
                     <span class="text-sm font-bold text-primary"
                       >View all 30 filling stations</span
                     >
-                    <span
-                      class="material-symbols-outlined group-open:rotate-180 transition-transform text-primary"
-                      >expand_more</span
-                    >
+                    <i
+                      data-lucide="chevron-down"
+                      class="group-open:rotate-180 transition-transform text-primary"
+                    ></i>
                   </summary>
                   <div
                     class="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-2"
@@ -479,9 +469,7 @@
                 <div
                   class="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-center gap-2"
                 >
-                  <span class="material-symbols-outlined text-primary"
-                    >info</span
-                  >
+                  <i data-lucide="info" class="text-primary"></i>
                   <span class="text-sm"
                     >Fuel will be sourced from:
                     <span class="font-bold" id="selectedStation"
@@ -496,9 +484,7 @@
                 class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
               >
                 <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary"
-                    >straighten</span
-                  >
+                  <i data-lucide="ruler" class="text-primary"></i>
                   Step 3: How much do you need?
                 </h2>
 
@@ -545,18 +531,16 @@
                 class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
               >
                 <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary"
-                    >location_on</span
-                  >
+                  <i data-lucide="map-pin" class="text-primary"></i>
                   Step 4: Where should we deliver?
                 </h2>
 
                 <div class="space-y-4">
                   <div class="relative">
-                    <span
-                      class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                      >search</span
-                    >
+                    <i
+                      data-lucide="search"
+                      class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    ></i>
                     <input
                       id="addressInput"
                       class="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary border-none"
@@ -568,9 +552,7 @@
                       type="button"
                       class="absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-slate-700 px-3 py-1.5 rounded-md text-xs font-bold shadow-sm flex items-center gap-1 hover:bg-slate-50"
                     >
-                      <span class="material-symbols-outlined text-sm"
-                        >my_location</span
-                      >
+                      <i data-lucide="locate" class="w-3.5 h-3.5"></i>
                       Current Location
                     </button>
                   </div>
@@ -578,9 +560,7 @@
                   <!-- Interactive Map -->
                   <div id="deliveryMap">
                     <div class="map-loading">
-                      <span class="material-symbols-outlined animate-spin"
-                        >sync</span
-                      >
+                      <i data-lucide="refresh-cw" class="animate-spin"></i>
                       Loading map...
                     </div>
                   </div>
@@ -600,9 +580,7 @@
                 class="bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm"
               >
                 <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary"
-                    >schedule</span
-                  >
+                  <i data-lucide="clock" class="text-primary"></i>
                   Step 5: When should we arrive?
                 </h2>
 
@@ -618,9 +596,7 @@
                     <div
                       class="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-xl peer-checked:border-primary text-center"
                     >
-                      <span class="material-symbols-outlined text-2xl mb-2"
-                        >bolt</span
-                      >
+                      <i data-lucide="zap" class="w-6 h-6 mb-2 mx-auto"></i>
                       <p class="font-bold">Deliver Now</p>
                       <p class="text-xs text-slate-500">
                         Estimated: 15-30 mins
@@ -638,9 +614,10 @@
                     <div
                       class="p-4 border-2 border-slate-100 dark:border-slate-800 rounded-xl peer-checked:border-primary text-center"
                     >
-                      <span class="material-symbols-outlined text-2xl mb-2"
-                        >calendar_today</span
-                      >
+                      <i
+                        data-lucide="calendar"
+                        class="w-6 h-6 mb-2 mx-auto"
+                      ></i>
                       <p class="font-bold">Schedule for Later</p>
                       <p class="text-xs text-slate-500">Pick date &amp; time</p>
                     </div>
@@ -758,7 +735,7 @@
                     class="w-full mt-8 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 font-extrabold py-4 rounded-xl transition-all shadow-lg shadow-yellow-600/20 active:scale-95 flex items-center justify-center gap-2"
                   >
                     Confirm &amp; Pay
-                    <span class="material-symbols-outlined">arrow_forward</span>
+                    <i data-lucide="arrow-right"></i>
                   </button>
 
                   <p class="mt-3 text-[11px] text-slate-300/80 leading-snug">
@@ -771,9 +748,7 @@
                 <div
                   class="bg-primary/10 border border-primary/20 rounded-xl p-4 flex gap-4"
                 >
-                  <span class="material-symbols-outlined text-primary"
-                    >verified</span
-                  >
+                  <i data-lucide="shield-check" class="text-primary"></i>
                   <div>
                     <p class="text-sm font-bold">Safe &amp; Reliable</p>
                     <p class="text-xs text-slate-600 dark:text-slate-400">
@@ -792,26 +767,26 @@
     <!-- Mobile Bottom Tab Bar -->
     <nav class="mobile-bottom-nav">
       <a href="Home.html" class="bottom-nav-item" id="bottomDashboard">
-        <span class="material-symbols-outlined">Home</span><span>Home</span>
+        <i data-lucide="home"></i><span>Home</span>
       </a>
       <a href="Order-history.html" class="bottom-nav-item" id="bottomHistory">
-        <span class="material-symbols-outlined">history</span
-        ><span>History</span>
+        <i data-lucide="history"></i><span>History</span>
       </a>
       <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder">
-        <span class="material-symbols-outlined">local_gas_station</span
-        ><span>Order</span>
+        <i data-lucide="fuel"></i><span>Order</span>
       </a>
       <a href="tracking.html" class="bottom-nav-item" id="bottomTracking">
-        <span class="material-symbols-outlined">near_me</span><span>Track</span>
+        <i data-lucide="navigation"></i><span>Track</span>
       </a>
       <a href="Profile.html" class="bottom-nav-item" id="bottomProfile"
-        ><span class="material-symbols-outlined">person</span
-        ><span>Profile</span></a
+        ><i data-lucide="user"></i><span>Profile</span></a
       >
     </nav>
 
     <script>
+      // Initialize Lucide icons
+      lucide.createIcons();
+
       // ========== CONFIG ==========
       const API_BASE_URL =
         window.location.hostname === "localhost" ||
@@ -1016,7 +991,7 @@
               align-items: center;
               justify-content: center;
             ">
-              <span class="material-symbols-outlined" style="color: white; font-size: 22px; font-variation-settings: 'FILL' 1;">location_on</span>
+              <i data-lucide="map-pin" style="color: white; width: 22px; height: 22px;"></i>
             </div>
           `,
           className: "",
@@ -1034,8 +1009,9 @@
         if (deliveryMarker) {
           deliveryMarker.setLatLng([lat, lng]);
         } else {
+          const icon = createDeliveryMarkerIcon();
           deliveryMarker = L.marker([lat, lng], {
-            icon: createDeliveryMarkerIcon(),
+            icon: icon,
             draggable: true,
           })
             .addTo(deliveryMap)
@@ -1053,6 +1029,8 @@
 
         updateCoordsHint();
         deliveryMap.setView([lat, lng], 17, { animate: true, duration: 0.5 });
+        // Initialize Lucide icons in the marker
+        setTimeout(() => lucide.createIcons(), 50);
       }
 
       function updateCoordsHint() {
