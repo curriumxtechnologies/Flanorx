@@ -14,11 +14,8 @@
       rel="stylesheet"
     />
 
-    <!-- Material Symbols Outlined -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-      rel="stylesheet"
-    />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
     <link
       rel="apple-touch-icon"
@@ -178,8 +175,7 @@
         padding: 4px 0;
       }
 
-      .bottom-nav-item.active .material-symbols-outlined {
-        font-variation-settings: "FILL" 1;
+      .bottom-nav-item.active .lucide {
         color: #13ec5b;
       }
 
@@ -196,8 +192,9 @@
         margin: 0 2px;
       }
 
-      .bottom-nav-item span:first-child {
-        font-size: 24px;
+      .bottom-nav-item .lucide {
+        width: 24px;
+        height: 24px;
       }
 
       .bottom-nav-item span:last-child {
@@ -280,47 +277,47 @@
             href="#"
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
           >
-            <span class="material-symbols-outlined text-primary">Home</span>
+            <i data-lucide="home" class="text-primary"></i>
             <span class="font-semibold text-sm">Home</span>
           </a>
           <a
             href="Order-history.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >history</span
-            >
+            <i
+              data-lucide="history"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Order History</span>
           </a>
           <a
             href="place-order.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >local_gas_station</span
-            >
+            <i
+              data-lucide="fuel"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-semibold text-sm">Place Order</span>
           </a>
           <a
             href="tracking.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >near_me</span
-            >
+            <i
+              data-lucide="navigation"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Tracking</span>
           </a>
           <a
             href="Profile.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >person</span
-            >
+            <i
+              data-lucide="user"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Profile</span>
           </a>
         </nav>
@@ -351,9 +348,7 @@
             <div
               class="mx-auto size-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6"
             >
-              <span class="material-symbols-outlined text-red-500 text-4xl"
-                >lock</span
-              >
+              <i data-lucide="lock" class="text-red-500 w-9 h-9"></i>
             </div>
             <h2
               class="text-2xl font-extrabold text-slate-900 dark:text-white mb-3"
@@ -368,7 +363,7 @@
               href="login.html"
               class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-slate-900 font-extrabold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary/20"
             >
-              <span class="material-symbols-outlined">login</span> Login now
+              <i data-lucide="log-in"></i> Login now
             </a>
           </div>
         </div>
@@ -397,7 +392,7 @@
                 href="place-order.html"
                 class="bg-brand-yellow hover:scale-105 transition-transform px-4 lg:px-6 py-2 lg:py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-yellow-500/20 text-slate-900 font-bold text-sm lg:text-base"
               >
-                <span class="material-symbols-outlined">bolt</span> Quick Order
+                <i data-lucide="zap"></i> Quick Order
               </a>
             </div>
 
@@ -430,9 +425,7 @@
                       <div
                         class="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0"
                       >
-                        <span class="material-symbols-outlined"
-                          >local_gas_station</span
-                        >
+                        <i data-lucide="fuel"></i>
                       </div>
                       <div class="flex-1">
                         <p
@@ -449,16 +442,14 @@
                             href="place-order.html"
                             class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-slate-900 font-bold text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
                           >
-                            <span class="material-symbols-outlined">bolt</span>
+                            <i data-lucide="zap"></i>
                             Place Order
                           </a>
                           <a
                             href="Order-history.html"
                             class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold hover:bg-white dark:hover:bg-slate-800 transition-all"
                           >
-                            <span class="material-symbols-outlined"
-                              >history</span
-                            >
+                            <i data-lucide="history"></i>
                             View History
                           </a>
                         </div>
@@ -513,9 +504,7 @@
                         <div
                           class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center"
                         >
-                          <span class="material-symbols-outlined"
-                            >oil_barrel</span
-                          >
+                          <i data-lucide="droplets"></i>
                         </div>
                         <div>
                           <p
@@ -532,9 +521,7 @@
                         <div
                           class="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center"
                         >
-                          <span class="material-symbols-outlined"
-                            >payments</span
-                          >
+                          <i data-lucide="banknote"></i>
                         </div>
                         <div>
                           <p
@@ -573,9 +560,7 @@
                         type="button"
                         disabled
                       >
-                        <span class="material-symbols-outlined text-slate-600"
-                          >call</span
-                        >
+                        <i data-lucide="phone" class="text-slate-600"></i>
                       </button>
                     </div>
 
@@ -630,9 +615,7 @@
                     <div
                       class="size-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform"
                     >
-                      <span class="material-symbols-outlined font-bold"
-                        >local_gas_station</span
-                      >
+                      <i data-lucide="fuel" class="font-bold"></i>
                     </div>
                     <div class="text-right">
                       <h4
@@ -702,27 +685,26 @@
 
     <nav class="mobile-bottom-nav">
       <a href="#" class="bottom-nav-item" id="bottomHome"
-        ><span class="material-symbols-outlined">Home</span><span>Home</span></a
+        ><i data-lucide="home"></i><span>Home</span></a
       >
       <a href="Order-history.html" class="bottom-nav-item" id="bottomHistory"
-        ><span class="material-symbols-outlined">history</span
-        ><span>History</span></a
+        ><i data-lucide="history"></i><span>History</span></a
       >
       <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder"
-        ><span class="material-symbols-outlined">local_gas_station</span
-        ><span>Order</span></a
+        ><i data-lucide="fuel"></i><span>Order</span></a
       >
       <a href="tracking.html" class="bottom-nav-item" id="bottomTracking"
-        ><span class="material-symbols-outlined">near_me</span
-        ><span>Track</span></a
+        ><i data-lucide="navigation"></i><span>Track</span></a
       >
       <a href="Profile.html" class="bottom-nav-item" id="bottomProfile"
-        ><span class="material-symbols-outlined">person</span
-        ><span>Profile</span></a
+        ><i data-lucide="user"></i><span>Profile</span></a
       >
     </nav>
 
     <script>
+      // Initialize Lucide icons
+      lucide.createIcons();
+
       const API_BASE_URL =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1"
@@ -747,6 +729,8 @@
         localStorage.removeItem("flanorx_auth");
         // Hide loader
         hidePageLoader();
+        // Re-initialize icons for newly shown content
+        lucide.createIcons();
       }
 
       // Check if user is authenticated; if not, show unauthorized card
