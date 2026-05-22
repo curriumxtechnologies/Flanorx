@@ -606,54 +606,61 @@
           const profile = await apiRequest("/api/users/profile");
 
           // Update UI with profile data
-          document.getElementById("userName").textContent = profile.name;
-          document.getElementById("detailName").textContent = profile.name;
-          document.getElementById("userEmail").textContent = profile.email;
-          document.getElementById("detailEmail").textContent = profile.email;
-          document.getElementById("userPhone").textContent =
-            profile.phone || "Not set";
-          document.getElementById("detailPhone").textContent =
-            profile.phone || "Not set";
+          const userName = document.getElementById("userName");
+          const detailName = document.getElementById("detailName");
+          const userEmail = document.getElementById("userEmail");
+          const detailEmail = document.getElementById("detailEmail");
+          const userPhone = document.getElementById("userPhone");
+          const detailPhone = document.getElementById("detailPhone");
+
+          if (userName) userName.textContent = profile.name || "User";
+          if (detailName) detailName.textContent = profile.name || "User";
+          if (userEmail) userEmail.textContent = profile.email || "-";
+          if (detailEmail) detailEmail.textContent = profile.email || "-";
+          if (userPhone) userPhone.textContent = profile.phone || "Not set";
+          if (detailPhone) detailPhone.textContent = profile.phone || "Not set";
 
           const memberDate = formatDate(
             profile.memberSince || profile.createdAt,
           );
-          document.getElementById("memberSince").textContent = memberDate;
+          const memberSince = document.getElementById("memberSince");
+          if (memberSince) memberSince.textContent = memberDate;
 
           // Set profile image
-          if (profile.profilePhoto) {
-            document.getElementById("profileImage").src = profile.profilePhoto;
-          } else {
-            document.getElementById("profileImage").src =
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=13ec5b&color=fff&bold=true`;
+          const profileImage = document.getElementById("profileImage");
+          if (profileImage) {
+            if (profile.profilePhoto) {
+              profileImage.src = profile.profilePhoto;
+            } else {
+              profileImage.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || "User")}&background=13ec5b&color=fff&bold=true`;
+            }
           }
 
           // Load order stats
-          const stats = await apiRequest("/api/users/orders/stats");
-          document.getElementById("totalOrders").textContent =
-            stats.totalOrders || 0;
-          document.getElementById("monthlyOrders").textContent =
-            stats.monthlyOrders || 0;
+          try {
+            const stats = await apiRequest("/api/users/orders/stats");
+            const totalOrders = document.getElementById("totalOrders");
+            const monthlyOrders = document.getElementById("monthlyOrders");
+            if (totalOrders) totalOrders.textContent = stats.totalOrders || 0;
+            if (monthlyOrders)
+              monthlyOrders.textContent = stats.monthlyOrders || 0;
+          } catch (statsError) {
+            console.error("Error loading stats:", statsError);
+          }
 
           // Load recent orders
           await loadRecentOrders();
 
           // Load addresses
           await loadAddresses();
-
-          // Show content, hide loading
-          document.getElementById("loadingState").style.display = "none";
-          document.getElementById("profileContent").style.display = "block";
         } catch (error) {
           console.error("Error loading profile:", error);
-          document.getElementById("loadingState").innerHTML = `
-            <div class="text-red-500 text-center">
-              <p class="mb-2">Failed to load profile: ${error.message}</p>
-              <button onclick="location.reload()" class="bg-primary text-black px-4 py-2 rounded-lg font-medium">
-                Retry
-              </button>
-            </div>
-          `;
+          // Show error in the profile card instead of missing elements
+          const userName = document.getElementById("userName");
+          if (userName) {
+            userName.textContent = "Error loading profile";
+            userName.classList.add("text-red-500");
+          }
         }
       }
 
