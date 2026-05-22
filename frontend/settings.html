@@ -157,6 +157,14 @@
         #sidebar {
           transform: translateX(-100%);
         }
+        /* Hide desktop danger zone on mobile */
+        .desktop-danger-zone {
+          display: none;
+        }
+        /* Show mobile danger zone on mobile */
+        .mobile-danger-zone {
+          display: block;
+        }
       }
       @media (min-width: 1024px) {
         #sidebar {
@@ -168,11 +176,39 @@
         main {
           padding-bottom: 0;
         }
+        /* Show desktop danger zone on desktop */
+        .desktop-danger-zone {
+          display: block;
+        }
+        /* Hide mobile danger zone on desktop */
+        .mobile-danger-zone {
+          display: none;
+        }
       }
 
       /* Utility to hide elements */
       .hidden-section {
         display: none !important;
+      }
+
+      /* Arrow rotation animation */
+      .arrow-icon {
+        transition: transform 0.3s ease;
+      }
+      .arrow-icon.rotated {
+        transform: rotate(180deg);
+      }
+
+      /* Danger content animation */
+      .danger-content {
+        max-height: 0;
+        overflow: hidden;
+        transition:
+          max-height 0.3s ease,
+          padding 0.3s ease;
+      }
+      .danger-content.expanded {
+        max-height: 200px;
       }
     </style>
   </head>
@@ -196,53 +232,57 @@
         </div>
 
         <nav class="flex-1 px-4 py-4 space-y-1">
+          <!-- DASHBOARD -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="customer-dashboard.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >dashboard</span
-            >
+            <i
+              data-lucide="layout-dashboard"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Dashboard</span>
           </a>
+          <!-- ORDER HISTORY -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="Order-history.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >history</span
-            >
+            <i
+              data-lucide="history"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Order History</span>
           </a>
+          <!-- PLACE ORDER -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="place-order.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >local_gas_station</span
-            >
+            <i
+              data-lucide="fuel"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-semibold text-sm">Place Order</span>
           </a>
+          <!-- TRACKING -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="tracking.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >near_me</span
-            >
+            <i
+              data-lucide="navigation"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Tracking</span>
           </a>
-          <!-- Settings (ACTIVE) -->
+          <!-- PROFILE (active) -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
-            href="customer-settings.html"
+            href="Profile.html"
           >
-            <span class="material-symbols-outlined text-primary">settings</span>
-            <span class="font-semibold text-sm">Settings</span>
+            <i data-lucide="user" class="text-primary"></i>
+            <span class="font-semibold text-sm"> Profile </span>
           </a>
         </nav>
 
@@ -268,7 +308,7 @@
       <!-- ========== MAIN CONTENT ========== -->
       <main class="flex-1 flex flex-col overflow-y-auto">
         <!-- ========== SETTINGS CONTENT ========== -->
-        <div class="p-4 lg:p-8 space-y-8 max-w-5xl">
+        <div class="p-4 lg:p-8 space-y-8 max-w-7xl">
           <!-- Page heading -->
           <div>
             <h2
@@ -284,10 +324,10 @@
             </p>
           </div>
 
-          <!-- Two column layout -->
+          <!-- Main content area with Personal Information on left and Security/Notifications on right -->
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <!-- Right: Settings sections -->
-            <div class="lg:col-span-8 space-y-6">
+            <!-- Left column: Personal Information -->
+            <div class="lg:col-span-7 space-y-6">
               <!-- ===== PERSONAL INFORMATION (summary only, form hidden) ===== -->
               <div
                 class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm"
@@ -429,6 +469,28 @@
                 </div>
               </div>
 
+              <!-- Desktop Danger zone (visible only on desktop) -->
+              <div
+                class="desktop-danger-zone bg-red-500/5 border border-red-200 dark:border-red-900/30 rounded-3xl p-6"
+              >
+                <h4 class="font-bold text-red-500 flex items-center gap-2 mb-3">
+                  <span class="material-symbols-outlined">warning</span> Danger
+                  Zone
+                </h4>
+                <p class="text-xs text-slate-500 mb-4">
+                  Permanently delete your account and all associated data. This
+                  action cannot be undone.
+                </p>
+                <button
+                  class="px-5 py-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all"
+                >
+                  Delete account
+                </button>
+              </div>
+            </div>
+
+            <!-- Right column: Security and Notification Preferences -->
+            <div class="lg:col-span-5 space-y-6">
               <!-- ===== SECURITY (summary only, form hidden) ===== -->
               <div
                 class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm"
@@ -578,21 +640,39 @@
                   </label>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <!-- Danger zone -->
-              <div
-                class="bg-red-500/5 border border-red-200 dark:border-red-900/30 rounded-3xl p-6"
+          <!-- Mobile Danger Zone (visible only on mobile, placed after all other cards) -->
+          <div class="mobile-danger-zone">
+            <div
+              class="bg-white dark:bg-slate-900 rounded-3xl border border-red-200 dark:border-red-900/30 shadow-sm overflow-hidden"
+            >
+              <!-- Danger Zone Header Button -->
+              <button
+                id="dangerZoneToggle"
+                class="w-full p-6 flex items-center justify-between text-left hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
               >
-                <h4 class="font-bold text-red-500 flex items-center gap-2 mb-3">
+                <h4 class="font-bold text-red-500 flex items-center gap-2">
                   <span class="material-symbols-outlined">warning</span> Danger
                   Zone
                 </h4>
-                <p class="text-xs text-slate-500 mb-4">
+                <span
+                  class="material-symbols-outlined text-red-500 arrow-icon"
+                  id="dangerArrow"
+                >
+                  keyboard_arrow_down
+                </span>
+              </button>
+
+              <!-- Danger Zone Content (hidden by default) -->
+              <div class="danger-content px-6" id="dangerContent">
+                <p class="text-xs text-slate-500 dark:text-slate-400 pb-4">
                   Permanently delete your account and all associated data. This
                   action cannot be undone.
                 </p>
                 <button
-                  class="px-5 py-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all"
+                  class="px-5 py-2.5 mb-6 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all w-full sm:w-auto"
                 >
                   Delete account
                 </button>
@@ -605,26 +685,25 @@
 
     <!-- Mobile Bottom Tab Bar -->
     <nav class="mobile-bottom-nav">
-      <a href="customer-dashboard.html" class="bottom-nav-item"
-        ><span class="material-symbols-outlined">dashboard</span
-        ><span>Home</span></a
+      <a
+        href="customer-dashboard.html"
+        class="bottom-nav-item"
+        id="bottomDashboard"
+        ><i data-lucide="layout-dashboard"></i><span>Home</span></a
       >
-      <a href="Order-history.html" class="bottom-nav-item"
-        ><span class="material-symbols-outlined">history</span
-        ><span>History</span></a
+      <a href="Order-history.html" class="bottom-nav-item" id="bottomHistory"
+        ><i data-lucide="history"></i><span>History</span></a
       >
-      <a href="place-order.html" class="bottom-nav-item"
-        ><span class="material-symbols-outlined">local_gas_station</span
-        ><span>Order</span></a
+      <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder"
+        ><i data-lucide="fuel"></i><span>Order</span></a
       >
-      <a href="tracking.html" class="bottom-nav-item"
-        ><span class="material-symbols-outlined">near_me</span
-        ><span>Track</span></a
+      <a href="tracking.html" class="bottom-nav-item" id="bottomTracking"
+        ><i data-lucide="navigation"></i><span>Track</span></a
       >
-      <a href="customer-settings.html" class="bottom-nav-item active"
-        ><span class="material-symbols-outlined">settings</span
-        ><span>Settings</span></a
-      >
+      <a href="Profile.html" class="bottom-nav-item" id="bottomProfile">
+        <i data-lucide="user"></i>
+        <span>Profile</span>
+      </a>
     </nav>
 
     <!-- Scripts -->
@@ -701,6 +780,18 @@
           cancelSecurityBtn.addEventListener("click", function () {
             securitySummary.classList.remove("hidden-section");
             securityEditForm.classList.add("hidden-section");
+          });
+        }
+
+        // MOBILE DANGER ZONE TOGGLE
+        const dangerZoneToggle = document.getElementById("dangerZoneToggle");
+        const dangerContent = document.getElementById("dangerContent");
+        const dangerArrow = document.getElementById("dangerArrow");
+
+        if (dangerZoneToggle && dangerContent && dangerArrow) {
+          dangerZoneToggle.addEventListener("click", function () {
+            dangerContent.classList.toggle("expanded");
+            dangerArrow.classList.toggle("rotated");
           });
         }
 
