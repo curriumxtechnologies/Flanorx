@@ -14,12 +14,6 @@
       rel="stylesheet"
     />
 
-    <!-- Material Symbols Outlined -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      rel="stylesheet"
-    />
-
     <link
       rel="apple-touch-icon"
       sizes="180x180"
@@ -88,8 +82,7 @@
         border-radius: 12px;
         padding: 4px 0;
       }
-      .bottom-nav-item.active .material-symbols-outlined {
-        font-variation-settings: "FILL" 1;
+      .bottom-nav-item.active .lucide {
         color: #13ec5b;
       }
       .bottom-nav-item {
@@ -104,8 +97,9 @@
         flex: 1;
         max-width: 80px;
       }
-      .bottom-nav-item .material-symbols-outlined {
-        font-size: 24px;
+      .bottom-nav-item .lucide {
+        width: 24px;
+        height: 24px;
         transition: all 0.2s;
       }
       .bottom-nav-item span:last-child {
@@ -121,7 +115,7 @@
         background: rgba(19, 236, 91, 0.15);
         color: #13ec5b;
       }
-      .dark .bottom-nav-item.active .material-symbols-outlined {
+      .dark .bottom-nav-item.active .lucide {
         color: #13ec5b;
       }
       .mobile-bottom-nav {
@@ -314,9 +308,7 @@
             <h2
               class="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3"
             >
-              <span class="material-symbols-outlined text-primary text-3xl"
-                >settings</span
-              >
+              <i data-lucide="settings" class="text-primary w-8 h-8"></i>
               Account Settings
             </h2>
             <p class="text-slate-500 mt-1 text-sm lg:text-base">
@@ -334,9 +326,7 @@
               >
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary"
-                      >badge</span
-                    >
+                    <i data-lucide="badge" class="text-primary w-5 h-5"></i>
                     Personal Information
                   </h3>
                   <button
@@ -344,7 +334,7 @@
                     class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors"
                     title="Edit"
                   >
-                    <span class="material-symbols-outlined">edit</span>
+                    <i data-lucide="edit" class="w-5 h-5"></i>
                   </button>
                 </div>
 
@@ -463,7 +453,7 @@
                     <button
                       class="px-6 py-2 bg-primary text-slate-900 font-bold rounded-lg text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center gap-2"
                     >
-                      <span class="material-symbols-outlined">save</span> Save
+                      <i data-lucide="save" class="w-4 h-4"></i> Save
                     </button>
                   </div>
                 </div>
@@ -474,7 +464,7 @@
                 class="desktop-danger-zone bg-red-500/5 border border-red-200 dark:border-red-900/30 rounded-3xl p-6"
               >
                 <h4 class="font-bold text-red-500 flex items-center gap-2 mb-3">
-                  <span class="material-symbols-outlined">warning</span> Danger
+                  <i data-lucide="triangle-alert" class="w-5 h-5"></i> Danger
                   Zone
                 </h4>
                 <p class="text-xs text-slate-500 mb-4">
@@ -497,9 +487,7 @@
               >
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary"
-                      >lock</span
-                    >
+                    <i data-lucide="lock" class="text-primary w-5 h-5"></i>
                     Security
                   </h3>
                   <button
@@ -507,7 +495,7 @@
                     class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors"
                     title="Edit"
                   >
-                    <span class="material-symbols-outlined">edit</span>
+                    <i data-lucide="edit" class="w-5 h-5"></i>
                   </button>
                 </div>
 
@@ -560,10 +548,7 @@
                     <div
                       class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-xs flex items-center gap-2"
                     >
-                      <span
-                        class="material-symbols-outlined text-slate-400 text-sm"
-                        >info</span
-                      >
+                      <i data-lucide="info" class="text-slate-400 w-4 h-4"></i>
                       <span class="text-slate-500"
                         >Password must be at least 8 characters, include a
                         number and a special character.</span
@@ -580,7 +565,7 @@
                     <button
                       class="px-6 py-2 bg-primary text-slate-900 font-bold rounded-lg text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center gap-2"
                     >
-                      <span class="material-symbols-outlined">save</span> Update
+                      <i data-lucide="save" class="w-4 h-4"></i> Update
                     </button>
                   </div>
                 </div>
@@ -591,50 +576,38 @@
                 class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm"
               >
                 <h3 class="text-lg font-bold flex items-center gap-2 mb-6">
-                  <span class="material-symbols-outlined text-primary"
-                    >notifications</span
-                  >
+                  <i data-lucide="bell" class="text-primary w-5 h-5"></i>
                   Notification Preferences
                 </h3>
                 <div class="space-y-4">
+                  <!-- Email Notifications -->
                   <label
-                    class="flex items-center justify-between cursor-pointer"
+                    class="flex items-center justify-between cursor-pointer group"
                   >
-                    <span class="text-sm font-medium">Order updates (SMS)</span>
-                    <div
-                      class="relative inline-block w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-700 peer-checked:bg-primary transition"
-                    >
+                    <span class="text-sm font-medium">Email notifications</span>
+                    <div class="relative inline-block w-12 h-6">
                       <input type="checkbox" class="sr-only peer" checked />
+                      <div
+                        class="w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-700 peer-checked:bg-primary transition-colors duration-200"
+                      ></div>
                       <span
-                        class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:left-7 peer-checked:bg-primary"
+                        class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 peer-checked:translate-x-6"
                       ></span>
                     </div>
                   </label>
+
+                  <!-- Push Notifications -->
                   <label
-                    class="flex items-center justify-between cursor-pointer"
+                    class="flex items-center justify-between cursor-pointer group"
                   >
-                    <span class="text-sm font-medium">Promotional emails</span>
-                    <div
-                      class="relative inline-block w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-700"
-                    >
-                      <input type="checkbox" class="sr-only peer" />
-                      <span
-                        class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:left-7 peer-checked:bg-primary"
-                      ></span>
-                    </div>
-                  </label>
-                  <label
-                    class="flex items-center justify-between cursor-pointer"
-                  >
-                    <span class="text-sm font-medium"
-                      >Delivery push notifications</span
-                    >
-                    <div
-                      class="relative inline-block w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-700 peer-checked:bg-primary transition"
-                    >
+                    <span class="text-sm font-medium">Push notifications</span>
+                    <div class="relative inline-block w-12 h-6">
                       <input type="checkbox" class="sr-only peer" checked />
+                      <div
+                        class="w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-700 peer-checked:bg-primary transition-colors duration-200"
+                      ></div>
                       <span
-                        class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:left-7 peer-checked:bg-primary"
+                        class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-200 peer-checked:translate-x-6"
                       ></span>
                     </div>
                   </label>
@@ -654,15 +627,14 @@
                 class="w-full p-6 flex items-center justify-between text-left hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
               >
                 <h4 class="font-bold text-red-500 flex items-center gap-2">
-                  <span class="material-symbols-outlined">warning</span> Danger
+                  <i data-lucide="triangle-alert" class="w-5 h-5"></i> Danger
                   Zone
                 </h4>
-                <span
-                  class="material-symbols-outlined text-red-500 arrow-icon"
+                <i
+                  data-lucide="chevron-down"
+                  class="text-red-500 arrow-icon w-5 h-5"
                   id="dangerArrow"
-                >
-                  keyboard_arrow_down
-                </span>
+                ></i>
               </button>
 
               <!-- Danger Zone Content (hidden by default) -->
@@ -705,6 +677,12 @@
         <span>Profile</span>
       </a>
     </nav>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      lucide.createIcons();
+    </script>
 
     <!-- Scripts -->
     <script>
