@@ -8,15 +8,14 @@
     <!-- Tailwind + plugins -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
-    <!-- Google Fonts: Manrope & Material Icons -->
+    <!-- Google Fonts: Manrope -->
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap"
       rel="stylesheet"
     />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap"
-      rel="stylesheet"
-    />
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
     <link
       rel="apple-touch-icon"
@@ -76,8 +75,7 @@
         border-radius: 12px;
         padding: 4px 0;
       }
-      .bottom-nav-item.active .material-symbols-outlined {
-        font-variation-settings: "FILL" 1;
+      .bottom-nav-item.active .lucide {
         color: #13ec5b;
       }
       .bottom-nav-item {
@@ -92,8 +90,9 @@
         flex: 1;
         max-width: 80px;
       }
-      .bottom-nav-item .material-symbols-outlined {
-        font-size: 24px;
+      .bottom-nav-item .lucide {
+        width: 24px;
+        height: 24px;
         transition: all 0.2s;
       }
       .bottom-nav-item span:last-child {
@@ -109,7 +108,7 @@
         background: rgba(19, 236, 91, 0.15);
         color: #13ec5b;
       }
-      .dark .bottom-nav-item.active .material-symbols-outlined {
+      .dark .bottom-nav-item.active .lucide {
         color: #13ec5b;
       }
 
@@ -355,47 +354,47 @@
             href="Home.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >Home</span
-            >
+            <i
+              data-lucide="home"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Home</span>
           </a>
           <a
             href="Order-history.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
           >
-            <span class="material-symbols-outlined text-primary">history</span>
+            <i data-lucide="history" class="text-primary"></i>
             <span class="font-semibold text-sm">Order History</span>
           </a>
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="place-order.html"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >local_gas_station</span
-            >
+            <i
+              data-lucide="fuel"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-semibold text-sm">Place Order</span>
           </a>
           <a
             href="tracking.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >near_me</span
-            >
+            <i
+              data-lucide="navigation"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Tracking</span>
           </a>
           <a
             href="Profile.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >person</span
-            >
+            <i
+              data-lucide="user"
+              class="group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Profile</span>
           </a>
         </nav>
@@ -451,9 +450,7 @@
               <div
                 class="mx-auto size-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4"
               >
-                <span class="material-symbols-outlined text-primary text-3xl"
-                  >history</span
-                >
+                <i data-lucide="history" class="text-primary w-8 h-8"></i>
               </div>
               <h3 class="text-xl font-black mb-2">No orders found yet</h3>
               <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
@@ -462,10 +459,8 @@
               <a
                 href="place-order.html"
                 class="inline-flex items-center gap-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 font-extrabold px-6 py-3 rounded-xl transition-all shadow-lg shadow-yellow-600/20"
-                >Place your order<span class="material-symbols-outlined"
-                  >arrow_forward</span
-                ></a
-              >
+                >Place your order<i data-lucide="arrow-right"></i
+              ></a>
             </div>
 
             <!-- DESKTOP FILTER CARD (unchanged) -->
@@ -473,10 +468,10 @@
               class="hidden lg:flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex-wrap items-center gap-3 shrink-0"
             >
               <div class="relative flex-1 min-w-[200px]">
-                <span
-                  class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  >search</span
-                >
+                <i
+                  data-lucide="search"
+                  class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                ></i>
                 <input
                   id="searchInput"
                   class="w-full pl-10 pr-4 py-2.5 rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 focus:ring-primary focus:border-primary text-sm"
@@ -649,9 +644,7 @@
                     id="refreshBtn"
                     class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >
-                    <span class="material-symbols-outlined text-sm"
-                      >refresh</span
-                    >
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                     Refresh
                   </button>
                 </div>
@@ -686,26 +679,22 @@
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-bottom-nav">
       <a href="Home.html" class="bottom-nav-item" id="bottomDashboard"
-        ><span class="material-symbols-outlined">Home</span><span>Home</span></a
+        ><i data-lucide="home"></i><span>Home</span></a
       >
       <a
         href="Order-history.html"
         class="bottom-nav-item active"
         id="bottomHistory"
-        ><span class="material-symbols-outlined">history</span
-        ><span>History</span></a
+        ><i data-lucide="history"></i><span>History</span></a
       >
       <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder"
-        ><span class="material-symbols-outlined">local_gas_station</span
-        ><span>Order</span></a
+        ><i data-lucide="fuel"></i><span>Order</span></a
       >
       <a href="tracking.html" class="bottom-nav-item" id="bottomTracking"
-        ><span class="material-symbols-outlined">near_me</span
-        ><span>Track</span></a
+        ><i data-lucide="navigation"></i><span>Track</span></a
       >
       <a href="Profile.html" class="bottom-nav-item" id="bottomProfile"
-        ><span class="material-symbols-outlined">person</span
-        ><span>Profile</span></a
+        ><i data-lucide="user"></i><span>Profile</span></a
       >
     </nav>
 
@@ -714,7 +703,7 @@
       id="searchFab"
       class="fixed bottom-24 right-4 lg:hidden z-30 w-14 h-14 bg-primary text-slate-900 rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform"
     >
-      <span class="material-symbols-outlined text-2xl">search</span>
+      <i data-lucide="search" class="w-6 h-6"></i>
     </button>
 
     <!-- Search Modal -->
@@ -735,7 +724,7 @@
               id="closeSearchModal"
               class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              <span class="material-symbols-outlined">close</span>
+              <i data-lucide="x"></i>
             </button>
           </div>
           <input
@@ -784,7 +773,7 @@
               class="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Close"
             >
-              <span class="material-symbols-outlined">close</span>
+              <i data-lucide="x"></i>
             </button>
           </div>
           <div class="p-4 sm:p-5 space-y-4">
@@ -856,16 +845,13 @@
               id="modalSecondaryBtn"
               class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 text-sm font-extrabold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
-              <span class="material-symbols-outlined text-base"
-                >receipt_long</span
-              >Close
+              <i data-lucide="receipt" class="w-4 h-4"></i>Close
             </button>
             <button
               id="modalPayBtn"
               class="flex-1 hidden items-center justify-center gap-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 font-extrabold px-4 py-3 rounded-xl transition-all shadow-lg shadow-yellow-600/20 active:scale-95"
             >
-              <span class="material-symbols-outlined text-base">payments</span
-              >Pay Now
+              <i data-lucide="banknote" class="w-4 h-4"></i>Pay Now
             </button>
           </div>
         </div>
@@ -873,6 +859,9 @@
     </div>
 
     <script>
+      // Initialize Lucide icons
+      lucide.createIcons();
+
       const API_BASE_URL =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1"
@@ -1105,6 +1094,8 @@
         emptyState?.classList.add("hidden");
         renderDesktopTable(filtered);
         renderMobileList(filtered);
+        // Re-initialize Lucide icons for dynamically rendered content
+        lucide.createIcons();
       }
 
       function populateMonthDropdown() {
@@ -1182,8 +1173,8 @@
           .map((o) => {
             const isUnpaid = o?.paid === false;
             const payBtn = isUnpaid
-              ? `<button data-pay-order="${o._id}" class="inline-flex items-center gap-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 font-extrabold px-4 py-2 rounded-lg transition-all shadow-lg shadow-yellow-600/20 active:scale-95" title="Pay with Paystack"><span class="material-symbols-outlined text-sm">payments</span>Pay Now</button>`
-              : `<button class="p-2 opacity-30 cursor-not-allowed text-slate-400" title="Paid"><span class="material-symbols-outlined">done</span></button>`;
+              ? `<button data-pay-order="${o._id}" class="inline-flex items-center gap-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 font-extrabold px-4 py-2 rounded-lg transition-all shadow-lg shadow-yellow-600/20 active:scale-95" title="Pay with Paystack"><i data-lucide="banknote" class="w-3.5 h-3.5"></i>Pay Now</button>`
+              : `<button class="p-2 opacity-30 cursor-not-allowed text-slate-400" title="Paid"><i data-lucide="check"></i></button>`;
             return `<tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer" data-open-order="${o._id}">
             <td class="px-6 py-4 text-sm font-bold">${o?.orderId ? "#" + o.orderId : "#-"}</td>
             <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">${fmtDate(o?.createdAt || o?.date)}</td>
@@ -1240,21 +1231,21 @@
           const dateLine = `${fmtDate(o?.createdAt || o?.date)}${fmtTime(o?.createdAt || o?.date) ? " · " + fmtTime(o?.createdAt || o?.date) : ""}`;
           const status = (o?.status || "unknown").toLowerCase();
           let iconClass = "outgoing",
-            iconName = "arrow_upward";
+            iconName = "arrow-up";
           if (o?.paid === true) {
             iconClass = "incoming";
-            iconName = "arrow_downward";
+            iconName = "arrow-down";
           }
           if (status === "pending") {
             iconClass = "pending";
-            iconName = "schedule";
+            iconName = "clock";
           }
           if (status === "processing") {
             iconClass = "processing";
-            iconName = "sync";
+            iconName = "refresh-cw";
           }
           html += `<div class="txn-row-full" data-open-order="${o._id}">
-            <div class="txn-icon ${iconClass}"><span class="material-symbols-outlined text-lg">${iconName}</span></div>
+            <div class="txn-icon ${iconClass}"><i data-lucide="${iconName}" class="w-4.5 h-4.5"></i></div>
             <div class="flex-1 min-w-0">
               <p class="text-sm font-bold truncate">${o?.fuelType || "Fuel"} · ${Number(o?.quantity || 0)}L</p>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${dateLine}</p>
@@ -1277,6 +1268,8 @@
               if (order) openOrderModal(order);
             });
           });
+        // Initialize Lucide icons in mobile list
+        lucide.createIcons();
       }
 
       const orderModal = document.getElementById("orderModal");
@@ -1319,6 +1312,8 @@
         orderModal.classList.remove("hidden");
         orderModal.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
+        // Re-initialize Lucide icons in modal
+        lucide.createIcons();
       }
       function closeModal() {
         orderModal.classList.add("hidden");
