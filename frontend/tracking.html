@@ -29,8 +29,8 @@
       rel="stylesheet"
     />
 
-    <!-- Lucide Icons (CDN) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
     <link
       rel="apple-touch-icon"
@@ -105,9 +105,8 @@
         padding: 4px 0;
       }
 
-      .bottom-nav-item.active svg {
+      .bottom-nav-item.active .lucide {
         stroke: #13ec5b;
-        fill: #13ec5b;
       }
 
       .bottom-nav-item {
@@ -123,7 +122,7 @@
         max-width: 80px;
       }
 
-      .bottom-nav-item svg {
+      .bottom-nav-item .lucide {
         width: 24px;
         height: 24px;
         transition: all 0.2s;
@@ -266,50 +265,47 @@
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="Home.html"
           >
-            <span
-              class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
+            <i
               data-lucide="home"
-            ></span>
+              class="w-5 h-5 group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Home</span>
           </a>
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="Order-history.html"
           >
-            <span
-              class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
-              data-lucide="clock"
-            ></span>
+            <i
+              data-lucide="history"
+              class="w-5 h-5 group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Order History</span>
           </a>
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
             href="place-order.html"
           >
-            <span
-              class="lucide-icon w-5 h-5 group-hover:text-primary transition-colors"
+            <i
               data-lucide="fuel"
-            ></span>
+              class="w-5 h-5 group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-semibold text-sm">Place Order</span>
           </a>
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
             href="tracking.html"
           >
-            <span
-              class="lucide-icon w-5 h-5 text-primary"
-              data-lucide="navigation"
-            ></span>
+            <i data-lucide="navigation" class="w-5 h-5 text-primary"></i>
             <span class="font-semibold text-sm">Tracking</span>
           </a>
           <a
             href="Profile.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
-            <span
-              class="material-symbols-outlined group-hover:text-primary transition-colors"
-              >person</span
-            >
+            <i
+              data-lucide="user"
+              class="w-5 h-5 group-hover:text-primary transition-colors"
+            ></i>
             <span class="font-medium text-sm">Profile</span>
           </a>
         </nav>
@@ -348,24 +344,21 @@
                 class="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg hover:bg-slate-50 transition-colors"
                 title="Zoom In"
               >
-                <span class="lucide-icon w-5 h-5" data-lucide="plus"></span>
+                <i data-lucide="plus" class="w-5 h-5"></i>
               </button>
               <button
                 id="zoomOutBtn"
                 class="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg hover:bg-slate-50 transition-colors"
                 title="Zoom Out"
               >
-                <span class="lucide-icon w-5 h-5" data-lucide="minus"></span>
+                <i data-lucide="minus" class="w-5 h-5"></i>
               </button>
               <button
                 id="centerMapBtn"
                 class="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-lg text-primary hover:bg-slate-50 transition-colors mt-2"
                 title="Center on Rider"
               >
-                <span
-                  class="lucide-icon w-5 h-5"
-                  data-lucide="crosshair"
-                ></span>
+                <i data-lucide="crosshair" class="w-5 h-5"></i>
               </button>
             </div>
 
@@ -375,10 +368,10 @@
               class="hidden absolute inset-0 z-[999] bg-white/90 dark:bg-slate-900/90 flex items-center justify-center"
             >
               <div class="text-center p-8">
-                <span
-                  class="lucide-icon w-16 h-16 text-slate-300 mb-4 mx-auto"
+                <i
                   data-lucide="navigation-off"
-                ></span>
+                  class="w-16 h-16 text-slate-300 mb-4 mx-auto"
+                ></i>
                 <h3
                   class="text-xl font-bold text-slate-600 dark:text-slate-400 mb-2"
                 >
@@ -391,7 +384,7 @@
                   href="place-order.html"
                   class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-slate-900 font-bold rounded-xl hover:shadow-lg transition-all"
                 >
-                  <span class="lucide-icon w-5 h-5" data-lucide="zap"></span>
+                  <i data-lucide="zap" class="w-5 h-5"></i>
                   Place New Order
                 </a>
               </div>
@@ -419,10 +412,7 @@
                     <span
                       class="flex items-center text-yellow-500 whitespace-nowrap"
                     >
-                      <span
-                        class="lucide-icon w-3 h-3 fill-yellow-500"
-                        data-lucide="star"
-                      ></span>
+                      <i data-lucide="star" class="w-3 h-3 fill-yellow-500"></i>
                       <span id="riderRating" class="ml-0.5">--</span>
                     </span>
                     <span>•</span>
@@ -478,16 +468,13 @@
                   <div
                     class="ml-auto bg-primary p-2 rounded-lg flex items-center justify-center text-slate-900"
                   >
-                    <span
-                      class="lucide-icon w-6 h-6"
-                      data-lucide="timer"
-                    ></span>
+                    <i data-lucide="timer" class="w-6 h-6"></i>
                   </div>
                 </div>
                 <div
                   class="mt-3 flex items-center gap-2 text-sm text-slate-500"
                 >
-                  <span class="lucide-icon w-5 h-5" data-lucide="route"></span>
+                  <i data-lucide="route" class="w-5 h-5"></i>
                   <span id="distanceDisplay">-- km</span>
                 </div>
               </div>
@@ -512,20 +499,17 @@
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                  <span
-                    class="lucide-icon w-5 h-5 text-slate-400"
+                  <i
                     data-lucide="shopping-cart"
-                  ></span>
+                    class="w-5 h-5 text-slate-400"
+                  ></i>
                   <span class="font-bold text-sm">Order Summary</span>
                 </div>
                 <button
                   id="orderSummaryToggle"
                   class="text-slate-400 hover:text-primary transition-colors"
                 >
-                  <span
-                    class="lucide-icon w-5 h-5"
-                    data-lucide="chevron-down"
-                  ></span>
+                  <i data-lucide="chevron-down" class="w-5 h-5"></i>
                 </button>
               </div>
               <div
@@ -566,22 +550,19 @@
     <!-- Mobile Bottom Nav -->
     <nav class="mobile-bottom-nav">
       <a href="Home.html" class="bottom-nav-item" id="bottomDashboard">
-        <span class="lucide-icon" data-lucide="home"></span><span>Home</span>
+        <i data-lucide="home"></i><span>Home</span>
       </a>
       <a href="Order-history.html" class="bottom-nav-item" id="bottomHistory">
-        <span class="lucide-icon" data-lucide="clock"></span
-        ><span>History</span>
+        <i data-lucide="history"></i><span>History</span>
       </a>
       <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder">
-        <span class="lucide-icon" data-lucide="fuel"></span><span>Order</span>
+        <i data-lucide="fuel"></i><span>Order</span>
       </a>
       <a href="tracking.html" class="bottom-nav-item" id="bottomTracking">
-        <span class="lucide-icon" data-lucide="navigation"></span
-        ><span>Track</span>
+        <i data-lucide="navigation"></i><span>Track</span>
       </a>
       <a href="Profile.html" class="bottom-nav-item" id="bottomProfile"
-        ><span class="material-symbols-outlined">person</span
-        ><span>Profile</span></a
+        ><i data-lucide="user"></i><span>Profile</span></a
       >
     </nav>
 
@@ -922,19 +903,19 @@
           {
             key: "pending",
             label: "Order Placed",
-            icon: "receipt",
+            icon: "receipt-text",
             detail: "Payment confirmed",
           },
           {
             key: "accepted",
             label: "Rider Assigned",
-            icon: "user",
+            icon: "user-check",
             detail: "Rider is preparing",
           },
           {
             key: "picked_up",
             label: "Fuel Picked Up",
-            icon: "droplet",
+            icon: "droplets",
             detail: "Quality verified",
           },
           {
@@ -952,7 +933,7 @@
           {
             key: "confirmed",
             label: "Completed",
-            icon: "verified",
+            icon: "shield-check",
             detail: "Delivery confirmed",
           },
         ];
@@ -967,7 +948,7 @@
           if (index < currentStatusIndex) stepClass = "step-completed";
           else if (index === currentStatusIndex) stepClass = "step-active";
           const timeStr = getTimeForStatus(order, status.key);
-          html += `<div class="relative z-10 flex gap-6 pb-8 ${stepClass}"><div class="icon-container size-12 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900 ring-1 ring-slate-100 dark:ring-slate-800 flex-shrink-0 ${index <= currentStatusIndex ? "" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}"><span class="lucide-icon w-5 h-5" data-lucide="${status.icon}"></span></div><div class="flex flex-col justify-center min-w-0"><h4 class="font-bold text-slate-900 dark:text-white truncate">${status.label}</h4><p class="text-xs ${index === currentStatusIndex ? "text-primary font-semibold" : "text-slate-500"} truncate">${timeStr ? timeStr + " • " : ""}${status.detail}</p></div></div>`;
+          html += `<div class="relative z-10 flex gap-6 pb-8 ${stepClass}"><div class="icon-container size-12 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900 ring-1 ring-slate-100 dark:ring-slate-800 flex-shrink-0 ${index <= currentStatusIndex ? "" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}"><i data-lucide="${status.icon}" class="w-5 h-5"></i></div><div class="flex flex-col justify-center min-w-0"><h4 class="font-bold text-slate-900 dark:text-white truncate">${status.label}</h4><p class="text-xs ${index === currentStatusIndex ? "text-primary font-semibold" : "text-slate-500"} truncate">${timeStr ? timeStr + " • " : ""}${status.detail}</p></div></div>`;
         });
         html += "</div>";
         timeline.innerHTML = html;
@@ -1057,7 +1038,7 @@
         }
         const timeline = document.getElementById("statusTimeline");
         if (timeline)
-          timeline.innerHTML = `<div class="text-center py-8"><span class="lucide-icon w-12 h-12 text-slate-300 mb-2 mx-auto" data-lucide="inbox"></span><p class="text-slate-400 text-sm">No active delivery</p></div>`;
+          timeline.innerHTML = `<div class="text-center py-8"><i data-lucide="inbox" class="w-12 h-12 text-slate-300 mb-2 mx-auto"></i><p class="text-slate-400 text-sm">No active delivery</p></div>`;
         lucide.createIcons();
       }
 
