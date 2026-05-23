@@ -22,6 +22,8 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <!-- After Leaflet JS, before your main script -->
+    <script src="https://cdn.jsdelivr.net/npm/@mapbox/polyline@1.1.1/src/polyline.js"></script>
 
     <!-- Google Fonts: Manrope -->
     <link
@@ -853,16 +855,28 @@
           routeLine = null;
         }
         try {
-          const coordinates =
-            L.Polyline.fromEncoded(encodedPolyline).getLatLngs();
-          routeLine = L.polyline(coordinates, {
-            color: "#13ec5b",
-            weight: 5,
-            opacity: 0.8,
-            dashArray: "10, 10",
-          }).addTo(map);
-          if (coordinates.length > 0)
-            map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+          // Use the polyline library's decode method
+          if (typeof polyline !== "undefined" && polyline.decode) {
+            const decodedPoints = polyline.decode(encodedPolyline);
+            // Convert from [lat, lng] to Leaflet format [lat, lng]
+            const coordinates = decodedPoints.map((point) => [
+              point[0],
+              point[1],
+            ]);
+
+            routeLine = L.polyline(coordinates, {
+              color: "#13ec5b",
+              weight: 5,
+              opacity: 0.8,
+              dashArray: "10, 10",
+            }).addTo(map);
+
+            if (coordinates.length > 0) {
+              map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+            }
+          } else {
+            console.error("Polyline library not loaded");
+          }
         } catch (error) {
           console.error("Error drawing route:", error);
         }
@@ -1061,21 +1075,6 @@
         );
       }
 
-      function setUserInfo() {
-        try {
-          const raw = localStorage.getItem("flanorx_auth");
-          if (!raw) return;
-          const user = JSON.parse(raw);
-          document.getElementById("userNameDisplay").textContent =
-            user?.name || user?.email || "Customer";
-          const avatar = document.getElementById("userAvatar");
-          if (avatar && user?.profile)
-            avatar.style.backgroundImage = `url('${user.profile}')`;
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
       function showNoActiveOrder() {
         document
           .getElementById("noActiveOrderOverlay")
@@ -1272,7 +1271,6 @@
       }
 
       function init() {
-        setUserInfo();
         initMap();
         initSidebar();
         setActiveNavigation();
