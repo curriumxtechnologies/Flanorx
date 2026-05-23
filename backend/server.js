@@ -20,33 +20,39 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 const MONGO_URL = process.env.MONGO_URL;
 
-// ✅ Parse first
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ✅ Parse JSON with increased limit for base64 images
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// ✅ CORS FIRST (must be before routes)
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? ['http://127.0.0.1:5500', 'https://flanorx.onrender.com', 'https://flanorx.vercel.app']
-    : ['http://127.0.0.1:5500', 'https://flanorx.onrender.com', 'https://flanorx.vercel.app'];
+// ✅ CORS configuration - FIXED
+const allowedOrigins = [
+  'http://localhost:5500', 
+  'http://127.0.0.1:5500', 
+  'http://localhost:8000',
+  'https://flanorx.onrender.com', 
+  'https://flanorx.vercel.app'
+];
 
 app.use(cors({
-    origin: function(origin, callback) {
-        // allow requests with no origin (mobile apps, curl)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            // Instead of throwing an error, just deny
-            callback(null, false);
-        }
-    },
-    credentials: true,
-    methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
+// ✅ REMOVED the problematic line - CORS handles OPTIONS automatically
+// app.options('*', cors()); // ← DELETE THIS LINE
 
 // ✅ Health test endpoint
 app.get("/api/health", (req, res) => {

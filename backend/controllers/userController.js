@@ -103,52 +103,49 @@ const logoutUser = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
 
-// ========== ADD THIS FUNCTION ==========
 const uploadProfilePhoto = asyncHandler(async (req, res) => {
-  try {
-    const { imageUrl } = req.body;
-    
-    // Validate image data
-    if (!imageUrl) {
-      res.status(400);
-      throw new Error("No image data provided");
-    }
-    
-    // Check if it's a valid base64 image
-    if (!imageUrl.startsWith('data:image/')) {
-      res.status(400);
-      throw new Error("Invalid image format. Please provide a valid image.");
-    }
-    
-    // Check file size (approximate from base64)
-    const base64Data = imageUrl.split(',')[1];
-    const sizeInBytes = Buffer.byteLength(base64Data, 'base64');
-    if (sizeInBytes > 5 * 1024 * 1024) { // 5MB limit
-      res.status(400);
-      throw new Error("Image size exceeds 5MB limit");
-    }
-    
-    // Update user's profilePhoto
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      res.status(404);
-      throw new Error("User not found");
-    }
-    
-    user.profilePhoto = imageUrl;
-    await user.save();
-    
-    res.status(200).json({
-      message: "Profile photo updated successfully",
-      profilePhoto: imageUrl
-    });
-  } catch (error) {
-    console.error("Avatar upload error:", error);
-    res.status(error.status || 500);
-    throw new Error(error.message || "Failed to upload avatar");
+  const { imageUrl } = req.body;
+  
+  // Validate image data
+  if (!imageUrl) {
+    res.status(400);
+    throw new Error("No image data provided");
   }
+  
+  // Check if it's a valid base64 image
+  if (!imageUrl.startsWith('data:image/')) {
+    res.status(400);
+    throw new Error("Invalid image format. Please provide a valid image.");
+  }
+  
+  // Check file size (approximate from base64)
+  const base64Data = imageUrl.split(',')[1];
+  if (!base64Data) {
+    res.status(400);
+    throw new Error("Invalid image data format");
+  }
+  
+  const sizeInBytes = Buffer.byteLength(base64Data, 'base64');
+  if (sizeInBytes > 5 * 1024 * 1024) { // 5MB limit
+    res.status(400);
+    throw new Error("Image size exceeds 5MB limit");
+  }
+  
+  // Update user's profilePhoto
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  
+  user.profilePhoto = imageUrl;
+  await user.save();
+  
+  res.status(200).json({
+    message: "Profile photo updated successfully",
+    profilePhoto: user.profilePhoto
+  });
 });
-// ========== END OF ADDED FUNCTION ==========
 
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
@@ -205,11 +202,10 @@ const deleteAccount = asyncHandler(async (req, res) => {
   res.json({ message: "Account deleted successfully" });
 });
 
-// EXPORT - all functions including the new one
 export {
   googleAuth,
   logoutUser,
   changePassword,
   deleteAccount,
-  uploadProfilePhoto  // ← Make sure this is included!
+  uploadProfilePhoto
 };
