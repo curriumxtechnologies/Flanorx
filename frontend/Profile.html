@@ -70,15 +70,6 @@
         border-right: 4px solid #13ec5b;
         color: #111813;
       }
-      .avatar-upload-overlay {
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(2px);
-        opacity: 0;
-        transition: opacity 0.2s ease;
-      }
-      .avatar-group:hover .avatar-upload-overlay {
-        opacity: 1;
-      }
       .bottom-nav-item.active {
         color: #13ec5b;
         background: rgba(19, 236, 91, 0.1);
@@ -163,6 +154,24 @@
           padding-bottom: 0;
         }
       }
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 50;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal.active {
+        display: flex;
+      }
+      .modal-content {
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
     </style>
   </head>
   <body
@@ -187,7 +196,7 @@
         <nav class="flex-1 px-4 py-4 space-y-1">
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            href="Home.html"
+            href="home.html"
           >
             <i
               data-lucide="home"
@@ -198,7 +207,7 @@
           <!-- ORDER HISTORY -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            href="Order-history.html"
+            href="order-history.html"
           >
             <i
               data-lucide="history"
@@ -231,7 +240,7 @@
           <!-- PROFILE (active) -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
-            href="Profile.html"
+            href="profile.html"
           >
             <i data-lucide="user" class="text-primary"></i>
             <span class="font-semibold text-sm"> Profile </span>
@@ -242,7 +251,7 @@
           <div class="bg-red-500/10 rounded-2xl p-4">
             <p class="text-xs font-bold text-red-500 uppercase mb-3">Account</p>
             <button
-              id="logoutBtn"
+              id="logoutBtnSidebar"
               class="w-full py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all"
             >
               Logout
@@ -294,27 +303,16 @@
             ></div>
 
             <div class="px-6 pb-6 relative">
-              <!-- Avatar with upload -->
+              <!-- Avatar (no upload) -->
               <div class="flex flex-col sm:flex-row sm:items-end gap-6 -mt-12">
                 <div
-                  class="relative avatar-group group cursor-pointer w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 shadow-lg"
+                  class="w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 shadow-lg"
                 >
                   <img
                     id="profileImage"
                     src=""
                     alt="Profile"
                     class="w-full h-full rounded-full object-cover"
-                  />
-                  <div
-                    class="avatar-upload-overlay absolute inset-0 rounded-full flex items-center justify-center"
-                  >
-                    <i data-lucide="camera" class="text-white w-8 h-8"></i>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="hidden"
-                    id="avatarUpload"
                   />
                 </div>
                 <div
@@ -344,14 +342,6 @@
                       >
                     </div>
                   </div>
-                  <!-- hint: photo upload -->
-                  <button
-                    onclick="document.getElementById('avatarUpload').click()"
-                    class="text-xs text-primary font-medium hover:underline flex items-center gap-1 self-start sm:self-center"
-                  >
-                    <i data-lucide="upload" class="w-4 h-4"></i>
-                    change photo
-                  </button>
                 </div>
               </div>
 
@@ -422,6 +412,17 @@
                   <span class="font-medium">Go to Settings</span>
                 </a>
               </div>
+
+              <!-- Logout button on mobile (desktop has it in sidebar) -->
+              <div class="lg:hidden">
+                <button
+                  id="logoutBtnMobile"
+                  class="w-full py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                >
+                  <i data-lucide="log-out" class="w-5 h-5"></i>
+                  Logout
+                </button>
+              </div>
             </div>
 
             <!-- right column: recent orders / activity -->
@@ -445,7 +446,7 @@
                 </div>
                 <div class="mt-3 text-right">
                   <a
-                    href="Order-history.html"
+                    href="order-history.html"
                     class="text-sm text-primary font-medium hover:underline inline-flex items-center gap-1"
                     >View all <i data-lucide="arrow-right" class="w-4 h-4"></i
                   ></a>
@@ -479,10 +480,10 @@
 
     <!-- Mobile Bottom Tab Bar -->
     <nav class="mobile-bottom-nav">
-      <a href="Home.html" class="bottom-nav-item" id="bottomDashboard"
+      <a href="home.html" class="bottom-nav-item" id="bottomDashboard"
         ><i data-lucide="home"></i><span>Home</span></a
       >
-      <a href="Order-history.html" class="bottom-nav-item" id="bottomHistory"
+      <a href="order-history.html" class="bottom-nav-item" id="bottomHistory"
         ><i data-lucide="history"></i><span>History</span></a
       >
       <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder"
@@ -491,11 +492,61 @@
       <a href="tracking.html" class="bottom-nav-item" id="bottomTracking"
         ><i data-lucide="navigation"></i><span>Track</span></a
       >
-      <a href="Profile.html" class="bottom-nav-item active" id="bottomProfile">
+      <a href="profile.html" class="bottom-nav-item active" id="bottomProfile">
         <i data-lucide="user"></i>
         <span>Profile</span>
       </a>
     </nav>
+
+    <!-- Address Modal -->
+    <div id="addressModal" class="modal">
+      <div class="modal-content bg-white dark:bg-slate-900 rounded-2xl p-6">
+        <h3 class="text-xl font-bold mb-4">Add New Address</h3>
+        <form id="addressForm" onsubmit="saveAddress(event)">
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Address Label</label>
+            <select
+              id="addressLabel"
+              class="w-full border rounded-lg px-3 py-2 dark:bg-slate-800"
+            >
+              <option value="HOME">🏠 Home</option>
+              <option value="WORK">💼 Work</option>
+              <option value="OTHER">📍 Other</option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Address</label>
+            <textarea
+              id="addressText"
+              rows="3"
+              class="w-full border rounded-lg px-3 py-2 dark:bg-slate-800"
+              required
+            ></textarea>
+          </div>
+          <div class="mb-4">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" id="setDefault" class="rounded" />
+              <span class="text-sm">Set as default address</span>
+            </label>
+          </div>
+          <div class="flex gap-3">
+            <button
+              type="button"
+              onclick="closeAddressModal()"
+              class="flex-1 px-4 py-2 border rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg"
+            >
+              Save Address
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script>
       // Initialize Lucide icons
@@ -651,7 +702,6 @@
           await loadAddresses();
         } catch (error) {
           console.error("Error loading profile:", error);
-          // Show error in the profile card instead of missing elements
           const userName = document.getElementById("userName");
           if (userName) {
             userName.textContent = "Error loading profile";
@@ -745,7 +795,7 @@
       }
 
       // Save new address
-      async function saveAddress(event) {
+      window.saveAddress = async function (event) {
         event.preventDefault();
 
         const addressLabel = document.getElementById("addressLabel").value;
@@ -772,11 +822,9 @@
             }),
           });
 
-          // Close modal and refresh addresses
           closeAddressModal();
           await loadAddresses();
 
-          // Show success message
           const toast = document.createElement("div");
           toast.className =
             "fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50";
@@ -790,51 +838,30 @@
           submitButton.textContent = originalText;
           submitButton.disabled = false;
         }
-      }
-
-      // Upload avatar
-      async function uploadAvatar(file) {
-        const reader = new FileReader();
-
-        reader.onload = async function (e) {
-          const imageData = e.target.result;
-
-          try {
-            const result = await apiRequest("/api/users/avatar", {
-              method: "POST",
-              body: JSON.stringify({ imageUrl: imageData }),
-            });
-
-            if (result.profilePhoto) {
-              document.getElementById("profileImage").src = result.profilePhoto;
-            }
-
-            alert("Profile photo updated successfully!");
-          } catch (error) {
-            console.error("Error uploading avatar:", error);
-            alert("Failed to update profile photo: " + error.message);
-          }
-        };
-
-        reader.readAsDataURL(file);
-      }
+      };
 
       // Modal functions
-      function openAddressModal() {
+      window.openAddressModal = function () {
         document.getElementById("addressModal").classList.add("active");
         document.getElementById("addressForm").reset();
-      }
+      };
 
-      function closeAddressModal() {
+      window.closeAddressModal = function () {
         document.getElementById("addressModal").classList.remove("active");
-      }
+      };
 
-      // Logout
+      // Logout function
       async function logout() {
         if (!confirm("Are you sure you want to logout?")) return;
 
         try {
-          await apiRequest("/api/users/logout", { method: "POST" });
+          const token = getToken();
+          if (token) {
+            await fetch(`${API_BASE_URL}/api/users/logout`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          }
         } catch (error) {
           console.error("Logout error:", error);
         } finally {
@@ -854,15 +881,13 @@
 
         loadProfileData();
 
-        document.getElementById("logoutBtn")?.addEventListener("click", logout);
-
+        // Logout buttons
         document
-          .getElementById("avatarUpload")
-          ?.addEventListener("change", (e) => {
-            if (e.target.files && e.target.files[0]) {
-              uploadAvatar(e.target.files[0]);
-            }
-          });
+          .getElementById("logoutBtnSidebar")
+          ?.addEventListener("click", logout);
+        document
+          .getElementById("logoutBtnMobile")
+          ?.addEventListener("click", logout);
 
         const menuToggle = document.getElementById("menuToggle");
         const sidebar = document.getElementById("sidebar");
