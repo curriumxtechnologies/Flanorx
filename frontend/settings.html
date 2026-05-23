@@ -955,83 +955,6 @@
           }
         }
 
-        // ========== UPDATE PASSWORD ==========
-        async function updatePassword() {
-          const currentPassword =
-            document.getElementById("currentPassword").value;
-          const newPassword = document.getElementById("newPassword").value;
-          const confirmPassword =
-            document.getElementById("confirmPassword").value;
-
-          if (!currentPassword) {
-            showToast("Please enter your current password", "error");
-            return;
-          }
-
-          if (!newPassword) {
-            showToast("Please enter a new password", "error");
-            return;
-          }
-
-          if (newPassword !== confirmPassword) {
-            showToast("New passwords do not match", "error");
-            return;
-          }
-
-          if (newPassword.length < 8) {
-            showToast("Password must be at least 8 characters", "error");
-            return;
-          }
-
-          const saveBtn = document.getElementById("saveSecurityBtn");
-          const originalHTML = saveBtn.innerHTML;
-          saveBtn.innerHTML =
-            '<span class="loading-spinner"></span> Updating...';
-          saveBtn.disabled = true;
-
-          try {
-            const token = getAuthToken();
-            const response = await fetch(
-              `${API_BASE_URL}/users/change-password`,
-              {
-                method: "PUT",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ currentPassword, newPassword }),
-              },
-            );
-
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.message || "Password update failed");
-            }
-
-            // Clear password fields
-            document.getElementById("currentPassword").value = "";
-            document.getElementById("newPassword").value = "";
-            document.getElementById("confirmPassword").value = "";
-
-            // Hide security edit form and show summary
-            document
-              .getElementById("securitySummary")
-              .classList.remove("hidden-section");
-            document
-              .getElementById("securityEditForm")
-              .classList.add("hidden-section");
-
-            showToast("Password updated successfully!");
-          } catch (error) {
-            console.error("Error updating password:", error);
-            showToast(error.message, "error");
-          } finally {
-            saveBtn.innerHTML = originalHTML;
-            saveBtn.disabled = false;
-            lucide.createIcons();
-          }
-        }
-
         // ========== SAVE NOTIFICATION PREFERENCES ==========
         function saveNotificationPreferences() {
           const emailCheckbox = document.getElementById("emailNotifications");
@@ -1172,37 +1095,6 @@
         }
         if (savePersonalBtn) {
           savePersonalBtn.addEventListener("click", updateUserProfile);
-        }
-
-        // Security Toggle
-        const editSecurityBtn = document.getElementById("editSecurityBtn");
-        const cancelSecurityBtn = document.getElementById("cancelSecurityBtn");
-        const securitySummary = document.getElementById("securitySummary");
-        const securityEditForm = document.getElementById("securityEditForm");
-        const saveSecurityBtn = document.getElementById("saveSecurityBtn");
-
-        if (editSecurityBtn) {
-          editSecurityBtn.addEventListener("click", function () {
-            securitySummary.classList.add("hidden-section");
-            securityEditForm.classList.remove("hidden-section");
-            // Clear password fields when opening form
-            document.getElementById("currentPassword").value = "";
-            document.getElementById("newPassword").value = "";
-            document.getElementById("confirmPassword").value = "";
-          });
-        }
-        if (cancelSecurityBtn) {
-          cancelSecurityBtn.addEventListener("click", function () {
-            securitySummary.classList.remove("hidden-section");
-            securityEditForm.classList.add("hidden-section");
-            // Clear password fields
-            document.getElementById("currentPassword").value = "";
-            document.getElementById("newPassword").value = "";
-            document.getElementById("confirmPassword").value = "";
-          });
-        }
-        if (saveSecurityBtn) {
-          saveSecurityBtn.addEventListener("click", updatePassword);
         }
 
         // Notification Preferences
