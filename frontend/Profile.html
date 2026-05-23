@@ -759,9 +759,8 @@
         return icons[label] || "📍";
       }
 
-      // Load all profile data
       async function loadProfileData() {
-        incrementLoading();
+        incrementLoading(); // #1
         try {
           // Get user profile
           const profile = await apiRequest("/api/users/profile");
@@ -798,13 +797,13 @@
           }
 
           // Load order stats
-          loadOrderStats();
-
+          await loadOrderStats(); // increments & decrements internally
           // Load recent orders
-          loadRecentOrders();
-
+          await loadRecentOrders(); // increments & decrements internally
           // Load addresses
-          loadAddresses();
+          await loadAddresses(); // increments & decrements internally
+
+          decrementLoading(); // ← ADD THIS! Decrement for loadProfileData itself
         } catch (error) {
           console.error("Error loading profile:", error);
           const userName = document.getElementById("userName");
@@ -812,12 +811,8 @@
             userName.textContent = "Error loading profile";
             userName.classList.add("text-red-500");
           }
-          // If profile fails, decrement loading and hide loader
-          decrementLoading();
-          // Also decrement for the 3 sub-loads that won't happen
-          decrementLoading();
-          decrementLoading();
-          decrementLoading();
+          decrementLoading(); // Decrement for the error case too
+          // Don't decrement extra times for functions that didn't run
         }
       }
 
