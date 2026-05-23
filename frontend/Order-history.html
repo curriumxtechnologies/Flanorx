@@ -63,6 +63,55 @@
       body {
         font-family: "Manrope", sans-serif;
       }
+
+      /* Loader */
+      #pageLoader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f6f8f6;
+        transition:
+          opacity 0.45s ease,
+          visibility 0.45s ease;
+      }
+
+      .dark #pageLoader {
+        background: #102216;
+      }
+
+      #pageLoader.hidden-loader {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .loader-logo {
+        width: 120px;
+        max-width: 40vw;
+        height: auto;
+        animation: logoPulse 1.5s ease-in-out infinite;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+
+      @keyframes logoPulse {
+        0% {
+          transform: scale(0.92);
+          opacity: 0.85;
+        }
+        50% {
+          transform: scale(1.12);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.92);
+          opacity: 0.85;
+        }
+      }
+
       .sidebar-active {
         background-color: rgba(19, 236, 91, 0.1);
         border-right: 4px solid #13ec5b;
@@ -333,6 +382,11 @@
   <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen"
   >
+    <!-- Loader Overlay -->
+    <div id="pageLoader">
+      <img src="flanorx.png" alt="Flanorx Loading Logo" class="loader-logo" />
+    </div>
+
     <div class="flex h-screen overflow-hidden">
       <!-- SIDEBAR (desktop only) -->
       <aside
@@ -638,7 +692,7 @@
                     id="resultsHint"
                     class="text-xs font-medium text-slate-500"
                   >
-                    Showing 0 results
+                    Loading orders...
                   </p>
                   <button
                     id="refreshBtn"
@@ -668,7 +722,11 @@
                   >
                 </div>
                 <!-- Full‑width transaction rows -->
-                <div id="mobileListContainer"></div>
+                <div id="mobileListContainer">
+                  <div class="text-center text-slate-400 py-4">
+                    Loading orders...
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -868,6 +926,18 @@
           ? "http://127.0.0.1:8000"
           : "https://flanorx-api.onrender.com";
 
+      const pageLoader = document.getElementById("pageLoader");
+
+      // Track loading state
+      let dataLoaded = false;
+
+      function hidePageLoader() {
+        if (!pageLoader) return;
+        setTimeout(() => {
+          pageLoader.classList.add("hidden-loader");
+        }, 200);
+      }
+
       function safeJSONParse(s) {
         try {
           return JSON.parse(s);
@@ -875,14 +945,17 @@
           return null;
         }
       }
+
       function getToken() {
         const raw = localStorage.getItem("flanorx_auth");
         if (!raw) return null;
         return safeJSONParse(raw)?.token || null;
       }
+
       function formatNaira(n) {
         return "₦" + Number(n || 0).toLocaleString("en-NG");
       }
+
       function fmtDate(d) {
         const dt = d ? new Date(d) : null;
         return dt && !isNaN(dt)
@@ -893,6 +966,7 @@
             })
           : "-";
       }
+
       function fmtTime(d) {
         const dt = d ? new Date(d) : null;
         return dt && !isNaN(dt)
@@ -902,6 +976,7 @@
             })
           : "";
       }
+
       function badge(status) {
         const s = (status || "").toLowerCase();
         if (s === "completed")
@@ -915,11 +990,13 @@
         if (s === "failed") return "bg-red-500/10 text-red-500";
         return "bg-slate-100 dark:bg-slate-800 text-slate-500";
       }
+
       function payBadge(paid) {
         return paid
           ? "bg-primary/10 text-emerald-600 dark:text-primary"
           : "bg-red-500/10 text-red-500";
       }
+
       function showToast(title, msg) {
         const wrap = document.getElementById("toast"),
           t = document.getElementById("toastTitle"),
@@ -931,6 +1008,7 @@
         clearTimeout(showToast._t);
         showToast._t = setTimeout(() => wrap.classList.add("hidden"), 4500);
       }
+
       function requireAuthOrRedirect() {
         const user = safeJSONParse(localStorage.getItem("flanorx_auth"));
         if (!user) {
@@ -1403,6 +1481,12 @@
         allOrders = await fetchMyOrders();
         populateMonthDropdown();
         applyClientFilters();
+
+        // Hide loader after first successful data load
+        if (!dataLoaded) {
+          dataLoaded = true;
+          hidePageLoader();
+        }
       }
 
       loadOrders();

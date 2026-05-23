@@ -1262,27 +1262,42 @@
       function setActiveBottomNav() {
         const path = window.location.pathname;
         let current = path.substring(path.lastIndexOf("/") + 1);
+
+        // Normalize the current page name
         if (
           current === "" ||
           current === "index.html" ||
           current === "Home.html" ||
-          current === "#"
+          current === "#" ||
+          current === "home"
         ) {
           current = "home";
         }
-        if (current === "Profile.html") {
+
+        // Handle profile page
+        if (current === "Profile.html" || current === "profile") {
           current = "profile";
         }
+
+        // Remove active class from all bottom nav items
         document
           .querySelectorAll(".bottom-nav-item")
           .forEach((i) => i.classList.remove("active"));
+
+        // Add active class to matching item
         document.querySelectorAll(".bottom-nav-item").forEach((i) => {
           const href = i.getAttribute("href");
-          if (
-            (current === "home" && href === "#") ||
-            href === current ||
-            (current === "profile" && href === "Profile.html")
-          ) {
+
+          // For home button (href="#")
+          if (current === "home" && href === "#") {
+            i.classList.add("active");
+          }
+          // For other pages
+          else if (href === current || href === `${current}.html`) {
+            i.classList.add("active");
+          }
+          // Handle profile specifically
+          else if (current === "profile" && href === "Profile.html") {
             i.classList.add("active");
           }
         });
