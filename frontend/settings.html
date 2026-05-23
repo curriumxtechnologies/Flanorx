@@ -265,7 +265,7 @@
         <nav class="flex-1 px-4 py-4 space-y-1">
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            href="Home.html"
+            href="home.html"
           >
             <i
               data-lucide="home"
@@ -276,7 +276,7 @@
           <!-- ORDER HISTORY -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
-            href="Order-history.html"
+            href="order-history.html"
           >
             <i
               data-lucide="history"
@@ -309,7 +309,7 @@
           <!-- PROFILE (active) -->
           <a
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
-            href="Profile.html"
+            href="profile.html"
           >
             <i data-lucide="user" class="text-primary"></i>
             <span class="font-semibold text-sm"> Profile </span>
@@ -350,6 +350,44 @@
             <p class="text-slate-500 mt-1 text-sm lg:text-base">
               View your information. Click the edit icon to modify.
             </p>
+          </div>
+
+          <!-- Avatar Section (moved to top for better visibility) -->
+          <div
+            class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm"
+          >
+            <div class="flex items-center gap-6 flex-wrap">
+              <div class="relative avatar-group group cursor-pointer">
+                <img
+                  id="profileImage"
+                  src=""
+                  alt="Profile"
+                  class="w-20 h-20 rounded-full object-cover border-2 border-primary"
+                />
+                <div
+                  class="avatar-upload-overlay absolute inset-0 rounded-full flex items-center justify-center cursor-pointer"
+                  id="uploadAvatarBtn"
+                >
+                  <i data-lucide="camera" class="text-white w-6 h-6"></i>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                  <i data-lucide="user" class="text-primary w-5 h-5"></i>
+                  Profile Photo
+                </h3>
+                <p class="text-sm text-slate-500 mt-1">
+                  Click on the camera icon to change your profile photo
+                </p>
+                <button
+                  id="uploadAvatarTextBtn"
+                  class="mt-2 text-primary text-sm font-medium hover:underline flex items-center gap-1"
+                >
+                  <i data-lucide="upload" class="w-4 h-4"></i>
+                  Upload new photo
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Main content area with Personal Information on left and Security/Notifications on right -->
@@ -663,13 +701,10 @@
 
     <!-- Mobile Bottom Tab Bar -->
     <nav class="mobile-bottom-nav">
-      <a
-        href="customer-dashboard.html"
-        class="bottom-nav-item"
-        id="bottomDashboard"
-        ><i data-lucide="layout-dashboard"></i><span>Home</span></a
+      <a href="Home.html" class="bottom-nav-item" id="bottomDashboard"
+        ><i data-lucide="home"></i><span>Home</span></a
       >
-      <a href="Order-history.html" class="bottom-nav-item" id="bottomHistory"
+      <a href="order-history.html" class="bottom-nav-item" id="bottomHistory"
         ><i data-lucide="history"></i><span>History</span></a
       >
       <a href="place-order.html" class="bottom-nav-item" id="bottomPlaceOrder"
@@ -678,7 +713,7 @@
       <a href="tracking.html" class="bottom-nav-item" id="bottomTracking"
         ><i data-lucide="navigation"></i><span>Track</span></a
       >
-      <a href="Profile.html" class="bottom-nav-item" id="bottomProfile">
+      <a href="profile.html" class="bottom-nav-item" id="bottomProfile">
         <i data-lucide="user"></i>
         <span>Profile</span>
       </a>
@@ -696,7 +731,11 @@
     <script>
       (function () {
         // ========== API CONFIGURATION ==========
-        const API_BASE_URL = "http://localhost:8000/api";
+        const API_BASE_URL =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+            ? "http://localhost:8000/api"
+            : "https://flanorx-api.onrender.com/api";
 
         // Helper: Show toast notification
         function showToast(message, type = "success") {
@@ -734,6 +773,59 @@
             }
           }
           return null;
+        }
+
+        // ========== UPLOAD AVATAR (Only when clicked) ==========
+        function uploadAvatar(file) {
+          const reader = new FileReader();
+
+          reader.onload = async function (e) {
+            const imageData = e.target.result;
+
+            try {
+              const token = getAuthToken();
+              const response = await fetch(`${API_BASE_URL}/users/avatar`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ imageUrl: imageData }),
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || "Upload failed");
+              }
+
+              const result = await response.json();
+
+              if (result.profilePhoto) {
+                document.getElementById("profileImage").src =
+                  result.profilePhoto;
+              }
+
+              showToast("Profile photo updated successfully!");
+            } catch (error) {
+              console.error("Error uploading avatar:", error);
+              showToast(error.message, "error");
+            }
+          };
+
+          reader.readAsDataURL(file);
+        }
+
+        // Create file input dynamically when user clicks (no pre-load permission request)
+        function triggerAvatarUpload() {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = "image/*";
+          input.onchange = (e) => {
+            if (e.target.files && e.target.files[0]) {
+              uploadAvatar(e.target.files[0]);
+            }
+          };
+          input.click();
         }
 
         // ========== FETCH USER PROFILE ==========
@@ -775,6 +867,16 @@
             document.getElementById("editName").value = user.name || "";
             document.getElementById("editEmail").value = user.email || "";
             document.getElementById("editPhone").value = user.phone || "";
+
+            // Set profile image
+            const profileImage = document.getElementById("profileImage");
+            if (profileImage) {
+              if (user.profilePhoto) {
+                profileImage.src = user.profilePhoto;
+              } else {
+                profileImage.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=13ec5b&color=fff&bold=true`;
+              }
+            }
 
             // Load notification preferences from localStorage
             const savedPrefs = localStorage.getItem("flanorx_notifications");
@@ -1028,6 +1130,19 @@
 
         // ========== EVENT LISTENERS ==========
 
+        // Avatar upload buttons (only trigger when clicked)
+        const uploadAvatarBtn = document.getElementById("uploadAvatarBtn");
+        const uploadAvatarTextBtn = document.getElementById(
+          "uploadAvatarTextBtn",
+        );
+
+        if (uploadAvatarBtn) {
+          uploadAvatarBtn.addEventListener("click", triggerAvatarUpload);
+        }
+        if (uploadAvatarTextBtn) {
+          uploadAvatarTextBtn.addEventListener("click", triggerAvatarUpload);
+        }
+
         // Mobile menu toggle
         const menuToggle = document.getElementById("menuToggle");
         const sidebar = document.getElementById("sidebar");
@@ -1152,7 +1267,7 @@
         const path = window.location.pathname;
         let currentPage = path.substring(path.lastIndexOf("/") + 1);
         if (!currentPage || currentPage === "index.html")
-          currentPage = "Profile.html";
+          currentPage = "profile.html";
 
         const navItems = document.querySelectorAll(".bottom-nav-item");
         navItems.forEach((item) => item.classList.remove("active"));
