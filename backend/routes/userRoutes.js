@@ -2,7 +2,10 @@
 import express from "express";
 import { 
   googleAuth, 
-  logoutUser 
+  logoutUser,
+  uploadProfilePhoto,  // ← Import from userController
+  changePassword,
+  deleteAccount
 } from "../controllers/userController.js";
 import { 
   protect 
@@ -10,7 +13,6 @@ import {
 import {
   getUserProfile,
   updateUserProfile,
-  uploadProfilePhoto,
   addAddress,
   getOrderStats,
   getRecentOrders,
@@ -18,10 +20,6 @@ import {
   deleteAddress,
   setDefaultAddress
 } from "../controllers/orderController.js";
-import {
-  changePassword,
-  deleteAccount
-} from "../controllers/userController.js";
 
 const router = express.Router();
 
