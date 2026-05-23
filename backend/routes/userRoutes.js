@@ -18,6 +18,10 @@ import {
   deleteAddress,
   setDefaultAddress
 } from "../controllers/orderController.js";
+import {
+  changePassword,
+  deleteAccount
+} from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -37,5 +41,9 @@ router.get("/addresses", protect, getUserAddresses);
 router.post("/address", protect, addAddress);
 router.delete("/address/:addressId", protect, deleteAddress);
 router.put("/address/:addressId/default", protect, setDefaultAddress);
+
+// New routes for settings page
+router.put("/change-password", protect, changePassword);
+router.delete("/account", protect, deleteAccount);
 
 export default router;

@@ -204,6 +204,43 @@
       .danger-content.expanded {
         max-height: 200px;
       }
+
+      /* Toast notification styles */
+      .toast-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.6s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body
@@ -319,7 +356,7 @@
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <!-- Left column: Personal Information -->
             <div class="lg:col-span-7 space-y-6">
-              <!-- ===== PERSONAL INFORMATION (summary only, form hidden) ===== -->
+              <!-- ===== PERSONAL INFORMATION ===== -->
               <div
                 class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm"
               >
@@ -337,26 +374,32 @@
                   </button>
                 </div>
 
-                <!-- Summary view (visible by default) -->
+                <!-- Summary view -->
                 <div
                   id="personalSummary"
                   class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm"
                 >
                   <div>
                     <span class="text-slate-500 block text-xs">Full name</span
-                    ><span class="font-medium">Alex</span>
+                    ><span id="displayName" class="font-medium"
+                      >Loading...</span
+                    >
                   </div>
                   <div class="md:col-span-2">
                     <span class="text-slate-500 block text-xs">Email</span
-                    ><span class="font-medium">alex.johnson@example.com</span>
+                    ><span id="displayEmail" class="font-medium"
+                      >Loading...</span
+                    >
                   </div>
                   <div class="md:col-span-2">
                     <span class="text-slate-500 block text-xs">Phone</span
-                    ><span class="font-medium">+1 (555) 789-1234</span>
+                    ><span id="displayPhone" class="font-medium"
+                      >Loading...</span
+                    >
                   </div>
                 </div>
 
-                <!-- Edit form (hidden by default) -->
+                <!-- Edit form -->
                 <div id="personalEditForm" class="hidden-section">
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                     <div>
@@ -365,8 +408,8 @@
                         >Full name</label
                       >
                       <input
+                        id="editName"
                         type="text"
-                        value="Alex"
                         class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
                       />
                     </div>
@@ -376,10 +419,15 @@
                         >Email address</label
                       >
                       <input
+                        id="editEmail"
                         type="email"
-                        value="alex.johnson@example.com"
-                        class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
+                        class="w-full bg-slate-100 dark:bg-slate-700 border-none rounded-xl px-4 py-3 text-sm text-slate-500 cursor-not-allowed"
+                        readonly
+                        disabled
                       />
+                      <p class="text-xs text-slate-400 mt-1">
+                        Email cannot be changed
+                      </p>
                     </div>
                     <div class="md:col-span-2">
                       <label
@@ -387,8 +435,8 @@
                         >Phone number</label
                       >
                       <input
+                        id="editPhone"
                         type="tel"
-                        value="+1 (555) 789-1234"
                         class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
                       />
                     </div>
@@ -401,6 +449,7 @@
                       Cancel
                     </button>
                     <button
+                      id="savePersonalBtn"
                       class="px-6 py-2 bg-primary text-slate-900 font-bold rounded-lg text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center gap-2"
                     >
                       <i data-lucide="save" class="w-4 h-4"></i> Save
@@ -409,7 +458,7 @@
                 </div>
               </div>
 
-              <!-- Desktop Danger zone (visible only on desktop) -->
+              <!-- Desktop Danger zone -->
               <div
                 class="desktop-danger-zone bg-red-500/5 border border-red-200 dark:border-red-900/30 rounded-3xl p-6"
               >
@@ -422,6 +471,7 @@
                   action cannot be undone.
                 </p>
                 <button
+                  id="deleteAccountDesktop"
                   class="px-5 py-2.5 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all"
                 >
                   Delete account
@@ -431,7 +481,7 @@
 
             <!-- Right column: Security and Notification Preferences -->
             <div class="lg:col-span-5 space-y-6">
-              <!-- ===== SECURITY (summary only, form hidden) ===== -->
+              <!-- ===== SECURITY ===== -->
               <div
                 class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm"
               >
@@ -449,17 +499,15 @@
                   </button>
                 </div>
 
-                <!-- Security summary (visible by default) -->
+                <!-- Security Summary -->
                 <div id="securitySummary" class="text-sm space-y-2">
-                  <p>
-                    <span class="text-slate-500">Password:</span> ••••••••
-                    <span class="text-xs text-slate-400 ml-2"
-                      >(last changed 30 days ago)</span
-                    >
+                  <p><span class="text-slate-500">Password:</span> ••••••••</p>
+                  <p class="text-xs text-slate-400">
+                    Click the edit icon to change your password
                   </p>
                 </div>
 
-                <!-- Security edit form (hidden by default) -->
+                <!-- Security Edit Form (hidden by default) -->
                 <div id="securityEditForm" class="hidden-section">
                   <div class="space-y-5 mt-2">
                     <div>
@@ -468,8 +516,8 @@
                         >Current password</label
                       >
                       <input
+                        id="currentPassword"
                         type="password"
-                        value="••••••••"
                         class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
                       />
                     </div>
@@ -479,8 +527,9 @@
                         >New password</label
                       >
                       <input
+                        id="newPassword"
                         type="password"
-                        placeholder="Leave blank to keep unchanged"
+                        placeholder="Enter new password"
                         class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
                       />
                     </div>
@@ -490,6 +539,7 @@
                         >Confirm new password</label
                       >
                       <input
+                        id="confirmPassword"
                         type="password"
                         placeholder="Re‑enter new password"
                         class="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
@@ -500,8 +550,7 @@
                     >
                       <i data-lucide="info" class="text-slate-400 w-4 h-4"></i>
                       <span class="text-slate-500"
-                        >Password must be at least 8 characters, include a
-                        number and a special character.</span
+                        >Password must be at least 8 characters.</span
                       >
                     </div>
                   </div>
@@ -513,15 +562,16 @@
                       Cancel
                     </button>
                     <button
+                      id="saveSecurityBtn"
                       class="px-6 py-2 bg-primary text-slate-900 font-bold rounded-lg text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center gap-2"
                     >
-                      <i data-lucide="save" class="w-4 h-4"></i> Update
+                      <i data-lucide="save" class="w-4 h-4"></i> Update Password
                     </button>
                   </div>
                 </div>
               </div>
 
-              <!-- Notification Preferences (always visible) -->
+              <!-- Notification Preferences -->
               <div
                 class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm"
               >
@@ -536,7 +586,11 @@
                   >
                     <span class="text-sm font-medium">Email notifications</span>
                     <div class="relative inline-block w-12 h-6">
-                      <input type="checkbox" class="sr-only peer" checked />
+                      <input
+                        id="emailNotifications"
+                        type="checkbox"
+                        class="sr-only peer"
+                      />
                       <div
                         class="w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-700 peer-checked:bg-primary transition-colors duration-200"
                       ></div>
@@ -552,7 +606,11 @@
                   >
                     <span class="text-sm font-medium">Push notifications</span>
                     <div class="relative inline-block w-12 h-6">
-                      <input type="checkbox" class="sr-only peer" checked />
+                      <input
+                        id="pushNotifications"
+                        type="checkbox"
+                        class="sr-only peer"
+                      />
                       <div
                         class="w-12 h-6 rounded-full bg-slate-200 dark:bg-slate-700 peer-checked:bg-primary transition-colors duration-200"
                       ></div>
@@ -566,12 +624,11 @@
             </div>
           </div>
 
-          <!-- Mobile Danger Zone (visible only on mobile, placed after all other cards) -->
+          <!-- Mobile Danger Zone -->
           <div class="mobile-danger-zone">
             <div
               class="bg-white dark:bg-slate-900 rounded-3xl border border-red-200 dark:border-red-900/30 shadow-sm overflow-hidden"
             >
-              <!-- Danger Zone Header Button -->
               <button
                 id="dangerZoneToggle"
                 class="w-full p-6 flex items-center justify-between text-left hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
@@ -586,14 +643,13 @@
                   id="dangerArrow"
                 ></i>
               </button>
-
-              <!-- Danger Zone Content (hidden by default) -->
               <div class="danger-content px-6" id="dangerContent">
                 <p class="text-xs text-slate-500 dark:text-slate-400 pb-4">
                   Permanently delete your account and all associated data. This
                   action cannot be undone.
                 </p>
                 <button
+                  id="deleteAccountMobile"
                   class="px-5 py-2.5 mb-6 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all w-full sm:w-auto"
                 >
                   Delete account
@@ -628,15 +684,350 @@
       </a>
     </nav>
 
+    <div id="toastContainer"></div>
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
       lucide.createIcons();
     </script>
 
-    <!-- Scripts -->
+    <!-- Backend Integration Script -->
     <script>
       (function () {
+        // ========== API CONFIGURATION ==========
+        const API_BASE_URL = "http://localhost:8000/api";
+
+        // Helper: Show toast notification
+        function showToast(message, type = "success") {
+          const container = document.getElementById("toastContainer");
+          if (!container) return;
+
+          const toast = document.createElement("div");
+          const bgColor =
+            type === "success"
+              ? "bg-green-500"
+              : type === "error"
+                ? "bg-red-500"
+                : "bg-blue-500";
+          toast.className = `toast-notification ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg`;
+          toast.innerHTML = `
+            <div class="flex items-center gap-2">
+              <i data-lucide="${type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info"}" class="w-5 h-5"></i>
+              <span>${message}</span>
+            </div>
+          `;
+          container.appendChild(toast);
+          lucide.createIcons();
+          setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Helper: Get auth token
+        function getAuthToken() {
+          const auth = localStorage.getItem("flanorx_auth");
+          if (auth) {
+            try {
+              const parsed = JSON.parse(auth);
+              return parsed.token;
+            } catch (e) {
+              return null;
+            }
+          }
+          return null;
+        }
+
+        // ========== FETCH USER PROFILE ==========
+        async function fetchUserProfile() {
+          try {
+            const token = getAuthToken();
+            if (!token) {
+              window.location.href = "login.html";
+              return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (response.status === 401) {
+              localStorage.removeItem("flanorx_auth");
+              window.location.href = "login.html";
+              return;
+            }
+
+            if (!response.ok) throw new Error("Failed to fetch profile");
+
+            const user = await response.json();
+
+            // Update display fields
+            document.getElementById("displayName").textContent =
+              user.name || "N/A";
+            document.getElementById("displayEmail").textContent =
+              user.email || "N/A";
+            document.getElementById("displayPhone").textContent =
+              user.phone || "Not provided";
+
+            // Update edit form fields
+            document.getElementById("editName").value = user.name || "";
+            document.getElementById("editEmail").value = user.email || "";
+            document.getElementById("editPhone").value = user.phone || "";
+
+            // Load notification preferences from localStorage
+            const savedPrefs = localStorage.getItem("flanorx_notifications");
+            if (savedPrefs) {
+              const prefs = JSON.parse(savedPrefs);
+              const emailCheckbox =
+                document.getElementById("emailNotifications");
+              const pushCheckbox = document.getElementById("pushNotifications");
+              if (emailCheckbox) emailCheckbox.checked = prefs.email !== false;
+              if (pushCheckbox) pushCheckbox.checked = prefs.push !== false;
+            } else {
+              // Default: both enabled
+              const emailCheckbox =
+                document.getElementById("emailNotifications");
+              const pushCheckbox = document.getElementById("pushNotifications");
+              if (emailCheckbox) emailCheckbox.checked = true;
+              if (pushCheckbox) pushCheckbox.checked = true;
+            }
+
+            return user;
+          } catch (error) {
+            console.error("Error fetching profile:", error);
+            showToast("Failed to load profile data", "error");
+          }
+        }
+
+        // ========== UPDATE USER PROFILE ==========
+        async function updateUserProfile() {
+          const name = document.getElementById("editName").value.trim();
+          const phone = document.getElementById("editPhone").value.trim();
+
+          if (!name) {
+            showToast("Please enter your name", "error");
+            return;
+          }
+
+          const saveBtn = document.getElementById("savePersonalBtn");
+          const originalHTML = saveBtn.innerHTML;
+          saveBtn.innerHTML = '<span class="loading-spinner"></span> Saving...';
+          saveBtn.disabled = true;
+
+          try {
+            const token = getAuthToken();
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ name, phone }),
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || "Update failed");
+            }
+
+            const updatedUser = await response.json();
+
+            // Update display
+            document.getElementById("displayName").textContent =
+              updatedUser.name;
+            document.getElementById("displayPhone").textContent =
+              updatedUser.phone || "Not provided";
+
+            // Update stored auth data
+            const authData = JSON.parse(
+              localStorage.getItem("flanorx_auth") || "{}",
+            );
+            authData.name = updatedUser.name;
+            localStorage.setItem("flanorx_auth", JSON.stringify(authData));
+
+            // Hide edit form
+            document
+              .getElementById("personalSummary")
+              .classList.remove("hidden-section");
+            document
+              .getElementById("personalEditForm")
+              .classList.add("hidden-section");
+
+            showToast("Profile updated successfully!");
+          } catch (error) {
+            console.error("Error updating profile:", error);
+            showToast(error.message, "error");
+          } finally {
+            saveBtn.innerHTML = originalHTML;
+            saveBtn.disabled = false;
+            lucide.createIcons();
+          }
+        }
+
+        // ========== UPDATE PASSWORD ==========
+        async function updatePassword() {
+          const currentPassword =
+            document.getElementById("currentPassword").value;
+          const newPassword = document.getElementById("newPassword").value;
+          const confirmPassword =
+            document.getElementById("confirmPassword").value;
+
+          if (!currentPassword) {
+            showToast("Please enter your current password", "error");
+            return;
+          }
+
+          if (!newPassword) {
+            showToast("Please enter a new password", "error");
+            return;
+          }
+
+          if (newPassword !== confirmPassword) {
+            showToast("New passwords do not match", "error");
+            return;
+          }
+
+          if (newPassword.length < 8) {
+            showToast("Password must be at least 8 characters", "error");
+            return;
+          }
+
+          const saveBtn = document.getElementById("saveSecurityBtn");
+          const originalHTML = saveBtn.innerHTML;
+          saveBtn.innerHTML =
+            '<span class="loading-spinner"></span> Updating...';
+          saveBtn.disabled = true;
+
+          try {
+            const token = getAuthToken();
+            const response = await fetch(
+              `${API_BASE_URL}/users/change-password`,
+              {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ currentPassword, newPassword }),
+              },
+            );
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || "Password update failed");
+            }
+
+            // Clear password fields
+            document.getElementById("currentPassword").value = "";
+            document.getElementById("newPassword").value = "";
+            document.getElementById("confirmPassword").value = "";
+
+            // Hide security edit form and show summary
+            document
+              .getElementById("securitySummary")
+              .classList.remove("hidden-section");
+            document
+              .getElementById("securityEditForm")
+              .classList.add("hidden-section");
+
+            showToast("Password updated successfully!");
+          } catch (error) {
+            console.error("Error updating password:", error);
+            showToast(error.message, "error");
+          } finally {
+            saveBtn.innerHTML = originalHTML;
+            saveBtn.disabled = false;
+            lucide.createIcons();
+          }
+        }
+
+        // ========== SAVE NOTIFICATION PREFERENCES ==========
+        function saveNotificationPreferences() {
+          const emailCheckbox = document.getElementById("emailNotifications");
+          const pushCheckbox = document.getElementById("pushNotifications");
+
+          if (emailCheckbox && pushCheckbox) {
+            const preferences = {
+              email: emailCheckbox.checked,
+              push: pushCheckbox.checked,
+            };
+            localStorage.setItem(
+              "flanorx_notifications",
+              JSON.stringify(preferences),
+            );
+            showToast("Notification preferences saved!");
+          }
+        }
+
+        // ========== DELETE ACCOUNT ==========
+        async function deleteAccount() {
+          const confirmed = confirm(
+            "⚠️ WARNING: This will permanently delete your account and all associated data. This action cannot be undone. Are you absolutely sure?",
+          );
+
+          if (!confirmed) return;
+
+          const deleteCode = prompt(
+            'Type "DELETE" to confirm account deletion:',
+          );
+          if (deleteCode !== "DELETE") {
+            showToast("Account deletion cancelled", "error");
+            return;
+          }
+
+          try {
+            const token = getAuthToken();
+            const response = await fetch(`${API_BASE_URL}/users/account`, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || "Deletion failed");
+            }
+
+            localStorage.removeItem("flanorx_auth");
+            localStorage.removeItem("flanorx_notifications");
+            showToast("Account deleted successfully");
+
+            setTimeout(() => {
+              window.location.href = "index.html";
+            }, 1500);
+          } catch (error) {
+            console.error("Error deleting account:", error);
+            showToast(error.message, "error");
+          }
+        }
+
+        // ========== LOGOUT ==========
+        async function logout() {
+          if (!confirm("Log out from Flanorx?")) return;
+
+          try {
+            const token = getAuthToken();
+            if (token) {
+              await fetch(`${API_BASE_URL}/users/logout`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+            }
+          } catch (error) {
+            console.error("Logout error:", error);
+          }
+
+          localStorage.removeItem("flanorx_auth");
+          localStorage.removeItem("flanorx_notifications");
+          window.location.href = "login.html";
+        }
+
+        // ========== EVENT LISTENERS ==========
+
         // Mobile menu toggle
         const menuToggle = document.getElementById("menuToggle");
         const sidebar = document.getElementById("sidebar");
@@ -655,29 +1046,14 @@
         }
 
         // Logout
-        document
-          .getElementById("logoutBtn")
-          ?.addEventListener("click", function () {
-            if (confirm("Log out from Flanorx?")) {
-              localStorage.removeItem("flanorx_auth");
-              window.location.href = "login.html";
-            }
-          });
+        document.getElementById("logoutBtn")?.addEventListener("click", logout);
 
-        // Avatar upload demo
-        document
-          .getElementById("avatarUpload")
-          ?.addEventListener("change", function (e) {
-            if (e.target.files.length > 0) {
-              alert("[Demo] Avatar upload simulation. File would be uploaded.");
-            }
-          });
-
-        // PERSONAL INFORMATION TOGGLE
+        // Personal Information Toggle
         const editPersonalBtn = document.getElementById("editPersonalBtn");
         const cancelPersonalBtn = document.getElementById("cancelPersonalBtn");
         const personalSummary = document.getElementById("personalSummary");
         const personalEditForm = document.getElementById("personalEditForm");
+        const savePersonalBtn = document.getElementById("savePersonalBtn");
 
         if (editPersonalBtn) {
           editPersonalBtn.addEventListener("click", function () {
@@ -689,29 +1065,78 @@
           cancelPersonalBtn.addEventListener("click", function () {
             personalSummary.classList.remove("hidden-section");
             personalEditForm.classList.add("hidden-section");
+            fetchUserProfile(); // Reset form data
           });
         }
+        if (savePersonalBtn) {
+          savePersonalBtn.addEventListener("click", updateUserProfile);
+        }
 
-        // SECURITY TOGGLE
+        // Security Toggle
         const editSecurityBtn = document.getElementById("editSecurityBtn");
         const cancelSecurityBtn = document.getElementById("cancelSecurityBtn");
         const securitySummary = document.getElementById("securitySummary");
         const securityEditForm = document.getElementById("securityEditForm");
+        const saveSecurityBtn = document.getElementById("saveSecurityBtn");
 
         if (editSecurityBtn) {
           editSecurityBtn.addEventListener("click", function () {
             securitySummary.classList.add("hidden-section");
             securityEditForm.classList.remove("hidden-section");
+            // Clear password fields when opening form
+            document.getElementById("currentPassword").value = "";
+            document.getElementById("newPassword").value = "";
+            document.getElementById("confirmPassword").value = "";
           });
         }
         if (cancelSecurityBtn) {
           cancelSecurityBtn.addEventListener("click", function () {
             securitySummary.classList.remove("hidden-section");
             securityEditForm.classList.add("hidden-section");
+            // Clear password fields
+            document.getElementById("currentPassword").value = "";
+            document.getElementById("newPassword").value = "";
+            document.getElementById("confirmPassword").value = "";
           });
         }
+        if (saveSecurityBtn) {
+          saveSecurityBtn.addEventListener("click", updatePassword);
+        }
 
-        // MOBILE DANGER ZONE TOGGLE
+        // Notification Preferences
+        const emailNotifications =
+          document.getElementById("emailNotifications");
+        const pushNotifications = document.getElementById("pushNotifications");
+
+        if (emailNotifications) {
+          emailNotifications.addEventListener(
+            "change",
+            saveNotificationPreferences,
+          );
+        }
+        if (pushNotifications) {
+          pushNotifications.addEventListener(
+            "change",
+            saveNotificationPreferences,
+          );
+        }
+
+        // Delete Account Buttons
+        const deleteAccountDesktop = document.getElementById(
+          "deleteAccountDesktop",
+        );
+        const deleteAccountMobile = document.getElementById(
+          "deleteAccountMobile",
+        );
+
+        if (deleteAccountDesktop) {
+          deleteAccountDesktop.addEventListener("click", deleteAccount);
+        }
+        if (deleteAccountMobile) {
+          deleteAccountMobile.addEventListener("click", deleteAccount);
+        }
+
+        // Mobile Danger Zone Toggle
         const dangerZoneToggle = document.getElementById("dangerZoneToggle");
         const dangerContent = document.getElementById("dangerContent");
         const dangerArrow = document.getElementById("dangerArrow");
@@ -727,7 +1152,7 @@
         const path = window.location.pathname;
         let currentPage = path.substring(path.lastIndexOf("/") + 1);
         if (!currentPage || currentPage === "index.html")
-          currentPage = "customer-settings.html";
+          currentPage = "Profile.html";
 
         const navItems = document.querySelectorAll(".bottom-nav-item");
         navItems.forEach((item) => item.classList.remove("active"));
@@ -742,6 +1167,9 @@
           const href = link.getAttribute("href");
           if (href === currentPage) link.classList.add("sidebar-active");
         });
+
+        // Load user profile on page load
+        fetchUserProfile();
       })();
     </script>
   </body>

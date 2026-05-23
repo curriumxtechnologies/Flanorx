@@ -1,3 +1,4 @@
+// controllers/userController.js
 import asyncHandler from "express-async-handler";
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/userModel.js";
@@ -17,7 +18,7 @@ const getUserInfoFromAccessToken = async (accessToken) => {
   return response.json();
 };
 
- const googleAuth = asyncHandler(async (req, res) => {
+const googleAuth = asyncHandler(async (req, res) => {
   const { token: googleToken } = req.body;
 
   if (!googleToken) {
@@ -27,7 +28,6 @@ const getUserInfoFromAccessToken = async (accessToken) => {
 
   let googleId, email, name, picture;
 
-  // 1) Try as ID token
   try {
     const ticket = await googleClient.verifyIdToken({
       idToken: googleToken,
@@ -40,7 +40,6 @@ const getUserInfoFromAccessToken = async (accessToken) => {
     name = payload.name;
     picture = payload.picture;
   } catch (err) {
-    // 2) Otherwise treat as access token (your popup flow uses access_token)
     const userInfo = await getUserInfoFromAccessToken(googleToken);
     googleId = userInfo.sub || `google-${userInfo.email}`;
     email = userInfo.email;
@@ -48,7 +47,6 @@ const getUserInfoFromAccessToken = async (accessToken) => {
     picture = userInfo.picture;
   }
 
-  // Find user by googleId or email
   let user = await User.findOne({ $or: [{ googleId }, { email }] });
 
   if (!user) {
@@ -91,13 +89,12 @@ const getUserInfoFromAccessToken = async (accessToken) => {
   });
 });
 
-
 const logoutUser = asyncHandler(async (req, res) => {
   const isProd = process.env.NODE_ENV === "production";
 
   res.cookie("jwt", "", {
     httpOnly: true,
-    expires: new Date(0), // immediately expire
+    expires: new Date(0),
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
     path: "/",
@@ -106,7 +103,56 @@ const logoutUser = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
 
+// NEW FUNCTIONS FOR SETTINGS PAGE
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  const user = await User.findById(req.user._id);
+  
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  
+  if (user.authMethod === "google") {
+    res.status(400);
+    throw new Error("Google accounts use Google Sign-In. Password cannot be changed here.");
+  }
+  
+  const isMatch = await user.matchPassword(currentPassword);
+  if (!isMatch) {
+    res.status(401);
+    throw new Error("Current password is incorrect");
+  }
+  
+  if (newPassword.length < 8) {
+    res.status(400);
+    throw new Error("Password must be at least 8 characters");
+  }
+  
+  user.password = newPassword;
+  await user.save();
+  
+  res.json({ message: "Password updated successfully" });
+});
+
+const deleteAccount = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+  
+  await user.deleteOne();
+  
+  res.json({ message: "Account deleted successfully" });
+});
+
+// SINGLE EXPORT - all functions exported once
 export {
   googleAuth,
-  logoutUser
-}
+  logoutUser,
+  changePassword,
+  deleteAccount
+};
