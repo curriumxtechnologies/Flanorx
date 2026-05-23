@@ -65,6 +65,55 @@
       body {
         font-family: "Manrope", sans-serif;
       }
+
+      /* Loader */
+      #pageLoader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f6f8f6;
+        transition:
+          opacity 0.45s ease,
+          visibility 0.45s ease;
+      }
+
+      .dark #pageLoader {
+        background: #102216;
+      }
+
+      #pageLoader.hidden-loader {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .loader-logo {
+        width: 120px;
+        max-width: 40vw;
+        height: auto;
+        animation: logoPulse 1.5s ease-in-out infinite;
+        transform-origin: center;
+        will-change: transform, opacity;
+      }
+
+      @keyframes logoPulse {
+        0% {
+          transform: scale(0.92);
+          opacity: 0.85;
+        }
+        50% {
+          transform: scale(1.12);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.92);
+          opacity: 0.85;
+        }
+      }
+
       .sidebar-active {
         background-color: rgba(19, 236, 91, 0.1);
         border-right: 4px solid #13ec5b;
@@ -177,6 +226,11 @@
   <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen"
   >
+    <!-- Loader Overlay -->
+    <div id="pageLoader">
+      <img src="flanorx.png" alt="Flanorx Loading Logo" class="loader-logo" />
+    </div>
+
     <div class="flex h-screen overflow-hidden">
       <!-- ========== SIDEBAR ========== -->
       <aside
@@ -594,6 +648,30 @@
           ? "http://127.0.0.1:8000"
           : "https://flanorx-api.onrender.com";
 
+      const pageLoader = document.getElementById("pageLoader");
+
+      // Track loading state
+      let pendingLoads = 0;
+
+      function incrementLoading() {
+        pendingLoads++;
+      }
+
+      function decrementLoading() {
+        pendingLoads--;
+        if (pendingLoads <= 0) {
+          pendingLoads = 0;
+          hidePageLoader();
+        }
+      }
+
+      function hidePageLoader() {
+        if (!pageLoader) return;
+        setTimeout(() => {
+          pageLoader.classList.add("hidden-loader");
+        }, 200);
+      }
+
       function getToken() {
         try {
           const raw = localStorage.getItem("flanorx_auth");
@@ -683,6 +761,7 @@
 
       // Load all profile data
       async function loadProfileData() {
+        incrementLoading();
         try {
           // Get user profile
           const profile = await apiRequest("/api/users/profile");
@@ -719,22 +798,13 @@
           }
 
           // Load order stats
-          try {
-            const stats = await apiRequest("/api/users/orders/stats");
-            const totalOrders = document.getElementById("totalOrders");
-            const monthlyOrders = document.getElementById("monthlyOrders");
-            if (totalOrders) totalOrders.textContent = stats.totalOrders || 0;
-            if (monthlyOrders)
-              monthlyOrders.textContent = stats.monthlyOrders || 0;
-          } catch (statsError) {
-            console.error("Error loading stats:", statsError);
-          }
+          loadOrderStats();
 
           // Load recent orders
-          await loadRecentOrders();
+          loadRecentOrders();
 
           // Load addresses
-          await loadAddresses();
+          loadAddresses();
         } catch (error) {
           console.error("Error loading profile:", error);
           const userName = document.getElementById("userName");
@@ -742,11 +812,35 @@
             userName.textContent = "Error loading profile";
             userName.classList.add("text-red-500");
           }
+          // If profile fails, decrement loading and hide loader
+          decrementLoading();
+          // Also decrement for the 3 sub-loads that won't happen
+          decrementLoading();
+          decrementLoading();
+          decrementLoading();
+        }
+      }
+
+      // Load order stats
+      async function loadOrderStats() {
+        incrementLoading();
+        try {
+          const stats = await apiRequest("/api/users/orders/stats");
+          const totalOrders = document.getElementById("totalOrders");
+          const monthlyOrders = document.getElementById("monthlyOrders");
+          if (totalOrders) totalOrders.textContent = stats.totalOrders || 0;
+          if (monthlyOrders)
+            monthlyOrders.textContent = stats.monthlyOrders || 0;
+        } catch (statsError) {
+          console.error("Error loading stats:", statsError);
+        } finally {
+          decrementLoading();
         }
       }
 
       // Load recent orders
       async function loadRecentOrders() {
+        incrementLoading();
         try {
           const orders = await apiRequest("/api/users/orders/recent");
 
@@ -756,6 +850,7 @@
                 No orders yet
               </div>
             `;
+            decrementLoading();
             return;
           }
 
@@ -784,11 +879,14 @@
               Failed to load orders
             </div>
           `;
+        } finally {
+          decrementLoading();
         }
       }
 
       // Load addresses
       async function loadAddresses() {
+        incrementLoading();
         try {
           const addresses = await apiRequest("/api/users/addresses");
 
@@ -801,6 +899,7 @@
                 </button>
               </div>
             `;
+            decrementLoading();
             return;
           }
 
@@ -826,6 +925,8 @@
               Failed to load addresses
             </div>
           `;
+        } finally {
+          decrementLoading();
         }
       }
 
@@ -963,6 +1064,11 @@
             backdrop.classList.add("hidden");
           });
         }
+
+        // Re-initialize icons after dynamic content
+        setTimeout(() => {
+          lucide.createIcons();
+        }, 500);
       });
 
       // Close modal when clicking outside (for address modal)

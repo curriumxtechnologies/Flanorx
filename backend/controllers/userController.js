@@ -103,7 +103,53 @@ const logoutUser = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
 
-// NEW FUNCTIONS FOR SETTINGS PAGE
+// ========== ADD THIS FUNCTION ==========
+const uploadProfilePhoto = asyncHandler(async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    
+    // Validate image data
+    if (!imageUrl) {
+      res.status(400);
+      throw new Error("No image data provided");
+    }
+    
+    // Check if it's a valid base64 image
+    if (!imageUrl.startsWith('data:image/')) {
+      res.status(400);
+      throw new Error("Invalid image format. Please provide a valid image.");
+    }
+    
+    // Check file size (approximate from base64)
+    const base64Data = imageUrl.split(',')[1];
+    const sizeInBytes = Buffer.byteLength(base64Data, 'base64');
+    if (sizeInBytes > 5 * 1024 * 1024) { // 5MB limit
+      res.status(400);
+      throw new Error("Image size exceeds 5MB limit");
+    }
+    
+    // Update user's profilePhoto
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+    
+    user.profilePhoto = imageUrl;
+    await user.save();
+    
+    res.status(200).json({
+      message: "Profile photo updated successfully",
+      profilePhoto: imageUrl
+    });
+  } catch (error) {
+    console.error("Avatar upload error:", error);
+    res.status(error.status || 500);
+    throw new Error(error.message || "Failed to upload avatar");
+  }
+});
+// ========== END OF ADDED FUNCTION ==========
+
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   
@@ -146,13 +192,24 @@ const deleteAccount = asyncHandler(async (req, res) => {
   
   await user.deleteOne();
   
+  // Clear cookie on account deletion
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookie("jwt", "", {
+    httpOnly: true,
+    expires: new Date(0),
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: "/",
+  });
+  
   res.json({ message: "Account deleted successfully" });
 });
 
-// SINGLE EXPORT - all functions exported once
+// EXPORT - all functions including the new one
 export {
   googleAuth,
   logoutUser,
   changePassword,
-  deleteAccount
+  deleteAccount,
+  uploadProfilePhoto  // ← Make sure this is included!
 };
