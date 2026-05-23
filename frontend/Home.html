@@ -713,9 +713,27 @@
 
       const pageLoader = document.getElementById("pageLoader");
 
+      // Track loading state
+      let pendingLoads = 0;
+
+      function incrementLoading() {
+        pendingLoads++;
+      }
+
+      function decrementLoading() {
+        pendingLoads--;
+        if (pendingLoads <= 0) {
+          pendingLoads = 0;
+          hidePageLoader();
+        }
+      }
+
       function hidePageLoader() {
         if (!pageLoader) return;
-        pageLoader.classList.add("hidden-loader");
+        // Small delay to ensure smooth transition
+        setTimeout(() => {
+          pageLoader.classList.add("hidden-loader");
+        }, 200);
       }
 
       // Show the unauthorized card and hide dashboard content
@@ -723,11 +741,9 @@
         if (reason) console.error("Unauthorized access:", reason);
         document.getElementById("unauthorizedState").classList.remove("hidden");
         document.getElementById("dashboardContent").classList.add("hidden");
-        // Optionally hide the sidebar/mobile nav if needed, but they are still visible.
-        // We keep them visible so user can still navigate.
         // Clear any stored auth that may be corrupted
         localStorage.removeItem("flanorx_auth");
-        // Hide loader
+        // Hide loader immediately for unauthorized state
         hidePageLoader();
         // Re-initialize icons for newly shown content
         lucide.createIcons();
@@ -941,6 +957,7 @@
       }
 
       async function loadTotalSpentAndFuel(month, year) {
+        incrementLoading();
         const titleEl = document.getElementById("totalSpentTitle");
         const valueEl = document.getElementById("totalSpentValue");
         const fuelEl = document.getElementById("totalFuelLiters");
@@ -961,10 +978,13 @@
           if (valueEl) valueEl.textContent = "₦0";
           if (fuelEl) fuelEl.textContent = "0 Liters";
           if (titleEl) titleEl.textContent = "Total Spent (Unavailable)";
+        } finally {
+          decrementLoading();
         }
       }
 
       async function loadRecentTransactions() {
+        incrementLoading();
         const desktopTbody = document.getElementById("recentTransactionsTbody");
         const mobileContainer = document.getElementById(
           "recentMobileCardsContainer",
@@ -977,13 +997,17 @@
 
         try {
           const res = await authenticatedFetch(`${API_BASE_URL}/api/order/my`);
-          if (res.status === 401) return;
+          if (res.status === 401) {
+            decrementLoading();
+            return;
+          }
           const orders = await res.json().catch(() => []);
           if (!Array.isArray(orders)) {
             if (desktopTbody)
               desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No orders found</td></tr>`;
             if (mobileContainer)
               mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">No transactions yet</div>`;
+            decrementLoading();
             return;
           }
 
@@ -999,6 +1023,7 @@
               desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">No transactions yet</td></tr>`;
             if (mobileContainer)
               mobileContainer.innerHTML = `<div class="text-center text-slate-400 py-4">No transactions yet</div>`;
+            decrementLoading();
             return;
           }
 
@@ -1058,6 +1083,8 @@
             desktopTbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-red-400">Failed to load</td></tr>`;
           if (mobileContainer)
             mobileContainer.innerHTML = `<div class="text-center text-red-400 py-4">Failed to load</div>`;
+        } finally {
+          decrementLoading();
         }
       }
 
@@ -1104,6 +1131,7 @@
       }
 
       async function loadActiveOrder() {
+        incrementLoading();
         const activeOrderCard = document.getElementById("activeOrderCard");
         const activeUI = document.getElementById("activeUI");
         const noActiveUI = document.getElementById("noActiveUI");
@@ -1125,12 +1153,16 @@
           );
           const data = await res.json().catch(() => null);
 
-          if (res.status === 401) return;
+          if (res.status === 401) {
+            decrementLoading();
+            return;
+          }
 
           if (!res.ok || !data || !data._id) {
             if (activeOrderCard) activeOrderCard.classList.add("hidden");
             if (activeUI) activeUI.classList.add("hidden");
             if (noActiveUI) noActiveUI.classList.add("hidden");
+            decrementLoading();
             return;
           }
 
@@ -1222,6 +1254,8 @@
           }
         } catch (err) {
           console.error("loadActiveOrder error:", err);
+        } finally {
+          decrementLoading();
         }
       }
 
@@ -1275,18 +1309,20 @@
         const month = now.getMonth() + 1;
         const year = now.getFullYear();
 
+        // Load all data - loader will hide automatically when all complete
         loadTotalSpentAndFuel(month, year);
         loadRecentTransactions();
         loadActiveOrder();
+
+        // Refresh active order every 15 seconds
         setInterval(loadActiveOrder, 15000);
+
         setActiveBottomNav();
 
-        window.addEventListener("load", () => {
-          setTimeout(hidePageLoader, 900);
-        });
-        if (document.readyState === "complete") {
-          setTimeout(hidePageLoader, 900);
-        }
+        // Re-initialize icons after dynamic content loads
+        setTimeout(() => {
+          lucide.createIcons();
+        }, 500);
       })();
     </script>
   </body>
