@@ -1214,8 +1214,41 @@
         refreshSummary();
       });
 
+      // Quantity input handlers - improved for better typing experience
+      qtyRange?.addEventListener("input", () => {
+        qtyInput.value = qtyRange.value;
+        refreshSummary();
+      });
+
       qtyInput?.addEventListener("input", () => {
-        const v = clamp(qtyInput.value, 5, 500);
+        let rawValue = qtyInput.value;
+
+        // Allow user to clear and type new number
+        if (rawValue === "") {
+          // Just let them type, don't clamp yet
+          return;
+        }
+
+        let v = parseInt(rawValue);
+        if (!isNaN(v)) {
+          // Only update the range if within bounds
+          if (v >= 5 && v <= 500) {
+            qtyRange.value = v;
+            refreshSummary();
+          }
+        }
+      });
+
+      qtyInput?.addEventListener("blur", () => {
+        let v = parseInt(qtyInput.value);
+
+        // Handle empty or invalid input
+        if (isNaN(v) || qtyInput.value === "") {
+          v = 5;
+        }
+
+        // Clamp to valid range
+        v = clamp(v, 5, 500);
         qtyInput.value = v;
         qtyRange.value = v;
         refreshSummary();
