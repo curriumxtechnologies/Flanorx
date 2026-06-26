@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: flanorx
+    env: static
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: X-Robots-Tag
+        value: "index, follow"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
