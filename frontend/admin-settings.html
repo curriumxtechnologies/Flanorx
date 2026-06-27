@@ -252,7 +252,7 @@
             <span class="font-medium text-sm">Users</span>
           </a>
           <a
-            href="settings.html"
+            href="admin-settings.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
           >
             <span class="material-symbols-outlined text-primary">settings</span>
@@ -628,7 +628,7 @@
         <span class="material-symbols-outlined">people</span>
         <span>Users</span>
       </a>
-      <a href="settings.html" class="bottom-nav-item active">
+      <a href="admin-settings.html" class="bottom-nav-item active">
         <span class="material-symbols-outlined">settings</span>
         <span>Settings</span>
       </a>
@@ -637,7 +637,7 @@
     <script>
       (function () {
         const currentPage =
-          window.location.pathname.split("/").pop() || "settings.html";
+          window.location.pathname.split("/").pop() || "admin-settings.html";
         document.querySelectorAll("#sidebar nav a").forEach((link) => {
           link.classList.remove("sidebar-active");
           if (link.getAttribute("href") === currentPage)
