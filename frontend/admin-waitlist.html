@@ -127,6 +127,22 @@
         background-color: rgba(139, 92, 246, 0.1);
         color: #7c3aed;
       }
+      .status-pending {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: #b45309;
+      }
+      .status-contacted {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+      }
+      .status-converted {
+        background-color: rgba(19, 236, 91, 0.1);
+        color: #13ec5b;
+      }
+      .status-declined {
+        background-color: #f1f5f9;
+        color: #6b7280;
+      }
 
       /* Mobile bottom navigation */
       .mobile-bottom-nav {
@@ -216,11 +232,91 @@
           transform: translateX(0);
         }
       }
+      .modal-overlay {
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+      }
     </style>
   </head>
   <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen"
   >
+    <!-- Login Modal -->
+    <div
+      id="loginModal"
+      class="fixed inset-0 z-50 flex items-center justify-center modal-overlay"
+    >
+      <div
+        class="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md mx-4 shadow-2xl border border-slate-200 dark:border-slate-800"
+      >
+        <div class="text-center mb-8">
+          <img src="flanorx.png" alt="Flanorx Logo" class="h-8 mx-auto mb-4" />
+          <h2 class="text-2xl font-black text-slate-900 dark:text-white">
+            Admin Login
+          </h2>
+          <p class="text-sm text-slate-500 mt-2">
+            Enter your credentials to access the waitlist
+          </p>
+        </div>
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label
+              class="text-xs font-black text-slate-500 uppercase tracking-wider"
+              >Email</label
+            >
+            <input
+              id="loginEmail"
+              type="email"
+              class="w-full mt-1 px-4 py-3 rounded-xl border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 focus:ring-primary focus:border-primary text-sm"
+              placeholder="admin@flanorx.com"
+              required
+            />
+          </div>
+          <div>
+            <label
+              class="text-xs font-black text-slate-500 uppercase tracking-wider"
+              >Password</label
+            >
+            <input
+              id="loginPassword"
+              type="password"
+              class="w-full mt-1 px-4 py-3 rounded-xl border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 focus:ring-primary focus:border-primary text-sm"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full py-3 bg-primary text-slate-900 font-black rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all flex items-center justify-center gap-2"
+          >
+            <span id="loginBtnText">Sign In</span>
+            <span id="loginSpinner" class="hidden">
+              <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  fill="none"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                ></path>
+              </svg>
+            </span>
+          </button>
+        </form>
+        <p
+          id="loginError"
+          class="text-red-500 text-xs font-bold text-center mt-4 hidden"
+        ></p>
+      </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden">
       <div
@@ -232,7 +328,8 @@
       </div>
     </div>
 
-    <div class="flex h-screen overflow-hidden">
+    <!-- Main Dashboard (hidden until login) -->
+    <div id="mainDashboard" class="hidden flex h-screen overflow-hidden">
       <!-- Sidebar (desktop) -->
       <aside
         id="sidebar"
@@ -257,6 +354,15 @@
               >dashboard</span
             >
             <span class="font-medium text-sm">Dashboard</span>
+          </a>
+          <a
+            href="admin-waitlist.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
+          >
+            <span class="material-symbols-outlined text-primary"
+              >how_to_reg</span
+            >
+            <span class="font-semibold text-sm">Waitlist</span>
           </a>
           <a
             href="orders.html"
@@ -289,15 +395,6 @@
             <span class="font-medium text-sm">Users</span>
           </a>
           <a
-            href="admin-waitlist.html"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
-          >
-            <span class="material-symbols-outlined text-primary"
-              >how_to_reg</span
-            >
-            <span class="font-semibold text-sm">Waitlist</span>
-          </a>
-          <a
             href="admin-settings.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
           >
@@ -319,11 +416,14 @@
                 >
               </div>
               <div>
-                <p class="text-sm font-bold">Admin User</p>
-                <p class="text-xs text-slate-500">admin@flanorx.com</p>
+                <p id="sidebarAdminName" class="text-sm font-bold">Admin</p>
+                <p id="sidebarAdminEmail" class="text-xs text-slate-500">
+                  admin@flanorx.com
+                </p>
               </div>
             </div>
             <button
+              id="logoutBtn"
               class="w-full py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2"
             >
               <span class="material-symbols-outlined text-sm">logout</span>
@@ -365,7 +465,10 @@
             <div class="h-8 w-px bg-slate-200 dark:border-slate-800"></div>
             <div class="flex items-center gap-3">
               <div class="text-right hidden sm:block">
-                <p class="text-sm font-bold text-slate-900 dark:text-white">
+                <p
+                  id="headerAdminName"
+                  class="text-sm font-bold text-slate-900 dark:text-white"
+                >
                   Admin
                 </p>
                 <p class="text-xs text-slate-500">Operations</p>
@@ -417,7 +520,7 @@
             </div>
 
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div class="stat-card">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-slate-400 text-xs font-bold uppercase"
@@ -457,14 +560,26 @@
               <div class="stat-card">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-slate-400 text-xs font-bold uppercase"
-                    >Riders & Partners</span
+                    >Riders</span
                   >
                   <span class="material-symbols-outlined text-primary"
-                    >handshake</span
+                    >motorcycle</span
                   >
                 </div>
-                <p id="statRidersPartners" class="text-2xl font-black">0</p>
-                <p class="text-xs text-slate-500 mt-1">Delivery & station</p>
+                <p id="statRiders" class="text-2xl font-black">0</p>
+                <p class="text-xs text-slate-500 mt-1">Delivery partners</p>
+              </div>
+              <div class="stat-card">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-slate-400 text-xs font-bold uppercase"
+                    >Partners</span
+                  >
+                  <span class="material-symbols-outlined text-primary"
+                    >local_gas_station</span
+                  >
+                </div>
+                <p id="statPartners" class="text-2xl font-black">0</p>
+                <p class="text-xs text-slate-500 mt-1">Fuel stations</p>
               </div>
             </div>
 
@@ -501,6 +616,16 @@
                       Fuel Station / Partner
                     </option>
                   </select>
+                  <select
+                    id="filterStatus"
+                    class="pl-4 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:ring-primary focus:border-primary"
+                  >
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="converted">Converted</option>
+                    <option value="declined">Declined</option>
+                  </select>
                 </div>
               </div>
               <div class="scrollable-table">
@@ -516,6 +641,7 @@
                       <th class="pb-3 px-2 hidden lg:table-cell">Phone</th>
                       <th class="pb-3 px-2">City</th>
                       <th class="pb-3 px-2">User Type</th>
+                      <th class="pb-3 px-2">Status</th>
                       <th class="pb-3 px-2 hidden xl:table-cell">Date</th>
                     </tr>
                   </thead>
@@ -523,7 +649,7 @@
                     id="waitlistTableBody"
                     class="divide-y divide-slate-100 dark:divide-slate-800"
                   >
-                    <!-- Data will be injected here -->
+                    <!-- Data injected here -->
                   </tbody>
                 </table>
                 <div id="emptyState" class="text-center py-16 hidden">
@@ -567,7 +693,7 @@
     </div>
 
     <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-bottom-nav">
+    <nav id="mobileNav" class="mobile-bottom-nav hidden">
       <a href="admin-dashboard.html" class="bottom-nav-item">
         <span class="material-symbols-outlined">dashboard</span>
         <span>Home</span>
@@ -600,12 +726,21 @@
             : "https://flanorx-api.onrender.com";
 
         // ---------- STATE ----------
+        let authToken = localStorage.getItem("flanorx_admin_token") || "";
+        let adminUser = JSON.parse(
+          localStorage.getItem("flanorx_admin_user") || "null",
+        );
         let allEntries = [];
         let filteredEntries = [];
         let currentPage = 1;
-        const PER_PAGE = 10;
+        const PER_PAGE = 15;
 
         // ---------- DOM ELEMENTS ----------
+        const loginModal = document.getElementById("loginModal");
+        const loginForm = document.getElementById("loginForm");
+        const loginError = document.getElementById("loginError");
+        const mainDashboard = document.getElementById("mainDashboard");
+        const mobileNav = document.getElementById("mobileNav");
         const tableBody = document.getElementById("waitlistTableBody");
         const emptyState = document.getElementById("emptyState");
         const entriesCount = document.getElementById("entriesCount");
@@ -614,13 +749,10 @@
         const searchInput = document.getElementById("searchInput");
         const filterCity = document.getElementById("filterCity");
         const filterType = document.getElementById("filterType");
+        const filterStatus = document.getElementById("filterStatus");
         const refreshBtn = document.getElementById("refreshBtn");
         const exportBtn = document.getElementById("exportBtn");
-        const statTotal = document.getElementById("statTotal");
-        const statCustomers = document.getElementById("statCustomers");
-        const statBusinesses = document.getElementById("statBusinesses");
-        const statRidersPartners =
-          document.getElementById("statRidersPartners");
+        const logoutBtn = document.getElementById("logoutBtn");
         const toast = document.getElementById("toast");
         const toastTitle = document.getElementById("toastTitle");
         const toastMessage = document.getElementById("toastMessage");
@@ -660,21 +792,133 @@
           );
         }
 
+        // ---------- AUTH FUNCTIONS ----------
+        function updateUIForAdmin() {
+          const name = adminUser?.fullName || adminUser?.name || "Admin";
+          const email = adminUser?.email || "admin@flanorx.com";
+
+          const sidebarName = document.getElementById("sidebarAdminName");
+          const sidebarEmail = document.getElementById("sidebarAdminEmail");
+          const headerName = document.getElementById("headerAdminName");
+
+          if (sidebarName) sidebarName.textContent = name;
+          if (sidebarEmail) sidebarEmail.textContent = email;
+          if (headerName) headerName.textContent = name;
+        }
+
+        function showLogin() {
+          loginModal.classList.remove("hidden");
+          mainDashboard.classList.add("hidden");
+          if (mobileNav) mobileNav.classList.add("hidden");
+        }
+
+        function showDashboard() {
+          loginModal.classList.add("hidden");
+          mainDashboard.classList.remove("hidden");
+          if (mobileNav) mobileNav.classList.remove("hidden");
+          updateUIForAdmin();
+          fetchWaitlist();
+        }
+
+        async function handleLogin(e) {
+          e.preventDefault();
+          const email = document.getElementById("loginEmail").value.trim();
+          const password = document.getElementById("loginPassword").value;
+          const loginBtnText = document.getElementById("loginBtnText");
+          const loginSpinner = document.getElementById("loginSpinner");
+
+          if (!email || !password) {
+            showToast("Error", "Please enter email and password.", "error");
+            return;
+          }
+
+          loginBtnText.textContent = "Signing in...";
+          loginSpinner.classList.remove("hidden");
+          loginError.classList.add("hidden");
+
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/login`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              throw new Error(data.message || "Login failed");
+            }
+
+            authToken = data.token || data.data?.token;
+            adminUser = data.user ||
+              data.data?.user || { email, fullName: "Admin" };
+
+            localStorage.setItem("flanorx_admin_token", authToken);
+            localStorage.setItem(
+              "flanorx_admin_user",
+              JSON.stringify(adminUser),
+            );
+
+            showDashboard();
+            showToast("Welcome", "Successfully logged in.", "success");
+          } catch (error) {
+            loginError.textContent = error.message;
+            loginError.classList.remove("hidden");
+            showToast("Login Failed", error.message, "error");
+          } finally {
+            loginBtnText.textContent = "Sign In";
+            loginSpinner.classList.add("hidden");
+          }
+        }
+
+        function handleLogout() {
+          localStorage.removeItem("flanorx_admin_token");
+          localStorage.removeItem("flanorx_admin_user");
+          authToken = "";
+          adminUser = null;
+          allEntries = [];
+          filteredEntries = [];
+          currentPage = 1;
+          showLogin();
+          showToast("Logged Out", "You have been logged out.", "info");
+        }
+
         // ---------- FETCH DATA ----------
         async function fetchWaitlist() {
+          if (!authToken) {
+            showLogin();
+            return;
+          }
+
           try {
-            const res = await fetch(`${API_BASE_URL}/api/waitlist`);
-            if (!res.ok) throw new Error("Failed to fetch waitlist data");
+            const res = await fetch(`${API_BASE_URL}/api/waitlist`, {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            if (res.status === 401) {
+              handleLogout();
+              return;
+            }
+
+            if (!res.ok) {
+              const errorData = await res.json().catch(() => ({}));
+              throw new Error(
+                errorData.message || "Failed to fetch waitlist data",
+              );
+            }
+
             const data = await res.json();
-            // Support both array and { data: [] } responses
             allEntries = Array.isArray(data) ? data : data.data || [];
             applyFiltersAndRender();
             updateStats();
           } catch (error) {
-            console.error(error);
+            console.error("Fetch error:", error);
             showToast(
               "Error",
-              "Could not load waitlist data. Please try again.",
+              error.message || "Could not load waitlist data.",
               "error",
             );
             allEntries = [];
@@ -692,42 +936,46 @@
           const businesses = allEntries.filter(
             (e) => e.userType === "Business / Company",
           ).length;
-          const ridersPartners = allEntries.filter(
-            (e) =>
-              e.userType === "Rider" || e.userType === "Fuel Station / Partner",
+          const riders = allEntries.filter(
+            (e) => e.userType === "Rider",
+          ).length;
+          const partners = allEntries.filter(
+            (e) => e.userType === "Fuel Station / Partner",
           ).length;
 
-          if (statTotal) statTotal.textContent = total;
-          if (statCustomers) statCustomers.textContent = customers;
-          if (statBusinesses) statBusinesses.textContent = businesses;
-          if (statRidersPartners)
-            statRidersPartners.textContent = ridersPartners;
+          document.getElementById("statTotal").textContent = total;
+          document.getElementById("statCustomers").textContent = customers;
+          document.getElementById("statBusinesses").textContent = businesses;
+          document.getElementById("statRiders").textContent = riders;
+          document.getElementById("statPartners").textContent = partners;
         }
 
         // ---------- FILTERING & SEARCH ----------
         function applyFiltersAndRender() {
           const searchTerm = searchInput?.value.toLowerCase().trim() || "";
-          const cityFilter = filterCity?.value || "";
-          const typeFilter = filterType?.value || "";
+          const cityFilterVal = filterCity?.value || "";
+          const typeFilterVal = filterType?.value || "";
+          const statusFilterVal = filterStatus?.value || "";
 
           filteredEntries = allEntries.filter((entry) => {
             const name = (entry.fullName || "").toLowerCase();
             const email = (entry.email || "").toLowerCase();
+            const phone = (entry.phone || "").toLowerCase();
             const city = entry.city || "";
-            const otherCity = entry.otherCity || "";
             const userType = entry.userType || "";
+            const status = entry.status || "pending";
 
             const matchesSearch =
               !searchTerm ||
               name.includes(searchTerm) ||
-              email.includes(searchTerm);
-            const matchesCity =
-              !cityFilter ||
-              city === cityFilter ||
-              (cityFilter === "Other" && city === "Other");
-            const matchesType = !typeFilter || userType === typeFilter;
+              email.includes(searchTerm) ||
+              phone.includes(searchTerm);
+            const matchesCity = !cityFilterVal || city === cityFilterVal;
+            const matchesType = !typeFilterVal || userType === typeFilterVal;
+            const matchesStatus =
+              !statusFilterVal || status === statusFilterVal;
 
-            return matchesSearch && matchesCity && matchesType;
+            return matchesSearch && matchesCity && matchesType && matchesStatus;
           });
 
           currentPage = 1;
@@ -735,6 +983,26 @@
         }
 
         // ---------- RENDER TABLE ----------
+        function getStatusClass(status) {
+          const map = {
+            pending: "status-pending",
+            contacted: "status-contacted",
+            converted: "status-converted",
+            declined: "status-declined",
+          };
+          return map[status] || "status-pending";
+        }
+
+        function getTypeClass(userType) {
+          const map = {
+            Customer: "status-customer",
+            "Business / Company": "status-business",
+            Rider: "status-rider",
+            "Fuel Station / Partner": "status-partner",
+          };
+          return map[userType] || "status-customer";
+        }
+
         function renderTable() {
           if (!tableBody) return;
 
@@ -759,15 +1027,9 @@
               const displayCity =
                 entry.city === "Other"
                   ? entry.otherCity || "Other"
-                  : entry.city;
+                  : entry.city || "—";
               const userType = entry.userType || "Customer";
-              let typeBadgeClass = "status-customer";
-              if (userType === "Business / Company")
-                typeBadgeClass = "status-business";
-              else if (userType === "Rider") typeBadgeClass = "status-rider";
-              else if (userType === "Fuel Station / Partner")
-                typeBadgeClass = "status-partner";
-
+              const status = entry.status || "pending";
               const dateStr = entry.createdAt
                 ? new Date(entry.createdAt).toLocaleDateString("en-US", {
                     month: "short",
@@ -777,13 +1039,14 @@
                 : "—";
 
               row.innerHTML = `
-            <td class="py-3 px-2 font-bold text-sm">${escapeHtml(entry.fullName) || "—"}</td>
-            <td class="py-3 px-2 hidden md:table-cell text-sm">${escapeHtml(entry.email) || "—"}</td>
-            <td class="py-3 px-2 hidden lg:table-cell text-sm">${escapeHtml(entry.phone) || "—"}</td>
-            <td class="py-3 px-2 text-sm font-medium">${escapeHtml(displayCity)}</td>
-            <td class="py-3 px-2"><span class="status-badge ${typeBadgeClass}">${escapeHtml(userType)}</span></td>
-            <td class="py-3 px-2 hidden xl:table-cell text-xs text-slate-500">${dateStr}</td>
-          `;
+          <td class="py-3 px-2 font-bold text-sm">${escapeHtml(entry.fullName) || "—"}</td>
+          <td class="py-3 px-2 hidden md:table-cell text-sm">${escapeHtml(entry.email) || "—"}</td>
+          <td class="py-3 px-2 hidden lg:table-cell text-sm">${escapeHtml(entry.phone) || "—"}</td>
+          <td class="py-3 px-2 text-sm font-medium">${escapeHtml(displayCity)}</td>
+          <td class="py-3 px-2"><span class="status-badge ${getTypeClass(userType)}">${escapeHtml(userType)}</span></td>
+          <td class="py-3 px-2"><span class="status-badge ${getStatusClass(status)}">${escapeHtml(status)}</span></td>
+          <td class="py-3 px-2 hidden xl:table-cell text-xs text-slate-500">${dateStr}</td>
+        `;
               tableBody.appendChild(row);
             });
           }
@@ -843,7 +1106,9 @@
             "Other City",
             "User Type",
             "Needs",
+            "Status",
             "Created At",
+            "Updated At",
           ];
           const rows = filteredEntries.map((e) => [
             e.fullName || "",
@@ -853,16 +1118,20 @@
             e.otherCity || "",
             e.userType || "",
             Array.isArray(e.needs) ? e.needs.join("; ") : e.needs || "",
+            e.status || "pending",
             e.createdAt || "",
+            e.updatedAt || "",
           ]);
-          let csvContent =
-            "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+
+          let csvContent = "data:text/csv;charset=utf-8,";
+          csvContent += headers.join(",") + "\n";
           rows.forEach((row) => {
             csvContent +=
               row
                 .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
                 .join(",") + "\n";
           });
+
           const encodedUri = encodeURI(csvContent);
           const link = document.createElement("a");
           link.setAttribute("href", encodedUri);
@@ -873,19 +1142,24 @@
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          showToast("Exported", "CSV file downloaded successfully.", "success");
+          showToast(
+            "Exported",
+            `CSV file with ${filteredEntries.length} entries downloaded.`,
+            "success",
+          );
         }
 
         // ---------- EVENT LISTENERS ----------
+        if (loginForm) loginForm.addEventListener("submit", handleLogin);
+        if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
         if (searchInput)
-          searchInput.addEventListener("input", () => {
-            currentPage = 1;
-            applyFiltersAndRender();
-          });
+          searchInput.addEventListener("input", applyFiltersAndRender);
         if (filterCity)
           filterCity.addEventListener("change", applyFiltersAndRender);
         if (filterType)
           filterType.addEventListener("change", applyFiltersAndRender);
+        if (filterStatus)
+          filterStatus.addEventListener("change", applyFiltersAndRender);
         if (refreshBtn) refreshBtn.addEventListener("click", fetchWaitlist);
         if (exportBtn) exportBtn.addEventListener("click", exportToCSV);
         if (prevBtn) prevBtn.addEventListener("click", prevPage);
@@ -905,8 +1179,12 @@
             item.classList.add("active");
         });
 
-        // Initial load
-        fetchWaitlist();
+        // ---------- INITIALIZATION ----------
+        if (authToken && adminUser) {
+          showDashboard();
+        } else {
+          showLogin();
+        }
       })();
     </script>
   </body>
