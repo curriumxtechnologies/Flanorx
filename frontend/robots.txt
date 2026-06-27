@@ -1,4 +1,136 @@
-User-agent: *
-Allow: /
+routes:
+  - type: rewrite
+    source: /
+    destination: /index.html
 
-Sitemap: https://www.flanorx.com/sitemap.xml
+  - type: rewrite
+    source: /Home
+    destination: /Home.html
+
+  - type: rewrite
+    source: /admin-dashboard
+    destination: /admin-dashboard.html
+
+  - type: rewrite
+    source: /admin-login
+    destination: /admin-login.html
+
+  - type: rewrite
+    source: /admin-settings
+    destination: /admin-settings.html
+
+  - type: rewrite
+    source: /admin-waitlist
+    destination: /admin-waitlist.html
+
+  - type: rewrite
+    source: /customer-dashboard-empty
+    destination: /customer-dashboard-empty.html
+
+  - type: rewrite
+    source: /customer-order-history-empty
+    destination: /customer-order-history-empty.html
+
+  - type: rewrite
+    source: /customer-support
+    destination: /customer-support.html
+
+  - type: rewrite
+    source: /login
+    destination: /login.html
+
+  - type: rewrite
+    source: /new
+    destination: /new.html
+
+  - type: rewrite
+    source: /Order-history
+    destination: /Order-history.html
+
+  - type: rewrite
+    source: /orders
+    destination: /orders.html
+
+  - type: rewrite
+    source: /payment-success
+    destination: /payment-success.html
+
+  - type: rewrite
+    source: /place-order
+    destination: /place-order.html
+
+  - type: rewrite
+    source: /Profile
+    destination: /Profile.html
+
+  - type: rewrite
+    source: /register
+    destination: /register.html
+
+  - type: rewrite
+    source: /rider-complete-registration
+    destination: /rider-complete-registration.html
+
+  - type: rewrite
+    source: /rider-dashboard-empty
+    destination: /rider-dashboard-empty.html
+
+  - type: rewrite
+    source: /rider-dashboard
+    destination: /rider-dashboard.html
+
+  - type: rewrite
+    source: /rider-deliveries-empty
+    destination: /rider-deliveries-empty.html
+
+  - type: rewrite
+    source: /rider-deliveries
+    destination: /rider-deliveries.html
+
+  - type: rewrite
+    source: /rider-earnings
+    destination: /rider-earnings.html
+
+  - type: rewrite
+    source: /rider-history
+    destination: /rider-history.html
+
+  - type: rewrite
+    source: /rider-login
+    destination: /rider-login.html
+
+  - type: rewrite
+    source: /rider-register
+    destination: /rider-register.html
+
+  - type: rewrite
+    source: /rider-settings
+    destination: /rider-settings.html
+
+  - type: rewrite
+    source: /rider-support
+    destination: /rider-support.html
+
+  - type: rewrite
+    source: /riders
+    destination: /riders.html
+
+  - type: rewrite
+    source: /Settings
+    destination: /Settings.html
+
+  - type: rewrite
+    source: /tracking
+    destination: /tracking.html
+
+  - type: rewrite
+    source: /tracking-empty
+    destination: /tracking-empty.html
+
+  - type: rewrite
+    source: /users
+    destination: /users.html
+
+  - type: rewrite
+    source: /waitlist
+    destination: /waitlist.html
