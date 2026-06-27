@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Waitlist Admin · Flanorx Operations</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <!-- Google Fonts: Manrope -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Material Symbols Outlined -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Favicons -->
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="images/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="images/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="images/favicon-16x16.png"
+    />
+    <link rel="manifest" href="images/site.webmanifest" />
+
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#13ec5b",
+              "brand-yellow": "#FFD700",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102216",
+            },
+            fontFamily: { display: ["Manrope", "sans-serif"] },
+            borderRadius: {
+              xl: "0.75rem",
+              "2xl": "1rem",
+              "3xl": "1.5rem",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        font-family: "Manrope", sans-serif;
+      }
+      .sidebar-active {
+        background-color: rgba(19, 236, 91, 0.1);
+        border-right: 4px solid #13ec5b;
+        color: #111813;
+      }
+      .dark .sidebar-active {
+        background-color: rgba(19, 236, 91, 0.15);
+        color: #13ec5b;
+      }
+      .stat-card {
+        background-color: #ffffff;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
+      }
+      .dark .stat-card {
+        background-color: #0f1724;
+        border-color: #111827;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      }
+      .stat-card:hover {
+        box-shadow: 0 6px 20px rgba(19, 236, 91, 0.08);
+      }
+      .scrollable-table {
+        max-height: 600px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+      }
+      .scrollable-table::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scrollable-table::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 4px;
+      }
+      .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .status-customer {
+        background-color: rgba(19, 236, 91, 0.1);
+        color: #13ec5b;
+      }
+      .status-business {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+      }
+      .status-rider {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: #b45309;
+      }
+      .status-partner {
+        background-color: rgba(139, 92, 246, 0.1);
+        color: #7c3aed;
+      }
+
+      /* Mobile bottom navigation */
+      .mobile-bottom-nav {
+        display: none;
+      }
+      @media (max-width: 1023px) {
+        .mobile-bottom-nav {
+          display: flex;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 72px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-top: 1px solid rgba(226, 232, 240, 0.8);
+          z-index: 40;
+          padding-bottom: env(safe-area-inset-bottom, 0);
+          align-items: center;
+          justify-content: space-around;
+        }
+        .dark .mobile-bottom-nav {
+          background: rgba(15, 23, 42, 0.95);
+          border-top-color: rgba(30, 41, 59, 0.8);
+        }
+        main {
+          padding-bottom: calc(72px + env(safe-area-inset-bottom, 0));
+        }
+        #sidebar {
+          display: none;
+        }
+      }
+      @media (min-width: 1024px) {
+        #sidebar {
+          display: flex !important;
+        }
+        main {
+          padding-bottom: 0;
+        }
+      }
+      .bottom-nav-item.active {
+        color: #13ec5b;
+        background: rgba(19, 236, 91, 0.1);
+        border-radius: 12px;
+        padding: 4px 0;
+      }
+      .bottom-nav-item.active .material-symbols-outlined {
+        font-variation-settings: "FILL" 1;
+        color: #13ec5b;
+      }
+      .bottom-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #64748b;
+        transition: all 0.2s;
+        flex: 1;
+        max-width: 80px;
+        padding: 4px 0;
+        margin: 0 2px;
+      }
+      .bottom-nav-item span:first-child {
+        font-size: 24px;
+      }
+      .bottom-nav-item span:last-child {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        animation: slideIn 0.3s ease;
+      }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen"
+  >
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+      <div
+        id="toastContent"
+        class="rounded-2xl border p-4 shadow-xl backdrop-blur-md bg-white dark:bg-slate-900"
+      >
+        <p id="toastTitle" class="text-sm font-extrabold mb-1"></p>
+        <p id="toastMessage" class="text-xs opacity-80"></p>
+      </div>
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+      <!-- Sidebar (desktop) -->
+      <aside
+        id="sidebar"
+        class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col shrink-0 hidden lg:flex"
+      >
+        <div class="p-6 flex items-center">
+          <div class="flex items-center gap-2">
+            <img
+              src="flanorx.png"
+              alt="Flanorx Logo"
+              class="h-6 w-auto object-contain transition-transform duration-300 hover:scale-105"
+            />
+          </div>
+        </div>
+        <nav class="flex-1 px-4 py-4 space-y-1">
+          <a
+            href="admin-dashboard.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >dashboard</span
+            >
+            <span class="font-medium text-sm">Dashboard</span>
+          </a>
+          <a
+            href="orders.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >shopping_cart</span
+            >
+            <span class="font-medium text-sm">Orders</span>
+          </a>
+          <a
+            href="riders.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >motorcycle</span
+            >
+            <span class="font-medium text-sm">Riders</span>
+          </a>
+          <a
+            href="users.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >people</span
+            >
+            <span class="font-medium text-sm">Users</span>
+          </a>
+          <a
+            href="admin-waitlist.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl sidebar-active group transition-all"
+          >
+            <span class="material-symbols-outlined text-primary"
+              >how_to_reg</span
+            >
+            <span class="font-semibold text-sm">Waitlist</span>
+          </a>
+          <a
+            href="admin-settings.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+          >
+            <span
+              class="material-symbols-outlined group-hover:text-primary transition-colors"
+              >settings</span
+            >
+            <span class="font-medium text-sm">Settings</span>
+          </a>
+        </nav>
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+          <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
+            <div class="flex items-center gap-3 mb-3">
+              <div
+                class="size-10 rounded-full bg-primary/20 flex items-center justify-center"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >admin_panel_settings</span
+                >
+              </div>
+              <div>
+                <p class="text-sm font-bold">Admin User</p>
+                <p class="text-xs text-slate-500">admin@flanorx.com</p>
+              </div>
+            </div>
+            <button
+              class="w-full py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+            >
+              <span class="material-symbols-outlined text-sm">logout</span>
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Sticky Header -->
+        <header
+          class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4 lg:px-8 flex items-center justify-between sticky top-0 z-10 shrink-0"
+        >
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <span
+                class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-xl"
+                >search</span
+              >
+              <input
+                id="searchInput"
+                class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-40 lg:w-64 transition-all"
+                placeholder="Search name, email, city..."
+                type="text"
+              />
+            </div>
+          </div>
+          <div class="flex items-center gap-4 lg:gap-6">
+            <button
+              class="relative text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <span class="material-symbols-outlined">notifications</span>
+              <span
+                class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
+              ></span>
+            </button>
+            <div class="h-8 w-px bg-slate-200 dark:border-slate-800"></div>
+            <div class="flex items-center gap-3">
+              <div class="text-right hidden sm:block">
+                <p class="text-sm font-bold text-slate-900 dark:text-white">
+                  Admin
+                </p>
+                <p class="text-xs text-slate-500">Operations</p>
+              </div>
+              <div
+                class="size-10 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary"
+              >
+                <span class="material-symbols-outlined text-primary"
+                  >admin_panel_settings</span
+                >
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Waitlist Content -->
+        <div class="flex-1 overflow-y-auto p-4 lg:p-8">
+          <div class="space-y-8">
+            <!-- Header Section -->
+            <div
+              class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4"
+            >
+              <div>
+                <h2
+                  class="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight"
+                >
+                  Waitlist Management
+                </h2>
+                <p class="text-slate-500 mt-1 text-sm lg:text-base">
+                  View, filter, and manage early access signups.
+                </p>
+              </div>
+              <div class="flex gap-3">
+                <button
+                  id="refreshBtn"
+                  class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 lg:px-5 py-2 lg:py-2.5 rounded-xl flex items-center gap-2 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                >
+                  <span class="material-symbols-outlined">refresh</span>
+                  Refresh
+                </button>
+                <button
+                  id="exportBtn"
+                  class="bg-primary hover:bg-primary/90 px-4 lg:px-5 py-2 lg:py-2.5 rounded-xl flex items-center gap-2 text-slate-900 font-bold text-sm transition-all shadow-lg shadow-primary/20"
+                >
+                  <span class="material-symbols-outlined">download</span>
+                  Export CSV
+                </button>
+              </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="stat-card">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-slate-400 text-xs font-bold uppercase"
+                    >Total Signups</span
+                  >
+                  <span class="material-symbols-outlined text-primary"
+                    >group</span
+                  >
+                </div>
+                <p id="statTotal" class="text-2xl font-black">0</p>
+                <p class="text-xs text-slate-500 mt-1">All waitlist entries</p>
+              </div>
+              <div class="stat-card">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-slate-400 text-xs font-bold uppercase"
+                    >Customers</span
+                  >
+                  <span class="material-symbols-outlined text-primary"
+                    >person</span
+                  >
+                </div>
+                <p id="statCustomers" class="text-2xl font-black">0</p>
+                <p class="text-xs text-slate-500 mt-1">Individual users</p>
+              </div>
+              <div class="stat-card">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-slate-400 text-xs font-bold uppercase"
+                    >Businesses</span
+                  >
+                  <span class="material-symbols-outlined text-primary"
+                    >store</span
+                  >
+                </div>
+                <p id="statBusinesses" class="text-2xl font-black">0</p>
+                <p class="text-xs text-slate-500 mt-1">Company accounts</p>
+              </div>
+              <div class="stat-card">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-slate-400 text-xs font-bold uppercase"
+                    >Riders & Partners</span
+                  >
+                  <span class="material-symbols-outlined text-primary"
+                    >handshake</span
+                  >
+                </div>
+                <p id="statRidersPartners" class="text-2xl font-black">0</p>
+                <p class="text-xs text-slate-500 mt-1">Delivery & station</p>
+              </div>
+            </div>
+
+            <!-- Filters & Table Card -->
+            <div
+              class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-sm"
+            >
+              <div
+                class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
+              >
+                <h3 class="text-lg font-bold">Waitlist Entries</h3>
+                <div class="flex flex-wrap gap-3">
+                  <select
+                    id="filterCity"
+                    class="pl-4 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:ring-primary focus:border-primary"
+                  >
+                    <option value="">All Cities</option>
+                    <option value="Lagos">Lagos</option>
+                    <option value="Abuja">Abuja</option>
+                    <option value="Port Harcourt">Port Harcourt</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <select
+                    id="filterType"
+                    class="pl-4 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:ring-primary focus:border-primary"
+                  >
+                    <option value="">All Types</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Business / Company">
+                      Business / Company
+                    </option>
+                    <option value="Rider">Rider</option>
+                    <option value="Fuel Station / Partner">
+                      Fuel Station / Partner
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="scrollable-table">
+                <table class="w-full text-left">
+                  <thead
+                    class="border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10"
+                  >
+                    <tr
+                      class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+                    >
+                      <th class="pb-3 px-2">Name</th>
+                      <th class="pb-3 px-2 hidden md:table-cell">Email</th>
+                      <th class="pb-3 px-2 hidden lg:table-cell">Phone</th>
+                      <th class="pb-3 px-2">City</th>
+                      <th class="pb-3 px-2">User Type</th>
+                      <th class="pb-3 px-2 hidden xl:table-cell">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    id="waitlistTableBody"
+                    class="divide-y divide-slate-100 dark:divide-slate-800"
+                  >
+                    <!-- Data will be injected here -->
+                  </tbody>
+                </table>
+                <div id="emptyState" class="text-center py-16 hidden">
+                  <span
+                    class="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-700 mb-4"
+                    >person_off</span
+                  >
+                  <p class="text-slate-500 font-semibold">
+                    No waitlist entries found.
+                  </p>
+                  <p class="text-xs text-slate-400 mt-1">
+                    Try adjusting filters or refresh.
+                  </p>
+                </div>
+              </div>
+              <div
+                class="mt-4 flex items-center justify-between text-xs text-slate-500"
+              >
+                <span id="entriesCount">Showing 0 entries</span>
+                <div class="flex gap-2">
+                  <button
+                    id="prevPageBtn"
+                    class="px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40"
+                    disabled
+                  >
+                    Previous
+                  </button>
+                  <button
+                    id="nextPageBtn"
+                    class="px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40"
+                    disabled
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav">
+      <a href="admin-dashboard.html" class="bottom-nav-item">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span>Home</span>
+      </a>
+      <a href="admin-waitlist.html" class="bottom-nav-item active">
+        <span class="material-symbols-outlined">how_to_reg</span>
+        <span>Waitlist</span>
+      </a>
+      <a href="orders.html" class="bottom-nav-item">
+        <span class="material-symbols-outlined">shopping_cart</span>
+        <span>Orders</span>
+      </a>
+      <a href="riders.html" class="bottom-nav-item">
+        <span class="material-symbols-outlined">motorcycle</span>
+        <span>Riders</span>
+      </a>
+      <a href="users.html" class="bottom-nav-item">
+        <span class="material-symbols-outlined">people</span>
+        <span>Users</span>
+      </a>
+    </nav>
+
+    <script>
+      (function () {
+        // ---------- CONFIGURATION ----------
+        const API_BASE_URL =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+            ? "http://127.0.0.1:8000"
+            : "https://flanorx-api.onrender.com";
+
+        // ---------- STATE ----------
+        let allEntries = [];
+        let filteredEntries = [];
+        let currentPage = 1;
+        const PER_PAGE = 10;
+
+        // ---------- DOM ELEMENTS ----------
+        const tableBody = document.getElementById("waitlistTableBody");
+        const emptyState = document.getElementById("emptyState");
+        const entriesCount = document.getElementById("entriesCount");
+        const prevBtn = document.getElementById("prevPageBtn");
+        const nextBtn = document.getElementById("nextPageBtn");
+        const searchInput = document.getElementById("searchInput");
+        const filterCity = document.getElementById("filterCity");
+        const filterType = document.getElementById("filterType");
+        const refreshBtn = document.getElementById("refreshBtn");
+        const exportBtn = document.getElementById("exportBtn");
+        const statTotal = document.getElementById("statTotal");
+        const statCustomers = document.getElementById("statCustomers");
+        const statBusinesses = document.getElementById("statBusinesses");
+        const statRidersPartners =
+          document.getElementById("statRidersPartners");
+        const toast = document.getElementById("toast");
+        const toastTitle = document.getElementById("toastTitle");
+        const toastMessage = document.getElementById("toastMessage");
+        const toastContent = document.getElementById("toastContent");
+
+        // ---------- TOAST ----------
+        function showToast(title, message, type = "success") {
+          if (!toast || !toastTitle || !toastMessage) return;
+          toastContent.className =
+            "rounded-2xl border p-4 shadow-xl backdrop-blur-md bg-white dark:bg-slate-900";
+          if (type === "success") {
+            toastContent.classList.add(
+              "border-green-300",
+              "text-green-800",
+              "dark:text-green-300",
+            );
+          } else if (type === "error") {
+            toastContent.classList.add(
+              "border-red-300",
+              "text-red-800",
+              "dark:text-red-300",
+            );
+          } else {
+            toastContent.classList.add(
+              "border-blue-300",
+              "text-blue-800",
+              "dark:text-blue-300",
+            );
+          }
+          toastTitle.textContent = title;
+          toastMessage.textContent = message;
+          toast.classList.remove("hidden");
+          clearTimeout(window.toastTimeout);
+          window.toastTimeout = setTimeout(
+            () => toast.classList.add("hidden"),
+            5000,
+          );
+        }
+
+        // ---------- FETCH DATA ----------
+        async function fetchWaitlist() {
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/waitlist`);
+            if (!res.ok) throw new Error("Failed to fetch waitlist data");
+            const data = await res.json();
+            // Support both array and { data: [] } responses
+            allEntries = Array.isArray(data) ? data : data.data || [];
+            applyFiltersAndRender();
+            updateStats();
+          } catch (error) {
+            console.error(error);
+            showToast(
+              "Error",
+              "Could not load waitlist data. Please try again.",
+              "error",
+            );
+            allEntries = [];
+            applyFiltersAndRender();
+            updateStats();
+          }
+        }
+
+        // ---------- STATS ----------
+        function updateStats() {
+          const total = allEntries.length;
+          const customers = allEntries.filter(
+            (e) => e.userType === "Customer",
+          ).length;
+          const businesses = allEntries.filter(
+            (e) => e.userType === "Business / Company",
+          ).length;
+          const ridersPartners = allEntries.filter(
+            (e) =>
+              e.userType === "Rider" || e.userType === "Fuel Station / Partner",
+          ).length;
+
+          if (statTotal) statTotal.textContent = total;
+          if (statCustomers) statCustomers.textContent = customers;
+          if (statBusinesses) statBusinesses.textContent = businesses;
+          if (statRidersPartners)
+            statRidersPartners.textContent = ridersPartners;
+        }
+
+        // ---------- FILTERING & SEARCH ----------
+        function applyFiltersAndRender() {
+          const searchTerm = searchInput?.value.toLowerCase().trim() || "";
+          const cityFilter = filterCity?.value || "";
+          const typeFilter = filterType?.value || "";
+
+          filteredEntries = allEntries.filter((entry) => {
+            const name = (entry.fullName || "").toLowerCase();
+            const email = (entry.email || "").toLowerCase();
+            const city = entry.city || "";
+            const otherCity = entry.otherCity || "";
+            const userType = entry.userType || "";
+
+            const matchesSearch =
+              !searchTerm ||
+              name.includes(searchTerm) ||
+              email.includes(searchTerm);
+            const matchesCity =
+              !cityFilter ||
+              city === cityFilter ||
+              (cityFilter === "Other" && city === "Other");
+            const matchesType = !typeFilter || userType === typeFilter;
+
+            return matchesSearch && matchesCity && matchesType;
+          });
+
+          currentPage = 1;
+          renderTable();
+        }
+
+        // ---------- RENDER TABLE ----------
+        function renderTable() {
+          if (!tableBody) return;
+
+          const start = (currentPage - 1) * PER_PAGE;
+          const end = start + PER_PAGE;
+          const pageEntries = filteredEntries.slice(start, end);
+
+          tableBody.innerHTML = "";
+
+          if (filteredEntries.length === 0) {
+            emptyState?.classList.remove("hidden");
+            tableBody.classList.add("hidden");
+          } else {
+            emptyState?.classList.add("hidden");
+            tableBody.classList.remove("hidden");
+
+            pageEntries.forEach((entry) => {
+              const row = document.createElement("tr");
+              row.className =
+                "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors";
+
+              const displayCity =
+                entry.city === "Other"
+                  ? entry.otherCity || "Other"
+                  : entry.city;
+              const userType = entry.userType || "Customer";
+              let typeBadgeClass = "status-customer";
+              if (userType === "Business / Company")
+                typeBadgeClass = "status-business";
+              else if (userType === "Rider") typeBadgeClass = "status-rider";
+              else if (userType === "Fuel Station / Partner")
+                typeBadgeClass = "status-partner";
+
+              const dateStr = entry.createdAt
+                ? new Date(entry.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "—";
+
+              row.innerHTML = `
+            <td class="py-3 px-2 font-bold text-sm">${escapeHtml(entry.fullName) || "—"}</td>
+            <td class="py-3 px-2 hidden md:table-cell text-sm">${escapeHtml(entry.email) || "—"}</td>
+            <td class="py-3 px-2 hidden lg:table-cell text-sm">${escapeHtml(entry.phone) || "—"}</td>
+            <td class="py-3 px-2 text-sm font-medium">${escapeHtml(displayCity)}</td>
+            <td class="py-3 px-2"><span class="status-badge ${typeBadgeClass}">${escapeHtml(userType)}</span></td>
+            <td class="py-3 px-2 hidden xl:table-cell text-xs text-slate-500">${dateStr}</td>
+          `;
+              tableBody.appendChild(row);
+            });
+          }
+
+          // Update pagination info
+          if (entriesCount) {
+            const showing = filteredEntries.length === 0 ? 0 : start + 1;
+            const to = Math.min(end, filteredEntries.length);
+            entriesCount.textContent = `Showing ${showing}–${to} of ${filteredEntries.length} entries`;
+          }
+
+          // Pagination buttons
+          if (prevBtn) prevBtn.disabled = currentPage <= 1;
+          if (nextBtn)
+            nextBtn.disabled =
+              currentPage >= Math.ceil(filteredEntries.length / PER_PAGE);
+        }
+
+        function escapeHtml(text) {
+          if (!text) return "";
+          return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+
+        // ---------- PAGINATION ----------
+        function nextPage() {
+          if (currentPage < Math.ceil(filteredEntries.length / PER_PAGE)) {
+            currentPage++;
+            renderTable();
+          }
+        }
+        function prevPage() {
+          if (currentPage > 1) {
+            currentPage--;
+            renderTable();
+          }
+        }
+
+        // ---------- EXPORT CSV ----------
+        function exportToCSV() {
+          if (filteredEntries.length === 0) {
+            showToast(
+              "Nothing to export",
+              "No entries match the current filters.",
+              "info",
+            );
+            return;
+          }
+          const headers = [
+            "Full Name",
+            "Email",
+            "Phone",
+            "City",
+            "Other City",
+            "User Type",
+            "Needs",
+            "Created At",
+          ];
+          const rows = filteredEntries.map((e) => [
+            e.fullName || "",
+            e.email || "",
+            e.phone || "",
+            e.city || "",
+            e.otherCity || "",
+            e.userType || "",
+            Array.isArray(e.needs) ? e.needs.join("; ") : e.needs || "",
+            e.createdAt || "",
+          ]);
+          let csvContent =
+            "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+          rows.forEach((row) => {
+            csvContent +=
+              row
+                .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+                .join(",") + "\n";
+          });
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          link.setAttribute(
+            "download",
+            `flanorx-waitlist-${new Date().toISOString().slice(0, 10)}.csv`,
+          );
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showToast("Exported", "CSV file downloaded successfully.", "success");
+        }
+
+        // ---------- EVENT LISTENERS ----------
+        if (searchInput)
+          searchInput.addEventListener("input", () => {
+            currentPage = 1;
+            applyFiltersAndRender();
+          });
+        if (filterCity)
+          filterCity.addEventListener("change", applyFiltersAndRender);
+        if (filterType)
+          filterType.addEventListener("change", applyFiltersAndRender);
+        if (refreshBtn) refreshBtn.addEventListener("click", fetchWaitlist);
+        if (exportBtn) exportBtn.addEventListener("click", exportToCSV);
+        if (prevBtn) prevBtn.addEventListener("click", prevPage);
+        if (nextBtn) nextBtn.addEventListener("click", nextPage);
+
+        // Active sidebar / bottom nav
+        const currentPageName =
+          window.location.pathname.split("/").pop() || "admin-waitlist.html";
+        document.querySelectorAll("#sidebar nav a").forEach((link) => {
+          link.classList.remove("sidebar-active");
+          if (link.getAttribute("href") === currentPageName)
+            link.classList.add("sidebar-active");
+        });
+        document.querySelectorAll(".bottom-nav-item").forEach((item) => {
+          item.classList.remove("active");
+          if (item.getAttribute("href") === currentPageName)
+            item.classList.add("active");
+        });
+
+        // Initial load
+        fetchWaitlist();
+      })();
+    </script>
+  </body>
+</html>
