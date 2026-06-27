@@ -32,7 +32,8 @@ const allowedOrigins = [
   'http://localhost:8000',
   'https://flanorx.onrender.com', 
   'https://flanorx.vercel.app',
-  'https://flanorx.com'
+  'https://flanorx.com',
+  'https://flanorx-api-6920.onrender.com',
 ];
 
 app.use(cors({
