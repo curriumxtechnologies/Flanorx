@@ -127,22 +127,6 @@
         background-color: rgba(139, 92, 246, 0.1);
         color: #7c3aed;
       }
-      .status-pending {
-        background-color: rgba(245, 158, 11, 0.1);
-        color: #b45309;
-      }
-      .status-contacted {
-        background-color: rgba(59, 130, 246, 0.1);
-        color: #2563eb;
-      }
-      .status-converted {
-        background-color: rgba(19, 236, 91, 0.1);
-        color: #13ec5b;
-      }
-      .status-declined {
-        background-color: #f1f5f9;
-        color: #6b7280;
-      }
 
       .mobile-bottom-nav {
         display: none;
@@ -535,16 +519,6 @@
                       Fuel Station / Partner
                     </option>
                   </select>
-                  <select
-                    id="filterStatus"
-                    class="pl-4 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:ring-primary focus:border-primary"
-                  >
-                    <option value="">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="converted">Converted</option>
-                    <option value="declined">Declined</option>
-                  </select>
                 </div>
               </div>
               <div class="scrollable-table">
@@ -560,7 +534,6 @@
                       <th class="pb-3 px-2 hidden lg:table-cell">Phone</th>
                       <th class="pb-3 px-2">City</th>
                       <th class="pb-3 px-2">User Type</th>
-                      <th class="pb-3 px-2">Status</th>
                       <th class="pb-3 px-2 hidden xl:table-cell">Date</th>
                     </tr>
                   </thead>
@@ -665,7 +638,6 @@
         const searchInput = document.getElementById("searchInput");
         const filterCity = document.getElementById("filterCity");
         const filterType = document.getElementById("filterType");
-        const filterStatus = document.getElementById("filterStatus");
         const refreshBtn = document.getElementById("refreshBtn");
         const exportBtn = document.getElementById("exportBtn");
         const logoutBtn = document.getElementById("logoutBtn");
@@ -711,7 +683,6 @@
         // ---------- AUTH FUNCTIONS ----------
         function checkAuth() {
           if (!authToken || !adminUser) {
-            // Redirect to login page
             window.location.href =
               "admin-login.html?redirect=" +
               encodeURIComponent(window.location.pathname.split("/").pop());
@@ -721,7 +692,6 @@
         }
 
         function updateUIForAdmin() {
-          // Your backend returns: { _id, name, email, profile, role, authMethod }
           const name = adminUser?.name || "Admin";
           const email = adminUser?.email || "admin@flanorx.com";
 
@@ -735,7 +705,6 @@
         }
 
         function handleLogout() {
-          // Call logout API
           fetch(`${API_BASE_URL}/api/admin/logout`, {
             method: "POST",
             headers: {
@@ -743,9 +712,8 @@
               "Content-Type": "application/json",
             },
             credentials: "include",
-          }).catch(() => {}); // Ignore errors on logout
+          }).catch(() => {});
 
-          // Clear local storage
           localStorage.removeItem("flanorx_admin_token");
           localStorage.removeItem("flanorx_admin_user");
           localStorage.removeItem("flanorx_admin_remember");
@@ -783,7 +751,6 @@
             }
 
             const data = await res.json();
-            // Your waitlist GET endpoint returns the array directly
             allEntries = Array.isArray(data) ? data : data.data || [];
             applyFiltersAndRender();
             updateStats();
@@ -828,7 +795,6 @@
           const searchTerm = searchInput?.value.toLowerCase().trim() || "";
           const cityFilterVal = filterCity?.value || "";
           const typeFilterVal = filterType?.value || "";
-          const statusFilterVal = filterStatus?.value || "";
 
           filteredEntries = allEntries.filter((entry) => {
             const name = (entry.fullName || "").toLowerCase();
@@ -836,7 +802,6 @@
             const phone = (entry.phone || "").toLowerCase();
             const city = entry.city || "";
             const userType = entry.userType || "";
-            const status = entry.status || "pending";
 
             const matchesSearch =
               !searchTerm ||
@@ -845,10 +810,8 @@
               phone.includes(searchTerm);
             const matchesCity = !cityFilterVal || city === cityFilterVal;
             const matchesType = !typeFilterVal || userType === typeFilterVal;
-            const matchesStatus =
-              !statusFilterVal || status === statusFilterVal;
 
-            return matchesSearch && matchesCity && matchesType && matchesStatus;
+            return matchesSearch && matchesCity && matchesType;
           });
 
           currentPage = 1;
@@ -856,16 +819,6 @@
         }
 
         // ---------- RENDER TABLE ----------
-        function getStatusClass(status) {
-          const map = {
-            pending: "status-pending",
-            contacted: "status-contacted",
-            converted: "status-converted",
-            declined: "status-declined",
-          };
-          return map[status] || "status-pending";
-        }
-
         function getTypeClass(userType) {
           const map = {
             Customer: "status-customer",
@@ -902,7 +855,6 @@
                   ? entry.otherCity || "Other"
                   : entry.city || "—";
               const userType = entry.userType || "Customer";
-              const status = entry.status || "pending";
               const dateStr = entry.createdAt
                 ? new Date(entry.createdAt).toLocaleDateString("en-US", {
                     month: "short",
@@ -917,7 +869,6 @@
           <td class="py-3 px-2 hidden lg:table-cell text-sm">${escapeHtml(entry.phone) || "—"}</td>
           <td class="py-3 px-2 text-sm font-medium">${escapeHtml(displayCity)}</td>
           <td class="py-3 px-2"><span class="status-badge ${getTypeClass(userType)}">${escapeHtml(userType)}</span></td>
-          <td class="py-3 px-2"><span class="status-badge ${getStatusClass(status)}">${escapeHtml(status)}</span></td>
           <td class="py-3 px-2 hidden xl:table-cell text-xs text-slate-500">${dateStr}</td>
         `;
               tableBody.appendChild(row);
@@ -977,7 +928,6 @@
             "Other City",
             "User Type",
             "Needs",
-            "Status",
             "Created At",
             "Updated At",
           ];
@@ -989,7 +939,6 @@
             e.otherCity || "",
             e.userType || "",
             Array.isArray(e.needs) ? e.needs.join("; ") : e.needs || "",
-            e.status || "pending",
             e.createdAt || "",
             e.updatedAt || "",
           ]);
@@ -1028,8 +977,6 @@
           filterCity.addEventListener("change", applyFiltersAndRender);
         if (filterType)
           filterType.addEventListener("change", applyFiltersAndRender);
-        if (filterStatus)
-          filterStatus.addEventListener("change", applyFiltersAndRender);
         if (refreshBtn) refreshBtn.addEventListener("click", fetchWaitlist);
         if (exportBtn) exportBtn.addEventListener("click", exportToCSV);
         if (prevBtn) prevBtn.addEventListener("click", prevPage);
