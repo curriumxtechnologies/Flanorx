@@ -599,12 +599,8 @@
           const email = document.getElementById("email").value.trim();
           const city = document.getElementById("city").value;
           const userType = document.getElementById("userType").value;
-
-          // Get checked needs
-          const needsCheckboxes = document.querySelectorAll(
-            'input[name="needs"]:checked',
-          );
-          const needs = Array.from(needsCheckboxes).map((cb) => cb.value);
+          const otherCity =
+            document.getElementById("otherCity")?.value.trim() || undefined;
 
           // Validate required fields
           if (!fullName) {
@@ -629,6 +625,11 @@
           }
           if (!city) {
             showToast("Missing Field", "Please select your city.", "error");
+            return;
+          }
+          // Validate otherCity if city is "Other"
+          if (city === "Other" && !otherCity) {
+            showToast("Missing Field", "Please enter your city name.", "error");
             return;
           }
           if (!userType) {
@@ -658,17 +659,24 @@
           if (btnIcon) btnIcon.classList.add("hidden");
 
           try {
+            // Build request body - include otherCity when provided
+            const body = {
+              fullName,
+              phone,
+              email,
+              city,
+              userType,
+            };
+
+            // Only include otherCity if it exists
+            if (otherCity) {
+              body.otherCity = otherCity;
+            }
+
             const res = await fetch(`${API_BASE_URL}/api/waitlist`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                fullName,
-                phone,
-                email,
-                city,
-                userType,
-                needs,
-              }),
+              body: JSON.stringify(body),
             });
 
             const data = await res.json().catch(() => ({}));
@@ -687,6 +695,12 @@
 
             // Reset form
             document.getElementById("waitlistForm").reset();
+            // Hide other city input if visible
+            const otherCityContainer =
+              document.getElementById("otherCityContainer");
+            if (otherCityContainer) {
+              otherCityContainer.classList.add("hidden");
+            }
           } catch (error) {
             console.error("Waitlist submission error:", error);
             showToast(

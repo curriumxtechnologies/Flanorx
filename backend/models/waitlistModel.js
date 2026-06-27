@@ -26,6 +26,10 @@ const waitlistSchema = new mongoose.Schema(
       required: [true, "City is required"],
       enum: ["Lagos", "Abuja", "Port Harcourt", "Other"],
     },
+    otherCity: {  // ADD THIS FIELD
+      type: String,
+      trim: true,
+    },
     userType: {
       type: String,
       required: [true, "User type is required"],

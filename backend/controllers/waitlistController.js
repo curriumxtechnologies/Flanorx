@@ -6,7 +6,7 @@ import Waitlist from "../models/waitlistModel.js";
 // @route   POST /api/waitlist
 // @access  Public
 const joinWaitlist = asyncHandler(async (req, res) => {
-  const { fullName, phone, email, city, userType, needs } = req.body;
+  const { fullName, phone, email, city, otherCity, userType, needs } = req.body;
 
   // Validate required fields
   if (!fullName || !phone || !email || !city || !userType) {
@@ -22,12 +22,13 @@ const joinWaitlist = asyncHandler(async (req, res) => {
     throw new Error("This email is already on the waitlist. We'll notify you when we launch!");
   }
 
-  // Create waitlist entry
+  // Create waitlist entry - ADD otherCity here
   const waitlistEntry = await Waitlist.create({
     fullName: fullName.trim(),
     phone: phone.trim(),
     email: email.toLowerCase().trim(),
     city,
+    otherCity: otherCity || undefined, // ADD THIS LINE
     userType,
     needs: needs || [],
   });
@@ -41,6 +42,7 @@ const joinWaitlist = asyncHandler(async (req, res) => {
         fullName: waitlistEntry.fullName,
         email: waitlistEntry.email,
         city: waitlistEntry.city,
+        otherCity: waitlistEntry.otherCity,
         userType: waitlistEntry.userType,
       },
     });
