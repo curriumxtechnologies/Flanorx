@@ -48,6 +48,14 @@
           "opsz" 24;
       }
     </style>
+    <script>
+    if (
+      window.location.pathname !== "/waitlist" &&
+      window.location.pathname !== "/waitlist/"
+    ) {
+      window.location.replace("/waitlist");
+    }
+    </script>
   </head>
   <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased font-display"

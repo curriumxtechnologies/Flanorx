@@ -65,6 +65,14 @@
         background: linear-gradient(145deg, #102216 0%, #1a3a24 100%);
       }
     </style>
+    <script>
+    if (
+      window.location.pathname !== "/waitlist" &&
+      window.location.pathname !== "/waitlist/"
+    ) {
+      window.location.replace("/waitlist");
+    }
+    </script>
   </head>
 
   <body

@@ -84,6 +84,14 @@
           opacity 0.2s ease;
       }
     </style>
+    <script>
+    if (
+      window.location.pathname !== "/waitlist" &&
+      window.location.pathname !== "/waitlist/"
+    ) {
+      window.location.replace("/waitlist");
+    }
+    </script>
   </head>
 
   <body
