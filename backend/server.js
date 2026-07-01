@@ -3,6 +3,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import dns from "dns";
 
 import userRoutes from "./routes/userRoutes.js";
 import riderRoutes from "./routes/riderRoutes.js";
@@ -16,6 +17,10 @@ import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
+// ✅ Fix DNS SRV resolution issues on Windows/VPN setups
+dns.setDefaultResultOrder('ipv4first');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 const app = express();
 const PORT = process.env.PORT || 8000;
 const MONGO_URL = process.env.MONGO_URL;
@@ -25,7 +30,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// ✅ CORS configuration - FIXED
+// ✅ CORS configuration 
 const allowedOrigins = [
   'http://localhost:5500', 
   'http://127.0.0.1:5500', 
@@ -53,9 +58,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
-
-// ✅ REMOVED the problematic line - CORS handles OPTIONS automatically
-// app.options('*', cors()); // ← DELETE THIS LINE
 
 // ✅ Health test endpoint
 app.get("/api/health", (req, res) => {
