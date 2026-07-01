@@ -377,6 +377,14 @@
         }
       }
     </style>
+    <script>
+    if (
+      window.location.pathname !== "/waitlist" &&
+      window.location.pathname !== "/waitlist/"
+    ) {
+      window.location.replace("/waitlist");
+    }
+    </script>
   </head>
 
   <body

@@ -291,6 +291,14 @@
         color: #13ec5b;
       }
     </style>
+    <script>
+    if (
+      window.location.pathname !== "/waitlist" &&
+      window.location.pathname !== "/waitlist/"
+    ) {
+      window.location.replace("/waitlist");
+    }
+    </script>
   </head>
   <body
     class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased min-h-screen overflow-hidden"
