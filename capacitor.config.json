@@ -1,0 +1,6 @@
+{
+  "appId": "com.flanorx.app",
+  "appName": "Flanorx",
+  "webDir": "frontend",
+  "bundledWebRuntime": false
+}
