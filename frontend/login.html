@@ -125,9 +125,25 @@
     </script>
   </head>
 
-  <body
-    class="min-h-screen flex flex-col bg-background-light font-display dark:bg-background-dark"
-  >
+  <body class="min-h-screen flex flex-col bg-background-light font-display dark:bg-background-dark">
+      <!-- Session Check - Redirect if already logged in -->
+      <script>
+          // Check if user is already logged in
+          const authData = localStorage.getItem('flanorx_auth');
+          if (authData) {
+              try {
+                  const parsed = JSON.parse(authData);
+                  // Check if token exists and session is not expired (optional: check age)
+                  if (parsed.token) {
+                      // Redirect to home page
+                      window.location.href = 'Home.html';
+                  }
+              } catch (e) {
+                  // Invalid data, clear it
+                  localStorage.removeItem('flanorx_auth');
+              }
+          }
+      </script>
     <!-- Loader -->
     <div id="pageLoader">
       <img src="flanorx.png" alt="Flanorx Loading Logo" class="loader-logo" />
@@ -314,18 +330,38 @@
       }
 
       function getToken() {
-        const raw = localStorage.getItem("flanorx_auth");
-        if (!raw) return null;
+          const raw = localStorage.getItem('flanorx_auth');
+          if (!raw) return null;
 
-        try {
-          return JSON.parse(raw)?.token || null;
-        } catch {
-          return null;
-        }
+          try {
+              const parsed = JSON.parse(raw);
+              return parsed?.token || null;
+          } catch {
+              localStorage.removeItem('flanorx_auth');
+              return null;
+          }
       }
 
       function redirectToDashboard() {
-        window.location.href = "Home.html";
+          // Check if we have session data
+          const authData = localStorage.getItem('flanorx_auth');
+          if (!authData) {
+              window.location.href = 'login.html';
+              return;
+          }
+          
+          try {
+              const parsed = JSON.parse(authData);
+              if (!parsed.token) {
+                  window.location.href = 'login.html';
+                  return;
+              }
+              // Redirect to home
+              window.location.href = 'Home.html';
+          } catch (e) {
+              localStorage.removeItem('flanorx_auth');
+              window.location.href = 'login.html';
+          }
       }
 
       function showMsg(message, type = "info") {
