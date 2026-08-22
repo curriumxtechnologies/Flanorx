@@ -1,0 +1,1475 @@
+<!doctype html>
+<html class="light" lang="en">
+  <head>
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>
+      Flanorx - On-Demand Fuel Delivery in Nigeria | Fast, Reliable, 24/7 |
+      Power Down? No Wahala!
+    </title>
+
+    <!-- SEO Meta Tags -->
+    <meta
+      name="description"
+      content="Flanorx - On-demand fuel delivery to your doorstep in Port Harcourt, Lagos, and Abuja. Fast 30-minute delivery, quality fuel, fair pricing. Power down? No wahala!"
+    />
+    <meta
+      name="keywords"
+      content="fuel delivery, petrol delivery, fuel delivery Nigeria, fuel delivery Port Harcourt, fuel delivery Lagos, fuel delivery Abuja, Flanorx, on-demand fuel, emergency fuel, generator fuel, bulk fuel delivery, commercial fuel, home fuel delivery, fuel logistics Nigeria, 24/7 fuel delivery, fast fuel delivery"
+    />
+    <meta name="author" content="Flanorx Energy Solutions" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="geo.region" content="NG-RI" />
+    <meta name="geo.placename" content="Port Harcourt" />
+    <meta name="geo.position" content="4.8156;7.0498" />
+    <meta name="ICBM" content="4.8156, 7.0498" />
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://flanorx.com/" />
+    <meta
+      property="og:title"
+      content="Flanorx - On-Demand Fuel Delivery in Nigeria | Power Down? No Wahala!"
+    />
+    <meta
+      property="og:description"
+      content="Get quality fuel delivered to your doorstep in 30 minutes. Serving Port Harcourt, Lagos & Abuja. Residential, commercial, and fleet fueling available 24/7."
+    />
+    <meta
+      property="og:image"
+      content="https://flanorx.com/images/flanorx-og-image.png"
+    />
+    <meta property="og:locale" content="en_NG" />
+    <meta property="og:site_name" content="Flanorx" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://flanorx.com/" />
+    <meta
+      name="twitter:title"
+      content="Flanorx - On-Demand Fuel Delivery in Nigeria | Power Down? No Wahala!"
+    />
+    <meta
+      name="twitter:description"
+      content="Get quality fuel delivered to your doorstep in 30 minutes. Serving Port Harcourt, Lagos & Abuja. Residential, commercial, and fleet fueling available 24/7."
+    />
+    <meta
+      name="twitter:image"
+      content="https://flanorx.com/images/flanorx-og-image.png"
+    />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://flanorx.com/" />
+
+    <!-- Google Site Verification -->
+    <meta
+      name="google-site-verification"
+      content="WdOXM4qspJg-zPU63jYQIvSA0EQfaTru4at3zPSy9FY"
+    />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap"
+      rel="stylesheet"
+    />
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <!-- Apple Touch Icon (iPhone, iPad) -->
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="images/apple-touch-icon.png"
+    />
+
+    <!-- Standard Favicons -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="images/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="images/favicon-16x16.png"
+    />
+
+    <!-- Fallback ICO (important for older browsers) -->
+    <link rel="icon" href="images/favicon.ico" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="images/site.webmanifest" />
+
+    <!-- Optional: Theme color for mobile browsers -->
+    <meta name="theme-color" content="#13ec5b" />
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#13ec5b",
+              "accent-yellow": "#ffc107",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102216",
+            },
+            fontFamily: {
+              display: ["Manrope", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Manrope", sans-serif;
+        scroll-behavior: smooth;
+      }
+      /* ---------- scroll reveal + hover animations ---------- */
+      .reveal {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+          transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+      .reveal.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      /* icons & buttons get playful hover (scale / rotate / color) — no design change, just motion */
+      .group-hover\:scale-110:hover .lucide,
+      .group:hover .lucide {
+        transition:
+          transform 0.2s ease,
+          color 0.2s ease;
+      }
+      .group:hover .lucide {
+        transform: scale(1.12) rotate(1deg);
+        color: #13ec5b; /* keep primary vibe */
+      }
+      /* icon containers gentle scale + background */
+      .hover\:icon-pop:hover .lucide {
+        transform: scale(1.15);
+        transition: transform 0.15s ease;
+      }
+      .hover\:icon-pop:hover {
+        background-color: rgba(19, 236, 91, 0.15) !important;
+        transition: background-color 0.2s;
+      }
+      /* specific overrides so design stays untouched – only motion added */
+      .lucide {
+        transition:
+          transform 0.18s ease,
+          color 0.18s ease;
+        width: 1em;
+        height: 1em;
+      }
+      button:active .lucide {
+        transform: scale(0.9);
+      }
+      img.avatar-hover:hover {
+        transform: scale(1.03);
+        transition: transform 0.2s;
+      }
+      /* Modal Styles */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition:
+          opacity 0.3s ease,
+          visibility 0.3s ease;
+      }
+      .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+      .modal-panel {
+        background: white;
+        width: 100%;
+        max-width: 600px;
+        max-height: 80vh;
+        border-radius: 1.5rem 1.5rem 0 0;
+        overflow-y: auto;
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+      .dark .modal-panel {
+        background: #1e293b;
+      }
+      .modal-overlay.active .modal-panel {
+        transform: translateY(0);
+      }
+      /* Cookie Banner */
+      .cookie-banner {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 99;
+        background: white;
+        border-top: 1px solid #e2e8f0;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+      .dark .cookie-banner {
+        background: #1e293b;
+        border-top-color: #334155;
+      }
+      .cookie-banner.show {
+        transform: translateY(0);
+      }
+      /* Toggle Switch */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: 0.3s;
+        border-radius: 24px;
+      }
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+      input:checked + .toggle-slider {
+        background-color: #13ec5b;
+      }
+      input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+      }
+      input:disabled + .toggle-slider {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    </style>
+
+    <!-- Structured Data for Local Business & Service -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Flanorx Energy Solutions",
+        "alternateName": "Flanorx",
+        "description": "On-demand fuel delivery service providing petrol to homes and businesses in Port Harcourt. 30-minute delivery, 24/7 service.",
+        "url": "https://flanorx.com",
+        "logo": "https://flanorx.com/images/flanorx-logo.png",
+        "image": "https://flanorx.com/images/flanorx-og-image.png",
+        "telephone": "+2347061088924",
+        "email": "support@flanorx.com",
+        "priceRange": "₦₦",
+        "currenciesAccepted": "NGN",
+        "paymentAccepted": "Cash, Bank Transfer, Card",
+        "areaServed": [
+          {
+            "@type": "City",
+            "name": "Port Harcourt"
+          },
+          {
+            "@type": "City",
+            "name": "Lagos"
+          },
+          {
+            "@type": "City",
+            "name": "Abuja"
+          }
+        ],
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Port Harcourt",
+          "addressRegion": "Rivers State",
+          "addressCountry": "NG"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "4.8156",
+          "longitude": "7.0498"
+        },
+        "openingHoursSpecification": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "opens": "00:00",
+          "closes": "23:59"
+        }
+      }
+    </script>
+
+    <!-- FAQ Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How fast is Flanorx fuel delivery?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Flanorx delivers fuel within 30 minutes in operational areas across Port Harcourt, Lagos, and Abuja."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What areas does Flanorx serve?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We are fully operational in Port Harcourt (GRA, Old Town, Trans-Amadi, Eleme, Rumuokoro) and expanding to Lagos and Abuja."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What types of fuel does Flanorx deliver?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Flanorx delivers premium petrol (PMS) directly to your home or business."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Flanorx available 24/7?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Flanorx operates 24 hours a day, 7 days a week for all your emergency and scheduled fuel needs."
+            }
+          }
+        ]
+      }
+    </script>
+    <script>
+    if (
+      window.location.pathname !== "/waitlist" &&
+      window.location.pathname !== "/waitlist/"
+    ) {
+      window.location.replace("/waitlist");
+    }
+    </script>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased"
+  >
+    <div class="relative flex min-h-screen flex-col overflow-x-hidden">
+      <header
+        class="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md dark:bg-background-dark/80 dark:border-slate-800"
+      >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex h-16 items-center justify-between">
+            <div class="flex items-center gap-2">
+              <img
+                src="flanorx.png"
+                alt="Flanorx fuel delivery logo"
+                class="h-6 w-auto object-contain transition-transform duration-300 hover:scale-105"
+              />
+            </div>
+            <nav class="hidden md:flex items-center gap-8">
+              <a
+                class="text-sm font-semibold hover:text-primary transition-colors cursor-pointer"
+                href="#services"
+                >Services</a
+              >
+              <a
+                class="text-sm font-semibold hover:text-primary transition-colors cursor-pointer"
+                href="#locations"
+                >Locations</a
+              >
+              <a
+                class="text-sm font-semibold hover:text-primary transition-colors cursor-pointer"
+                href="#about"
+                >About</a
+              >
+            </nav>
+            <div class="flex items-center gap-3">
+              <a
+                href="login.html"
+                class="flex items-center justify-center rounded-lg h-10 px-6 bg-primary text-background-dark text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-transform active:scale-95"
+              >
+                Order Now
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-grow">
+        <!-- hero section – reveal applied to inner elements -->
+        <section
+          class="relative w-full min-h-[600px] flex items-center justify-center py-20 px-4 overflow-hidden"
+        >
+          <div class="absolute inset-0 z-0">
+            <div
+              class="absolute inset-0 bg-gradient-to-r from-black/70 to-black/30 z-10"
+            ></div>
+            <img
+              alt="Flanorx fuel delivery truck delivering petrol in Nigeria"
+              class="w-full h-full object-cover"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJJ8AfCqcNGDUlO1ArZE02GXe1R27QZw2BwfHXQOPtOnLq-rIh1B4JLnRWZfAsw0OvzPY_cfPwMNGmxfCEJjv4I2iq2K-lyuHAa3lyDtO7Kq57y8nJx2M51uWmzIGTAqfLKvW10a3o67sN2-Ju9Euhu4Bbfrrgelr3NJr49eE3gAG-St2Qwrn61BcsSgiq7RGXbzQlSvOKB4iRT2gZYRN4gg0-11BYRgn0RQmO5IVtwoLIiDGu8a_y_ek--cdNK9yRsjcraqr_LZo"
+            />
+          </div>
+          <div
+            class="relative z-20 max-w-5xl w-full text-center lg:text-left flex flex-col lg:flex-row items-center gap-12"
+          >
+            <div class="flex-1 space-y-6">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 backdrop-blur-md reveal"
+              >
+                <i data-lucide="zap" class="text-primary text-sm"></i>
+                <span
+                  class="text-xs font-bold text-primary uppercase tracking-wider"
+                  >Fastest Delivery in Town</span
+                >
+              </div>
+              <h1
+                class="text-5xl md:text-7xl font-black text-white leading-[1.1] tracking-tight reveal"
+              >
+                Fuel Delivery in Nigeria <br /><span class="text-primary italic"
+                  >No wahala!</span
+                >
+              </h1>
+              <p
+                class="text-lg text-slate-200 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium reveal"
+              >
+                On-demand fuel delivery to your doorstep, anytime, 24/7
+              </p>
+            </div>
+            <div
+              class="w-full max-w-md bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl border border-white/20 reveal"
+            >
+              <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i data-lucide="shopping-cart" class="text-primary"></i>
+                Quick Order
+              </h3>
+              <form class="space-y-4">
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-slate-500 uppercase"
+                    >Delivery Location</label
+                  >
+                  <div class="relative group">
+                    <i
+                      data-lucide="map-pin"
+                      class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-primary transition-colors"
+                    ></i>
+                    <input
+                      class="w-full pl-10 pr-4 py-3 rounded-lg border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 focus:ring-primary focus:border-primary transition-all text-sm"
+                      placeholder="Enter street or city"
+                      type="text"
+                    />
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-slate-500 uppercase"
+                    >Quantity (Liters)</label
+                  >
+                  <input
+                    class="w-full py-3 rounded-lg border-slate-200 bg-slate-50 dark:bg-slate-800 dark:border-slate-700 focus:ring-primary focus:border-primary text-sm"
+                    placeholder="20"
+                    type="number"
+                  />
+                </div>
+                <a
+                  href="register.html"
+                  class="w-full py-4 bg-primary text-background-dark font-black text-lg rounded-xl hover:shadow-xl hover:shadow-primary/30 transition-all flex items-center justify-center gap-2 group"
+                >
+                  Get Fuel Now
+                  <i
+                    data-lucide="arrow-right"
+                    class="group-hover:translate-x-1 transition-transform"
+                  ></i>
+                </a>
+                <p
+                  class="text-center text-[10px] text-slate-400 uppercase font-bold tracking-widest pt-2"
+                >
+                  Available 24/7 in Lagos, Abuja, &amp; Port Harcourt
+                </p>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- how it works / services -->
+        <section
+          id="services"
+          class="py-24 px-4 bg-white dark:bg-background-dark scroll-mt-20"
+        >
+          <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16 space-y-4">
+              <h2
+                class="text-3xl md:text-4xl font-extrabold tracking-tight reveal"
+              >
+                Our Services
+              </h2>
+              <div
+                class="w-24 h-1.5 bg-primary mx-auto rounded-full reveal"
+              ></div>
+              <p class="text-slate-600 dark:text-slate-400 font-medium reveal">
+                Refueling is as simple as ordering pizza.
+              </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+              <div
+                class="relative flex flex-col items-center text-center group reveal"
+              >
+                <div
+                  class="size-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 transition-colors duration-300 hover:bg-primary/30"
+                >
+                  <i
+                    data-lucide="home"
+                    class="text-primary"
+                    style="width: 40px; height: 40px"
+                  ></i>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Residential Delivery</h3>
+                <p class="text-slate-600 dark:text-slate-400">
+                  Get fuel delivered straight to your home generator or vehicle.
+                  No more carrying heavy jerrycans.
+                </p>
+              </div>
+              <div
+                class="relative flex flex-col items-center text-center group reveal"
+              >
+                <div
+                  class="size-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 transition-colors duration-300 hover:bg-primary/30"
+                >
+                  <i
+                    data-lucide="building-2"
+                    class="text-primary"
+                    style="width: 40px; height: 40px"
+                  ></i>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Commercial Fueling</h3>
+                <p class="text-slate-600 dark:text-slate-400">
+                  Bulk fuel delivery for businesses, construction sites, and
+                  industrial equipment.
+                </p>
+              </div>
+              <div class="flex flex-col items-center text-center group reveal">
+                <div
+                  class="size-20 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 transition-colors duration-300 hover:bg-primary/30"
+                >
+                  <i
+                    data-lucide="truck"
+                    class="text-primary"
+                    style="width: 40px; height: 40px"
+                  ></i>
+                </div>
+                <h3 class="text-xl font-bold mb-3">Fleet Management</h3>
+                <p class="text-slate-600 dark:text-slate-400">
+                  Scheduled refueling for your entire fleet. We come to your
+                  yard or office.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- locations -->
+        <section
+          id="locations"
+          class="py-24 px-4 bg-slate-50 dark:bg-slate-900/50 scroll-mt-20"
+        >
+          <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16 space-y-4">
+              <h2
+                class="text-3xl md:text-4xl font-extrabold tracking-tight reveal"
+              >
+                Our Locations
+              </h2>
+              <div
+                class="w-24 h-1.5 bg-primary mx-auto rounded-full reveal"
+              ></div>
+              <p class="text-slate-600 dark:text-slate-400 font-medium reveal">
+                Currently serving the Garden City and expanding soon.
+              </p>
+            </div>
+            <div class="max-w-2xl mx-auto">
+              <div
+                class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm reveal"
+              >
+                <div class="flex items-start gap-6">
+                  <div
+                    class="size-16 bg-primary/10 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  >
+                    <i
+                      data-lucide="building"
+                      class="text-primary"
+                      style="width: 36px; height: 36px"
+                    ></i>
+                  </div>
+                  <div class="space-y-3">
+                    <h3 class="text-2xl font-bold">Port Harcourt</h3>
+                    <p
+                      class="text-slate-600 dark:text-slate-400 leading-relaxed"
+                    >
+                      We are fully operational across Port Harcourt, covering
+                      GRA, Old Town, Trans-Amadi, Eleme, and all major
+                      districts. Our riders are strategically positioned to
+                      reach you within 30 minutes.
+                    </p>
+                    <div class="flex flex-wrap gap-3 pt-2">
+                      <span
+                        class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full"
+                        >GRA</span
+                      >
+                      <span
+                        class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full"
+                        >Old Town</span
+                      >
+                      <span
+                        class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full"
+                        >Trans-Amadi</span
+                      >
+                      <span
+                        class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full"
+                        >Eleme</span
+                      >
+                      <span
+                        class="px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full"
+                        >Rumuokoro</span
+                      >
+                    </div>
+                    <p class="text-sm text-slate-400 italic mt-4">
+                      🚀 Expanding to Lagos, Abuja, and more cities soon!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- leading energy delivery / about -->
+        <section
+          id="about"
+          class="py-24 px-4 bg-white dark:bg-background-dark scroll-mt-20"
+        >
+          <div
+            class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"
+          >
+            <div class="grid grid-cols-2 gap-6">
+              <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 reveal group"
+              >
+                <i
+                  data-lucide="gauge"
+                  class="text-primary mb-4"
+                  style="width: 32px; height: 32px"
+                ></i>
+                <h4 class="font-bold mb-2">30-Min Delivery</h4>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                  Fastest turnaround in the industry. We don't keep you waiting.
+                </p>
+              </div>
+              <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mt-8 reveal group"
+              >
+                <i
+                  data-lucide="shield-check"
+                  class="text-[#ff4d4d] mb-4"
+                  style="width: 32px; height: 32px"
+                ></i>
+                <h4 class="font-bold mb-2">Quality Fuel</h4>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                  Direct from depot. No adulteration. 100% pure fuel guaranteed.
+                </p>
+              </div>
+              <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 reveal group"
+              >
+                <i
+                  data-lucide="banknote"
+                  class="text-[#ffc107] mb-4"
+                  style="width: 32px; height: 32px"
+                ></i>
+                <h4 class="font-bold mb-2">Fair Pricing</h4>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                  Market competitive rates with transparent delivery fees.
+                </p>
+              </div>
+              <div
+                class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mt-8 reveal group"
+              >
+                <i
+                  data-lucide="route"
+                  class="text-primary mb-4"
+                  style="width: 32px; height: 32px"
+                ></i>
+                <h4 class="font-bold mb-2">Live Tracking</h4>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                  Watch your delivery rider on the map in real-time.
+                </p>
+              </div>
+            </div>
+            <div class="space-y-8 reveal">
+              <h2 class="text-4xl font-extrabold leading-tight">
+                About <span class="text-primary">Flanorx</span>
+              </h2>
+              <p class="text-lg text-slate-600 dark:text-slate-400">
+                We understand that power is the lifeblood of your home and
+                business. Flanorx was built to eliminate the stress of searching
+                for fuel or carrying heavy jerrycans. Founded in Port Harcourt,
+                we're on a mission to revolutionize energy delivery across
+                Nigeria.
+              </p>
+              <ul class="space-y-4">
+                <li class="flex items-center gap-3 group">
+                  <i
+                    data-lucide="check-circle"
+                    class="text-primary group-hover:scale-110 transition-transform"
+                  ></i
+                  ><span class="font-bold">Fully Insured Delivery Process</span>
+                </li>
+                <li class="flex items-center gap-3 group">
+                  <i
+                    data-lucide="check-circle"
+                    class="text-primary group-hover:scale-110 transition-transform"
+                  ></i
+                  ><span class="font-bold">Certified Professional Riders</span>
+                </li>
+                <li class="flex items-center gap-3 group">
+                  <i
+                    data-lucide="check-circle"
+                    class="text-primary group-hover:scale-110 transition-transform"
+                  ></i
+                  ><span class="font-bold">Eco-friendly Delivery Fleet</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- customer stories -->
+        <section class="py-24 px-4 overflow-hidden">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex justify-between items-end mb-12">
+              <div>
+                <h2 class="text-3xl font-extrabold mb-2 reveal">
+                  Customer Stories
+                </h2>
+                <p class="text-slate-500 reveal">
+                  Don't just take our word for it.
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  class="p-2 rounded-full border border-slate-200 hover:bg-slate-100 transition-all group"
+                >
+                  <i
+                    data-lucide="chevron-left"
+                    class="group-hover:scale-110 transition-transform"
+                  ></i>
+                </button>
+                <button
+                  class="p-2 rounded-full bg-primary text-background-dark hover:shadow-md transition-all group"
+                >
+                  <i
+                    data-lucide="chevron-right"
+                    class="group-hover:scale-110 transition-transform"
+                  ></i>
+                </button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div
+                class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-between reveal group"
+              >
+                <div class="space-y-4">
+                  <div class="flex text-[#ffc107]">
+                    <i data-lucide="star"></i><i data-lucide="star"></i
+                    ><i data-lucide="star"></i><i data-lucide="star"></i
+                    ><i data-lucide="star"></i>
+                  </div>
+                  <p
+                    class="text-slate-600 dark:text-slate-400 leading-relaxed italic font-medium"
+                  >
+                    "Flanorx is a lifesaver! My generator ran out in the middle
+                    of a big zoom meeting. They arrived in 20 minutes."
+                  </p>
+                </div>
+                <div class="flex items-center gap-4 mt-8">
+                  <div
+                    class="size-12 rounded-full overflow-hidden bg-slate-200 avatar-hover"
+                  >
+                    <img
+                      alt="Happy Flanorx customer Ibrahim"
+                      class="hover:scale-105 transition-transform duration-200"
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZWyg0gmYeX7MBeNkbZCf30HL2ak_OEuY_Ip-sVArA6J46mbKQfz97vA8hgYGpljydGv2zy8QYqYSVxd10UI5yOBYkVTpRzcsjOIfC7cVy4pt4RdBCYv4qGBbCLnxkTTjHVebntDEV_xmmi8VEsKE9oWVrE8Deckj5mqCRUboOlzQpm8QJK01oWqZguemdKYTQ-_BbTlE6n9Qj6D2qY4nHx75lgQ1XrS_K7AX2Yux3iZT5lT0bRdkBqVtmaeQt9DlGjWBjQeYr0rY"
+                    />
+                  </div>
+                  <div>
+                    <h5 class="font-bold">Ibrahim O.</h5>
+                    <p
+                      class="text-xs text-slate-500 uppercase font-bold tracking-tighter"
+                    >
+                      Business Owner
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-between reveal group"
+              >
+                <div class="space-y-4">
+                  <div class="flex text-[#ffc107]">
+                    <i data-lucide="star"></i><i data-lucide="star"></i
+                    ><i data-lucide="star"></i><i data-lucide="star"></i
+                    ><i data-lucide="star"></i>
+                  </div>
+                  <p
+                    class="text-slate-600 dark:text-slate-400 leading-relaxed italic font-medium"
+                  >
+                    "The quality of the petrol is top-notch. I've noticed my
+                    engine runs smoother since I started using Flanorx
+                    exclusively."
+                  </p>
+                </div>
+                <div class="flex items-center gap-4 mt-8">
+                  <div
+                    class="size-12 rounded-full overflow-hidden bg-slate-200 avatar-hover"
+                  >
+                    <img
+                      alt="Happy Flanorx customer Sarah"
+                      class="hover:scale-105 transition-transform"
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuZou43f9AfRvat-5ZIu6Cbz9qjrG9oZ6cBdjzkI0_-RkRRe1wJwoyP4nniBprAPjS2Ol9dOOariRFmqEXYBMbCKezUKCGHXB8lGk5GD7Q92kmEtsxxkBpGrJ3gJL-3WMwI2AftC_tOa-ctkdQdHUoMY_JA5bS0Z6dCH9j4P9QMudKKrqVuR4m6wnr0EvOoq4CJnsJlCoQrpGPBNwFKIRIEbk6HggxilWa1Nq6P_Y2HUN3tnVAH9qdtGUdxcv0LsUzbfevD8e6rbk"
+                    />
+                  </div>
+                  <div>
+                    <h5 class="font-bold">Sarah A.</h5>
+                    <p
+                      class="text-xs text-slate-500 uppercase font-bold tracking-tighter"
+                    >
+                      Homeowner
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-between reveal group"
+              >
+                <div class="space-y-4">
+                  <div class="flex text-[#ffc107]">
+                    <i data-lucide="star"></i><i data-lucide="star"></i
+                    ><i data-lucide="star"></i><i data-lucide="star"></i
+                    ><i data-lucide="star"></i>
+                  </div>
+                  <p
+                    class="text-slate-600 dark:text-slate-400 leading-relaxed italic font-medium"
+                  >
+                    "I love the driver portal. I'm making a great income
+                    delivering fuel on my own schedule. Highly recommended!"
+                  </p>
+                </div>
+                <div class="flex items-center gap-4 mt-8">
+                  <div
+                    class="size-12 rounded-full overflow-hidden bg-slate-200 avatar-hover"
+                  >
+                    <img
+                      alt="Flanorx delivery rider David"
+                      class="hover:scale-105 transition-transform"
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrs1QjeztUnknw1dZrckl7dUR1vEP1phEZ0ZeyGSj0ardhSVLz7uL1YDn5Jusg-uOA4gQkJ7lwxkMMHpAeevIyrSRhATKfOxXILpEojG0LUsSuijP5zAYGUyIYJ6gRiDCcsX9fslMMbvdOeesSwIDX2kMUtR0-cAfZCVTB_B9iRTRF2DaCvxKjcqxAKGonsydL7qHg0XjxbQo-6Qzqph0ansyEAVufeaVG3sBy4hHzx3b6hLY09KzWudMlY3feDq5cDaeUkwSdTN4"
+                    />
+                  </div>
+                  <div>
+                    <h5 class="font-bold">David K.</h5>
+                    <p
+                      class="text-xs text-slate-500 uppercase font-bold tracking-tighter"
+                    >
+                      Flanorx Rider
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ride with flanorx -->
+        <section class="py-20 px-4 bg-primary">
+          <div
+            class="max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10"
+          >
+            <div
+              class="text-background-dark max-w-xl text-center lg:text-left reveal"
+            >
+              <h2 class="text-4xl font-black mb-4">Ride with Flanorx</h2>
+              <p class="text-lg font-semibold opacity-90 leading-relaxed">
+                Join our elite fleet of delivery experts. Earn great pay, work
+                your own hours, and help power the community.
+              </p>
+            </div>
+            <button
+              class="bg-background-dark text-primary px-10 py-5 rounded-2xl font-black text-xl shadow-2xl hover:scale-105 transition-transform active:scale-95 reveal"
+            >
+              Become a Rider
+            </button>
+          </div>
+        </section>
+
+        <!-- partner with flanorx -->
+        <section
+          class="py-24 px-4 bg-white dark:bg-background-dark border-t border-slate-100 dark:border-slate-800"
+        >
+          <div class="max-w-7xl mx-auto">
+            <div
+              class="bg-slate-50 dark:bg-slate-900/40 rounded-[2.5rem] p-8 md:p-16 flex flex-col lg:flex-row items-center gap-12 overflow-hidden relative"
+            >
+              <div
+                class="absolute -top-12 -right-12 size-64 bg-accent-yellow/5 rounded-full blur-3xl"
+              ></div>
+              <div
+                class="absolute -bottom-12 -left-12 size-64 bg-primary/5 rounded-full blur-3xl"
+              ></div>
+              <div class="flex-1 space-y-8 relative z-10">
+                <div class="flex items-center gap-3 reveal">
+                  <div
+                    class="size-12 bg-accent-yellow/20 rounded-xl flex items-center justify-center hover:bg-accent-yellow/30 transition-colors"
+                  >
+                    <i
+                      data-lucide="handshake"
+                      class="text-accent-yellow"
+                      style="width: 28px; height: 28px"
+                    ></i>
+                  </div>
+                  <span
+                    class="text-sm font-bold uppercase tracking-[0.2em] text-slate-500"
+                    >Business Opportunities</span
+                  >
+                </div>
+                <h2
+                  class="text-4xl md:text-5xl font-black tracking-tight leading-tight reveal"
+                >
+                  Partner with <span class="text-accent-yellow">Flanorx</span>
+                </h2>
+                <p
+                  class="text-lg text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed reveal"
+                >
+                  Are you a gas station owner or fuel depot operator? Expand
+                  your reach and increase your sales by joining our distribution
+                  network. We provide the technology and the customers; you
+                  provide the fuel.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div class="flex items-start gap-3 group">
+                    <i
+                      data-lucide="store"
+                      class="text-accent-yellow group-hover:scale-110 transition-transform"
+                    ></i>
+                    <div>
+                      <h5 class="font-bold text-sm">Expand Your Reach</h5>
+                      <p class="text-xs text-slate-500">
+                        Access thousands of customers beyond your physical
+                        location.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3 group">
+                    <i
+                      data-lucide="bar-chart-3"
+                      class="text-accent-yellow group-hover:scale-110 transition-transform"
+                    ></i>
+                    <div>
+                      <h5 class="font-bold text-sm">Real-time Analytics</h5>
+                      <p class="text-xs text-slate-500">
+                        Detailed insights into your sales and inventory
+                        movements.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="w-full lg:w-auto flex flex-col items-center gap-6 relative z-10 reveal"
+              >
+                <button
+                  class="w-full lg:w-auto bg-accent-yellow text-background-dark px-12 py-6 rounded-2xl font-black text-xl shadow-xl shadow-accent-yellow/20 hover:scale-105 hover:shadow-2xl transition-all active:scale-95"
+                >
+                  Join as a Partner
+                </button>
+                <div class="flex items-center gap-6 opacity-60 grayscale">
+                  <i
+                    data-lucide="building-2"
+                    style="width: 40px; height: 40px"
+                  ></i>
+                  <i
+                    data-lucide="factory"
+                    style="width: 40px; height: 40px"
+                  ></i>
+                  <i data-lucide="globe" style="width: 40px; height: 40px"></i>
+                </div>
+                <p
+                  class="text-xs font-bold text-slate-400 uppercase tracking-widest"
+                >
+                  Trusted by 50+ Depots Nationwide
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="bg-slate-950 text-white pt-20 pb-10 px-4">
+        <div class="max-w-7xl mx-auto">
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mb-16"
+          >
+            <div class="space-y-6 reveal">
+              <div class="flex items-center gap-2">
+                <img
+                  src="flanorx.png"
+                  alt="Flanorx fuel delivery company logo"
+                  class="h-6 w-auto object-contain transition-transform duration-300 hover:scale-105"
+                />
+              </div>
+              <p class="text-slate-400 text-sm leading-relaxed">
+                Providing reliable, fast, and safe on-demand energy delivery for
+                every home and business in Nigeria.
+              </p>
+              <div class="flex gap-4">
+                <a
+                  class="size-10 rounded-full bg-slate-900 flex items-center justify-center hover:bg-primary hover:text-background-dark transition-all group"
+                  href="https://www.tiktok.com/@flanorx"
+                  aria-label="TikTok"
+                >
+                  <svg
+                    class="w-5 h-5 group-hover:scale-110 transition-transform"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"
+                    />
+                  </svg>
+                </a>
+                <a
+                  class="size-10 rounded-full bg-slate-900 flex items-center justify-center hover:bg-primary hover:text-background-dark transition-all group"
+                  href="https://www.instagram.com/official_flanorx"
+                  aria-label="Instagram"
+                >
+                  <svg
+                    class="w-5 h-5 group-hover:scale-110 transition-transform"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"
+                    />
+                  </svg>
+                </a>
+                <a
+                  class="size-10 rounded-full bg-slate-900 flex items-center justify-center hover:bg-primary hover:text-background-dark transition-all group"
+                  href="https://x.com/FlanorX"
+                  aria-label="X (formerly Twitter)"
+                >
+                  <svg
+                    class="w-4 h-4 group-hover:scale-110 transition-transform"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path
+                      d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                    />
+                  </svg>
+                </a>
+              </div>
+            </div>
+            <div class="reveal">
+              <h5 class="font-bold mb-6">Company</h5>
+              <ul class="space-y-4 text-sm text-slate-400">
+                <li>
+                  <a
+                    class="hover:text-primary transition-colors flex items-center gap-1"
+                    href="#about"
+                    ><i data-lucide="chevron-right" class="text-sm"></i>About
+                    Us</a
+                  >
+                </li>
+                <li>
+                  <a
+                    class="hover:text-primary transition-colors flex items-center gap-1"
+                    href="#locations"
+                    ><i data-lucide="chevron-right" class="text-sm"></i
+                    >Locations</a
+                  >
+                </li>
+                <li>
+                  <a
+                    class="hover:text-primary transition-colors flex items-center gap-1"
+                    href="javascript:void(0)"
+                    onclick="openModal('privacyModal')"
+                  >
+                    <i data-lucide="chevron-right" class="text-sm"></i>Privacy
+                    Policy</a
+                  >
+                </li>
+                <li>
+                  <a
+                    class="hover:text-primary transition-colors flex items-center gap-1"
+                    href="javascript:void(0)"
+                    onclick="openModal('termsModal')"
+                  >
+                    <i data-lucide="chevron-right" class="text-sm"></i>Terms of
+                    Service</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="reveal">
+              <h5 class="font-bold mb-6">Contact</h5>
+              <ul class="space-y-4 text-sm text-slate-400">
+                <li class="flex gap-3">
+                  <i
+                    data-lucide="map-pin"
+                    class="text-primary group-hover:scale-110"
+                  ></i
+                  >Port Harcourt, Nigeria
+                </li>
+                <li class="flex gap-3">
+                  <i
+                    data-lucide="phone"
+                    class="text-primary group-hover:scale-110"
+                  ></i
+                  >+234 9016153183
+                </li>
+                <li class="flex gap-3">
+                  <i
+                    data-lucide="mail"
+                    class="text-primary group-hover:scale-110"
+                  ></i
+                  >support@flanorx.com
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div
+            class="pt-8 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4"
+          >
+            <p class="text-xs text-slate-500">
+              © 2026 Flanorx. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div class="modal-overlay" id="privacyModal">
+      <div class="modal-panel p-8">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-black">Privacy Policy</h2>
+          <button
+            onclick="closeModal('privacyModal')"
+            class="size-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div
+          class="space-y-4 text-slate-600 dark:text-slate-300 text-sm leading-relaxed"
+        >
+          <p><strong>Last Updated:</strong> January 2026</p>
+          <p>
+            Flanorx ("we," "our," or "us") is committed to protecting your
+            privacy. This Privacy Policy explains how we collect, use, and
+            safeguard your information when you use our fuel delivery service.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            1. Information We Collect
+          </h3>
+          <p>
+            We collect information you provide directly: name, phone number,
+            delivery address, and payment details. We also collect location data
+            to facilitate deliveries and improve our service.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            2. How We Use Your Information
+          </h3>
+          <p>
+            Your information helps us process orders, communicate delivery
+            updates, improve our platform, and send promotional offers (with
+            your consent).
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            3. Data Protection
+          </h3>
+          <p>
+            We implement industry-standard security measures to protect your
+            personal data. Your payment information is encrypted and never
+            stored on our servers.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            4. Third-Party Sharing
+          </h3>
+          <p>
+            We only share your information with delivery riders for order
+            fulfillment and with payment processors for transaction completion.
+            We never sell your data.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            5. Contact Us
+          </h3>
+          <p>
+            For privacy concerns, email us at privacy@flanorx.com or call +234
+            800 1234567.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terms of Service Modal -->
+    <div class="modal-overlay" id="termsModal">
+      <div class="modal-panel p-8">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-black">Terms of Service</h2>
+          <button
+            onclick="closeModal('termsModal')"
+            class="size-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div
+          class="space-y-4 text-slate-600 dark:text-slate-300 text-sm leading-relaxed"
+        >
+          <p><strong>Last Updated:</strong> January 2026</p>
+          <p>
+            By using Flanorx's fuel delivery services, you agree to these Terms
+            of Service.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            1. Service Description
+          </h3>
+          <p>
+            Flanorx provides on-demand fuel delivery to residential and
+            commercial customers in operational areas. We guarantee fuel quality
+            and timely delivery within stated timeframes.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            2. User Responsibilities
+          </h3>
+          <p>
+            You must provide accurate delivery information, ensure safe access
+            for our riders, and verify fuel receipt. Misuse of our platform may
+            result in account suspension.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            3. Payment Terms
+          </h3>
+          <p>
+            Payment is due upon delivery. We accept cash, card, and bank
+            transfers. Prices are subject to market rates and may change without
+            notice.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            4. Delivery Policy
+          </h3>
+          <p>
+            We strive for 30-minute delivery within operational zones. Delays
+            may occur due to traffic or weather. Refunds are issued for failed
+            deliveries.
+          </p>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">
+            5. Limitation of Liability
+          </h3>
+          <p>
+            Flanorx is not liable for damages from improper fuel handling after
+            delivery. Our liability is limited to the order value.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cookie Consent Banner -->
+    <div class="cookie-banner" id="cookieBanner">
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="text-center space-y-4">
+          <h3 class="text-lg font-bold">We use cookies</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">
+            We use cookies to improve your experience, analyze site traffic, and
+            show relevant ads. By clicking "Accept All", you agree to our use of
+            cookies.
+            <a
+              onclick="openModal('privacyModal')"
+              class="text-primary underline cursor-pointer font-semibold"
+              >Privacy Policy</a
+            >
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button
+              onclick="acceptAllCookies()"
+              class="px-8 py-2.5 bg-primary text-background-dark rounded-xl font-bold text-sm hover:shadow-lg transition-all"
+            >
+              Accept All
+            </button>
+            <button
+              onclick="acceptEssentialCookies()"
+              class="px-8 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+            >
+              Essential Only
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Initialize Lucide icons
+      lucide.createIcons();
+    </script>
+
+    <script>
+      // Cookie consent management
+      function getCookiePreferences() {
+        const prefs = localStorage.getItem("flanorx_cookie_prefs");
+        return prefs ? JSON.parse(prefs) : null;
+      }
+
+      function setCookiePreferences(prefs) {
+        localStorage.setItem("flanorx_cookie_prefs", JSON.stringify(prefs));
+      }
+
+      function acceptAllCookies() {
+        const prefs = {
+          essential: true,
+          performance: true,
+          functional: true,
+          marketing: true,
+          timestamp: new Date().toISOString(),
+        };
+        setCookiePreferences(prefs);
+        hideCookieBanner();
+      }
+
+      function acceptEssentialCookies() {
+        const prefs = {
+          essential: true,
+          performance: false,
+          functional: false,
+          marketing: false,
+          timestamp: new Date().toISOString(),
+        };
+        setCookiePreferences(prefs);
+        hideCookieBanner();
+      }
+
+      function hideCookieBanner() {
+        const banner = document.getElementById("cookieBanner");
+        banner.classList.remove("show");
+      }
+
+      function showCookieBanner() {
+        const banner = document.getElementById("cookieBanner");
+        banner.classList.add("show");
+      }
+
+      // Load saved preferences on page load
+      window.addEventListener("DOMContentLoaded", function () {
+        const prefs = getCookiePreferences();
+
+        if (!prefs) {
+          // No preferences saved yet - show banner
+          setTimeout(function () {
+            showCookieBanner();
+          }, 500);
+        }
+      });
+    </script>
+
+    <script>
+      function openModal(modalId) {
+        document.getElementById(modalId).classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove("active");
+        document.body.style.overflow = "";
+      }
+
+      // Close modal when clicking overlay
+      document.querySelectorAll(".modal-overlay").forEach((overlay) => {
+        overlay.addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeModal(this.id);
+          }
+        });
+      });
+
+      // Close modal with Escape key
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          document
+            .querySelectorAll(".modal-overlay.active")
+            .forEach((modal) => {
+              closeModal(modal.id);
+            });
+        }
+      });
+    </script>
+
+    <!-- tiny scroll reveal script -->
+    <script>
+      (function () {
+        const reveals = document.querySelectorAll(".reveal");
+        function checkReveal() {
+          for (let el of reveals) {
+            const rect = el.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            if (rect.top < windowHeight - 80) {
+              el.classList.add("show");
+            }
+          }
+        }
+        window.addEventListener("scroll", checkReveal);
+        window.addEventListener("resize", checkReveal);
+        checkReveal(); // immediate check
+      })();
+    </script>
+  </body>
+</html>
