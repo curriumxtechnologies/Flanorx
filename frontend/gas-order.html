@@ -691,25 +691,6 @@
         window.location.href = 'login.html';
       });
 
-      // Add menu toggle for mobile
-      const header = document.querySelector('main > .p-4 > div');
-      if (header) {
-        const menuBtn = document.createElement('button');
-        menuBtn.id = 'menuToggle';
-        menuBtn.className = 'lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mr-4';
-        menuBtn.innerHTML = '<i data-lucide="menu" class="w-6 h-6"></i>';
-        menuBtn.addEventListener('click', () => {
-          const sidebar = document.getElementById('sidebar');
-          const backdrop = document.getElementById('backdrop');
-          sidebar.classList.toggle('-translate-x-full');
-          backdrop.classList.toggle('hidden');
-        });
-        const titleDiv = header.querySelector('div:first-child');
-        if (titleDiv) {
-          titleDiv.prepend(menuBtn);
-        }
-      }
-
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('backdrop');
       backdrop?.addEventListener('click', () => {
@@ -735,11 +716,6 @@
 
         // Re-render Lucide icons
         lucide.createIcons();
-
-        // Show a welcome toast if no plan
-        if (!getActivePlan()) {
-          setTimeout(() => showToast('Welcome', 'Choose a cylinder plan to get started.'), 500);
-        }
       }
 
       if (document.readyState === 'loading') {
