@@ -385,6 +385,27 @@
         ]
       }
     </script>
+<<<<<<< Updated upstream
+=======
+      <script>
+      const isLocal =
+        location.hostname === "127.0.0.1" ||
+        location.hostname === "localhost";
+
+      if (isLocal) {
+        if (!location.pathname.endsWith("/frontend/waitlist.html")) {
+          location.replace("/frontend/waitlist.html");
+        }
+      } else {
+        if (
+          location.pathname !== "/waitlist" &&
+          location.pathname !== "/waitlist/"
+        ) {
+          location.replace("/waitlist");
+        }
+      }
+      </script>
+>>>>>>> Stashed changes
   </head>
   <body
     class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased"
