@@ -39,7 +39,8 @@ const allowedOrigins = [
   'https://flanorx.vercel.app',
   'https://flanorx.com',
   'https://flanorx-api-6920.onrender.com',
-  'https://staging.flanorx.com'
+  'https://staging.flanorx.com',
+  'https://flanorx-kduo.onrender.com'
 ];
 
 app.use(cors({
