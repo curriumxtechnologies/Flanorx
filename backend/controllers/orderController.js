@@ -5,39 +5,26 @@ import Order from "../models/orderModel.js";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 const parseMonthYear = (month, year) => {
   const m = Number(month);
   const y = Number(year);
-
-  if (!Number.isInteger(m) || m < 1 || m > 12) {
-    throw new Error("Invalid month. Use 1 - 12");
-  }
-
-  if (!Number.isInteger(y) || y < 2000 || y > 2100) {
-    throw new Error("Invalid year");
-  }
-
+  if (!Number.isInteger(m) || m < 1 || m > 12) throw new Error("Invalid month");
+  if (!Number.isInteger(y) || y < 2000 || y > 2100) throw new Error("Invalid year");
   return { m, y };
 };
 
-const getAuthActor = (req) => {
-  return {
-    userId: req.user?._id || null,
-    riderId: req.rider?._id || null,
-    isAdmin: req.user?.role === "admin",
-  };
-};
+const getAuthActor = (req) => ({
+  userId: req.user?._id || null,
+  riderId: req.rider?._id || null,
+  isAdmin: req.user?.role === "admin",
+});
 
 const canAccessOrder = (req, order) => {
   const { userId, riderId, isAdmin } = getAuthActor(req);
-
   if (isAdmin) return true;
   if (userId && order.user?.toString() === userId.toString()) return true;
   if (riderId && order.rider?.toString() === riderId.toString()) return true;
-
   return false;
 };
 
@@ -54,222 +41,47 @@ const initializePaystackPayment = async ({ email, amountInKobo, reference, order
       amount: amountInKobo,
       reference,
       callback_url: process.env.PAYSTACK_CALLBACK_URL,
-      metadata: {
-        orderId: orderId.toString(),
-        app: "flanorx",
-      },
+      metadata: { orderId: orderId.toString(), app: "flanorx" },
     },
-    {
-      headers: getPaystackHeaders(),
-    }
+    { headers: getPaystackHeaders() }
   );
-
   return initResp?.data?.data || {};
 };
 
 const verifyPaystackPayment = async (reference) => {
   const verifyResp = await axios.get(
     `${PAYSTACK_BASE}/transaction/verify/${encodeURIComponent(reference)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
-    }
+    { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
   );
-
   return verifyResp?.data?.data || null;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PROFILE RELATED FUNCTIONS (Added for user profile)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Gas price & cylinder cost ─────────────────────────────────────────────
+const GAS_PRICE_PER_KG = 1300;
+const CYLINDER_COST = { "3kg": 600, "6kg": 1200, "12kg": 3000 };
 
-// @desc    Get user's profile
-// @route   GET /api/users/profile
-// @access  Private
-const getUserProfile = asyncHandler(async (req, res) => {
-  const user = req.user;
-  
-  res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone || "",
-    profilePhoto: user.profilePhoto || "",
-    addresses: user.addresses || [],
-    memberSince: user.createdAt,
-    createdAt: user.createdAt
-  });
-});
+const calculateGasOrder = (cylinderSize, quantityKg, isFirstTime) => {
+  const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
+  const cylinderCost = isFirstTime ? (CYLINDER_COST[cylinderSize] || 0) : 0;
+  const subtotal = gasContentCost + cylinderCost;
+  const deliveryFee = 500;
+  const serviceTax = Math.round(subtotal * 0.075);
+  const total = subtotal + deliveryFee + serviceTax;
+  return { gasContentCost, cylinderCost, subtotal, deliveryFee, serviceTax, total };
+};
 
-// @desc    Update user profile
-// @route   PUT /api/users/profile
-// @access  Private
-const updateUserProfile = asyncHandler(async (req, res) => {
-  const user = req.user;
-  const { name, phone } = req.body;
-
-  if (name) user.name = name;
-  if (phone) user.phone = phone;
-
-  await user.save();
-
-  res.json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    profilePhoto: user.profilePhoto
-  });
-});
-
-// @desc    Upload profile photo
-// @route   POST /api/users/avatar
-// @access  Private
-const uploadProfilePhoto = asyncHandler(async (req, res) => {
-  const { imageUrl } = req.body;
-  
-  if (imageUrl) {
-    req.user.profilePhoto = imageUrl;
-    await req.user.save();
-  }
-  
-  res.json({ 
-    success: true, 
-    profilePhoto: req.user.profilePhoto,
-    message: "Profile photo updated" 
-  });
-});
-
-// @desc    Add new address
-// @route   POST /api/users/address
-// @access  Private
-const addAddress = asyncHandler(async (req, res) => {
-  const { label, address, coordinates, isDefault } = req.body;
-
-  if (!address) {
-    res.status(400);
-    throw new Error("Address is required");
-  }
-
-  const newAddress = {
-    label: label || "OTHER",
-    address,
-    coordinates: coordinates || { lat: null, lng: null },
-    isDefault: isDefault || false
-  };
-
-  // If this is the first address or isDefault true, set others to false
-  if (newAddress.isDefault || req.user.addresses.length === 0) {
-    req.user.addresses.forEach(addr => { addr.isDefault = false; });
-    newAddress.isDefault = true;
-  }
-
-  req.user.addresses.push(newAddress);
-  await req.user.save();
-
-  res.status(201).json({ 
-    success: true, 
-    address: newAddress,
-    addresses: req.user.addresses 
-  });
-});
-
-// @desc    Get order statistics
-// @route   GET /api/users/orders/stats
-// @access  Private
-const getOrderStats = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1;
-
-  // Total orders
-  const totalOrders = await Order.countDocuments({ user: userId });
-
-  // Orders this month
-  const monthlyOrders = await Order.countDocuments({ 
-    user: userId,
-    orderYear: currentYear,
-    orderMonth: currentMonth
-  });
-
-  res.json({
-    totalOrders,
-    monthlyOrders
-  });
-});
-
-// @desc    Get recent orders (last 3)
-// @route   GET /api/users/orders/recent
-// @access  Private
-const getRecentOrders = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-
-  const recentOrders = await Order.find({ user: userId })
-    .sort({ createdAt: -1 })
-    .limit(3)
-    .select("orderId date status totalAmount createdAt");
-
-  res.json(recentOrders);
-});
-
-// @desc    Get all user addresses
-// @route   GET /api/users/addresses
-// @access  Private
-const getUserAddresses = asyncHandler(async (req, res) => {
-  res.json(req.user.addresses || []);
-});
-
-// @desc    Delete address
-// @route   DELETE /api/users/address/:addressId
-// @access  Private
-const deleteAddress = asyncHandler(async (req, res) => {
-  const { addressId } = req.params;
-  
-  req.user.addresses = req.user.addresses.filter(
-    addr => addr._id.toString() !== addressId
-  );
-  
-  await req.user.save();
-  
-  res.json({ success: true, message: "Address deleted" });
-});
-
-// @desc    Set default address
-// @route   PUT /api/users/address/:addressId/default
-// @access  Private
-const setDefaultAddress = asyncHandler(async (req, res) => {
-  const { addressId } = req.params;
-  
-  req.user.addresses.forEach(addr => {
-    addr.isDefault = addr._id.toString() === addressId;
-  });
-  
-  await req.user.save();
-  
-  res.json({ success: true, addresses: req.user.addresses });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Create Order (Customer)
-// @route   POST /api/order
-// @access  Private (protect)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── CREATE ORDER (Fuel & Gas) ─────────────────────────────────────────────
 const createOrder = asyncHandler(async (req, res) => {
   const {
+    orderType,
     fuelType,
-    fillingStation,
+    gasDetails,
     quantity,
     deliveryAddress,
     deliveryCoordinates,
     scheduleType,
     scheduledDate,
     scheduledTime,
-    subtotal,
-    deliveryFee,
-    serviceTax,
-    totalAmount,
     notes,
     estimatedDeliveryMinutes,
   } = req.body;
@@ -279,58 +91,34 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("Not authorized");
   }
 
-  if (!fuelType || !fillingStation || !quantity || !deliveryAddress || !scheduleType) {
+  if (!orderType || !["fuel", "gas"].includes(orderType)) {
     res.status(400);
-    throw new Error("Missing required order fields");
+    throw new Error("Valid orderType (fuel/gas) is required");
+  }
+
+  if (!deliveryAddress || !scheduleType) {
+    res.status(400);
+    throw new Error("Missing required fields: deliveryAddress, scheduleType");
   }
 
   if (scheduleType === "scheduled" && (!scheduledDate || !scheduledTime)) {
     res.status(400);
-    throw new Error("Scheduled date and time are required for scheduled deliveries");
+    throw new Error("Scheduled date and time required");
   }
 
-  const parsedQuantity = Number(quantity);
-  if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-    res.status(400);
-    throw new Error("Quantity must be a valid number");
-  }
-
-  const priceCalculation = Order.calculatePrice(fuelType, parsedQuantity);
-
-  const finalSubtotal =
-    subtotal !== undefined ? Number(subtotal) : Number(priceCalculation.subtotal);
-  const finalDeliveryFee =
-    deliveryFee !== undefined ? Number(deliveryFee) : Number(priceCalculation.deliveryFee);
-  const finalServiceTax =
-    serviceTax !== undefined ? Number(serviceTax) : Number(priceCalculation.serviceTax);
-  const finalTotal =
-    totalAmount !== undefined ? Number(totalAmount) : Number(priceCalculation.total);
-
-  const orderData = {
+  let orderData = {
     user: req.user._id,
-    fuelType,
-    fuelPricePerLiter: priceCalculation.pricePerLiter,
-    fillingStation,
-    quantity: parsedQuantity,
+    orderType,
     deliveryAddress,
     scheduleType,
-    subtotal: finalSubtotal,
-    deliveryFee: finalDeliveryFee,
-    serviceTax: finalServiceTax,
-    totalAmount: finalTotal,
-    paid: false,
-    status: "pending",
     deliveryStatus: "pending",
-    estimatedDeliveryMinutes:
-      estimatedDeliveryMinutes || (scheduleType === "now" ? 30 : null),
+    status: "pending",
+    paid: false,
+    notes: notes || "",
+    estimatedDeliveryMinutes: estimatedDeliveryMinutes || (scheduleType === "now" ? 30 : null),
   };
 
-  if (
-    deliveryCoordinates &&
-    typeof deliveryCoordinates === "object" &&
-    deliveryCoordinates.lat !== undefined &&
-    deliveryCoordinates.lng !== undefined
-  ) {
+  if (deliveryCoordinates?.lat !== undefined && deliveryCoordinates?.lng !== undefined) {
     orderData.deliveryCoordinates = {
       lat: Number(deliveryCoordinates.lat),
       lng: Number(deliveryCoordinates.lng),
@@ -342,15 +130,68 @@ const createOrder = asyncHandler(async (req, res) => {
     orderData.scheduledTime = scheduledTime;
   }
 
-  if (notes) {
-    orderData.notes = notes;
+  // ─── FUEL ──────────────────────────────────────────────────────────────
+  if (orderType === "fuel") {
+    if (!fuelType || !quantity) {
+      res.status(400);
+      throw new Error("fuelType and quantity are required for fuel orders");
+    }
+    const parsedQuantity = Number(quantity);
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+      res.status(400);
+      throw new Error("Quantity must be a positive number");
+    }
+
+    const priceCalculation = Order.calculatePrice(fuelType, parsedQuantity);
+    orderData.fuelType = fuelType;
+    orderData.quantity = parsedQuantity;
+    orderData.fuelPricePerLiter = priceCalculation.pricePerLiter;
+    orderData.subtotal = priceCalculation.subtotal;
+    orderData.deliveryFee = priceCalculation.deliveryFee;
+    orderData.serviceTax = priceCalculation.serviceTax;
+    orderData.totalAmount = priceCalculation.total;
+    orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 30;
   }
 
+  // ─── GAS ──────────────────────────────────────────────────────────────
+  else if (orderType === "gas") {
+    const { cylinderSize, quantityKg, isFirstTime } = gasDetails || {};
+    if (!cylinderSize || !quantityKg) {
+      res.status(400);
+      throw new Error("gasDetails: cylinderSize and quantityKg are required");
+    }
+    if (!["3kg", "6kg", "12kg"].includes(cylinderSize)) {
+      res.status(400);
+      throw new Error("Invalid cylinderSize, must be 3kg, 6kg, or 12kg");
+    }
+    const kg = Number(quantityKg);
+    if (!Number.isFinite(kg) || kg <= 0) {
+      res.status(400);
+      throw new Error("quantityKg must be a positive number");
+    }
+    const firstTime = isFirstTime === true;
+    const gasCalc = calculateGasOrder(cylinderSize, kg, firstTime);
+
+    orderData.gasDetails = {
+      cylinderSize,
+      quantityKg: kg,
+      isFirstTime: firstTime,
+      cylinderCost: gasCalc.cylinderCost,
+      gasContentCost: gasCalc.gasContentCost,
+    };
+    orderData.subtotal = gasCalc.subtotal;
+    orderData.deliveryFee = gasCalc.deliveryFee;
+    orderData.serviceTax = gasCalc.serviceTax;
+    orderData.totalAmount = gasCalc.total;
+    orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 45;
+  }
+
+  // Create order
   const created = await Order.create(orderData);
 
+  // Initiate Paystack
   const amountInKobo = Math.round(Number(created.totalAmount) * 100);
   const reference = `FLX_${created._id}_${Date.now()}`;
-
   const paystackData = await initializePaystackPayment({
     email: req.user.email,
     amountInKobo,
@@ -360,7 +201,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const authUrl = paystackData?.authorization_url;
   const paystackRef = paystackData?.reference;
-
   if (!authUrl || !paystackRef) {
     await Order.findByIdAndDelete(created._id);
     res.status(502);
@@ -378,158 +218,108 @@ const createOrder = asyncHandler(async (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Process payment and mark order as paid
-// @route   PUT /api/order/:id/pay
-// @access  Private (protect)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── PAY ORDER (verify & mark paid) ────────────────────────────────────────
 const payOrder = asyncHandler(async (req, res) => {
   const { paymentReference } = req.body;
-
   if (!req.user?._id) {
     res.status(401);
     throw new Error("Not authorized");
   }
-
   const order = await Order.findById(req.params.id);
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
   }
-
   if (order.user.toString() !== req.user._id.toString()) {
     res.status(403);
     throw new Error("Not allowed to pay for this order");
   }
-
   if (order.paid) {
     res.status(400);
-    throw new Error("Order has already been paid");
+    throw new Error("Order already paid");
   }
-
   const refToVerify = paymentReference || order.paymentReference;
   if (!refToVerify) {
     res.status(400);
     throw new Error("Missing payment reference");
   }
-
   const data = await verifyPaystackPayment(refToVerify);
-
-  if (!data) {
-    res.status(502);
-    throw new Error("Unable to verify payment");
-  }
-
-  const expectedKobo = Math.round(Number(order.totalAmount) * 100);
-
-  if (data.status !== "success") {
+  if (!data || data.status !== "success") {
     res.status(400);
-    throw new Error(`Payment not successful (${data.status})`);
+    throw new Error("Payment not successful");
   }
-
+  const expectedKobo = Math.round(Number(order.totalAmount) * 100);
   if (Number(data.amount) !== expectedKobo) {
     res.status(400);
     throw new Error("Payment amount mismatch");
   }
-
   const updatedOrder = await order.markAsPaid(refToVerify, "card");
-
-  res.status(200).json({
-    success: true,
-    message: "Payment verified and order marked as paid",
-    order: updatedOrder,
-  });
+  res.status(200).json({ success: true, message: "Payment verified", order: updatedOrder });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Get single Order
-// @route   GET /api/order/:id
-// @access  Private (customer / assigned rider / admin)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── GET SINGLE ORDER ──────────────────────────────────────────────────────
 const getOrder = asyncHandler(async (req, res) => {
   const { userId, riderId, isAdmin } = getAuthActor(req);
-
   if (!userId && !riderId && !isAdmin) {
     res.status(401);
     throw new Error("Not authorized");
   }
-
   const order = await Order.findById(req.params.id)
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone");
-
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
   }
-
   if (!canAccessOrder(req, order)) {
     res.status(403);
     throw new Error("Not allowed");
   }
-
   res.status(200).json(order);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Get logged-in user's orders
-// @route   GET /api/order/my?month=2&year=2026&status=pending
-// @access  Private (protect)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── GET MY ORDERS ─────────────────────────────────────────────────────────
 const getMyOrders = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
     throw new Error("Not authorized");
   }
-
-  const { month, year, status, paid, deliveryStatus } = req.query;
-
+  const { month, year, status, paid, deliveryStatus, orderType } = req.query;
   const filter = { user: req.user._id };
-
   if (status) filter.status = status;
   if (deliveryStatus) filter.deliveryStatus = deliveryStatus;
+  if (orderType) filter.orderType = orderType;
   if (paid !== undefined) filter.paid = paid === "true";
-
   if (month && year) {
     const { m, y } = parseMonthYear(month, year);
     filter.orderMonth = m;
     filter.orderYear = y;
   }
-
   const orders = await Order.find(filter)
     .sort({ createdAt: -1 })
     .populate("rider", "name profilePicture phone");
-
   res.status(200).json(orders);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Get total spent for a month/year
-// @route   GET /api/order/total-spent?month=2&year=2026&paid=true
-// @access  Private (protect)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── GET MY TOTAL SPENT ────────────────────────────────────────────────────
 const getMyTotalSpent = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
     throw new Error("Not authorized");
   }
-
-  const { month, year, paid } = req.query;
-
+  const { month, year, paid, orderType } = req.query;
   if (!month || !year) {
     res.status(400);
     throw new Error("month and year are required");
   }
-
   const { m, y } = parseMonthYear(month, year);
-
   const matchStage = {
     user: req.user._id,
     orderMonth: m,
     orderYear: y,
     paid: paid !== undefined ? paid === "true" : true,
   };
-
+  if (orderType) matchStage.orderType = orderType;
   const result = await Order.aggregate([
     { $match: matchStage },
     {
@@ -538,10 +328,10 @@ const getMyTotalSpent = asyncHandler(async (req, res) => {
         totalSpent: { $sum: "$totalAmount" },
         count: { $sum: 1 },
         totalLiters: { $sum: "$quantity" },
+        totalKg: { $sum: { $ifNull: ["$gasDetails.quantityKg", 0] } },
       },
     },
   ]);
-
   res.status(200).json({
     month: m,
     year: y,
@@ -549,76 +339,45 @@ const getMyTotalSpent = asyncHandler(async (req, res) => {
     totalSpent: result[0]?.totalSpent || 0,
     ordersCount: result[0]?.count || 0,
     totalLiters: result[0]?.totalLiters || 0,
+    totalKg: result[0]?.totalKg || 0,
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Get logged-in user's active order
-// @route   GET /api/order/active
-// @access  Private (protect)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── GET ACTIVE ORDER ──────────────────────────────────────────────────────
 const getMyActiveOrder = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
     throw new Error("Not authorized");
   }
-
   const activeOrder = await Order.findOne({
     user: req.user._id,
     paid: true,
     status: { $in: ["processing"] },
-    deliveryStatus: {
-      $in: ["pending", "accepted", "picked_up", "in_transit", "delivered"],
-    },
+    deliveryStatus: { $in: ["pending", "accepted", "picked_up", "in_transit", "delivered"] },
   })
     .sort({ createdAt: -1 })
     .populate("rider", "name profilePicture phone");
-
   res.status(200).json(activeOrder || null);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Get delivery status for an order
-// @route   GET /api/order/:id/delivery-status
-// @access  Private (customer / assigned rider / admin)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── GET DELIVERY STATUS ──────────────────────────────────────────────────
 const getDeliveryStatus = asyncHandler(async (req, res) => {
   const { userId, riderId, isAdmin } = getAuthActor(req);
-
   if (!userId && !riderId && !isAdmin) {
     res.status(401);
     throw new Error("Not authorized");
   }
-
   const order = await Order.findById(req.params.id)
-    .select(
-      [
-        "user",
-        "rider",
-        "status",
-        "deliveryStatus",
-        "estimatedDeliveryMinutes",
-        "scheduledDate",
-        "scheduledTime",
-        "acceptedAt",
-        "pickedUpAt",
-        "deliveredAt",
-        "completedAt",
-        "customerConfirmedAt",
-      ].join(" ")
-    )
+    .select("user rider status deliveryStatus estimatedDeliveryMinutes scheduledDate scheduledTime acceptedAt pickedUpAt deliveredAt completedAt customerConfirmedAt")
     .populate("rider", "name email profilePicture phone");
-
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
   }
-
   if (!canAccessOrder(req, order)) {
     res.status(403);
     throw new Error("Not allowed");
   }
-
   res.status(200).json({
     status: order.status,
     deliveryStatus: order.deliveryStatus,
@@ -634,61 +393,36 @@ const getDeliveryStatus = asyncHandler(async (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Admin: Get all Orders
-// @route   GET /api/order?month=2&year=2026&status=pending&paid=false
-// @access  Private/Admin
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── ADMIN: GET ALL ORDERS ─────────────────────────────────────────────────
 const getOrders = asyncHandler(async (req, res) => {
-  const { month, year, status, fuelType, paid, deliveryStatus, scheduleType } = req.query;
-
+  const { month, year, status, paid, deliveryStatus, orderType } = req.query;
   const filter = {};
-
   if (status) filter.status = status;
-  if (fuelType) filter.fuelType = fuelType;
   if (deliveryStatus) filter.deliveryStatus = deliveryStatus;
-  if (scheduleType) filter.scheduleType = scheduleType;
+  if (orderType) filter.orderType = orderType;
   if (paid !== undefined) filter.paid = paid === "true";
-
   if (month && year) {
     const { m, y } = parseMonthYear(month, year);
     filter.orderMonth = m;
     filter.orderYear = y;
   }
-
   const orders = await Order.find(filter)
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone")
     .sort({ createdAt: -1 });
-
   res.status(200).json(orders);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Admin: Update order status
-// @route   PUT /api/order/:id/status
-// @access  Private/Admin
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── ADMIN: UPDATE ORDER STATUS ──────────────────────────────────────────
 const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status, deliveryStatus } = req.body;
-
   const allowedOrderStatuses = ["pending", "processing", "completed", "cancelled", "failed"];
-  const allowedDeliveryStatuses = [
-    "pending",
-    "accepted",
-    "picked_up",
-    "in_transit",
-    "delivered",
-    "confirmed",
-  ];
-
+  const allowedDeliveryStatuses = ["pending", "accepted", "picked_up", "in_transit", "delivered", "confirmed"];
   const order = await Order.findById(req.params.id);
-
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
   }
-
   if (status !== undefined) {
     if (!allowedOrderStatuses.includes(status)) {
       res.status(400);
@@ -696,7 +430,6 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     }
     order.status = status;
   }
-
   if (deliveryStatus !== undefined) {
     if (!allowedDeliveryStatuses.includes(deliveryStatus)) {
       res.status(400);
@@ -704,26 +437,16 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     }
     order.deliveryStatus = deliveryStatus;
   }
-
-  if (status === "completed" && !order.completedAt) {
-    order.completedAt = new Date();
-  }
-
+  if (status === "completed" && !order.completedAt) order.completedAt = new Date();
   const updatedOrder = await order.save();
-
   res.status(200).json(updatedOrder);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Admin: Get dashboard stats
-// @route   GET /api/order/stats/dashboard
-// @access  Private/Admin
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── ADMIN: DASHBOARD STATS ──────────────────────────────────────────────
 const getDashboardStats = asyncHandler(async (req, res) => {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
   const [
     totalOrders,
     pendingOrders,
@@ -741,18 +464,8 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     Order.countDocuments({ status: "completed" }),
     Order.countDocuments({ createdAt: { $gte: startOfToday } }),
     Order.aggregate([
-      {
-        $match: {
-          paid: true,
-          createdAt: { $gte: startOfMonth },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$totalAmount" },
-        },
-      },
+      { $match: { paid: true, createdAt: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]),
     Order.countDocuments({ paid: false, status: { $ne: "cancelled" } }),
     Order.countDocuments({
@@ -767,7 +480,6 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       deliveryStatus: { $in: ["accepted", "picked_up", "in_transit", "delivered"] },
     }),
   ]);
-
   res.status(200).json({
     totalOrders,
     pendingOrders,
@@ -781,134 +493,86 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Verify payment and get order
-// @route   GET /api/order/verify/:reference
-// @access  Private (protect)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── VERIFY PAYMENT & GET ORDER ───────────────────────────────────────────
 const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   const { reference } = req.params;
-
   if (!reference) {
     res.status(400);
     throw new Error("Reference is required");
   }
-
   const data = await verifyPaystackPayment(reference);
-
   if (!data || data.status !== "success") {
     res.status(400);
     throw new Error("Payment not successful");
   }
-
   const order = await Order.findOne({ paymentReference: reference })
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone");
-
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
   }
-
-  // For verify endpoint, allow access if:
-  // 1. User is authenticated and owns the order, OR
-  // 2. The reference is valid (public access for post-payment verification)
   const isOwner = req.user && String(order.user._id) === String(req.user._id);
   const hasValidRef = reference === order.paymentReference;
-
   if (!isOwner && !hasValidRef) {
     res.status(403);
     throw new Error("Not allowed");
   }
-
-  // Mark as paid if not already
   if (!order.paid) {
     const expectedKobo = Math.round(Number(order.totalAmount) * 100);
-
     if (Number(data.amount) !== expectedKobo) {
       res.status(400);
       throw new Error("Payment amount mismatch");
     }
-
     await order.markAsPaid(reference, "card");
   }
-
   const refreshedOrder = await Order.findById(order._id)
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone");
-
   res.status(200).json({ order: refreshedOrder });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// @desc    Initialize payment for an existing order
-// @route   POST /api/order/:id/initialize-payment
-// @access  Private (protect)
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── INITIALIZE PAYMENT FOR EXISTING ORDER ───────────────────────────────
 const initializePaymentForOrder = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
     throw new Error("Not authorized");
   }
-
   const order = await Order.findById(req.params.id);
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
   }
-
   if (order.user.toString() !== req.user._id.toString()) {
     res.status(403);
     throw new Error("Not allowed");
   }
-
   if (order.paid) {
     res.status(400);
-    throw new Error("Order is already paid");
+    throw new Error("Order already paid");
   }
-
   const amountInKobo = Math.round(Number(order.totalAmount) * 100);
   const reference = `FLX_${order._id}_${Date.now()}`;
-
   const paystackData = await initializePaystackPayment({
     email: req.user.email,
     amountInKobo,
     reference,
     orderId: order._id,
   });
-
   const authUrl = paystackData?.authorization_url;
   const paystackRef = paystackData?.reference;
-
   if (!authUrl || !paystackRef) {
     res.status(502);
     throw new Error("Failed to initialize Paystack payment");
   }
-
   order.paymentReference = paystackRef;
   order.paymentMethod = "card";
   await order.save();
-
-  res.status(200).json({
-    authorization_url: authUrl,
-    reference: paystackRef,
-    orderId: order._id,
-  });
+  res.status(200).json({ authorization_url: authUrl, reference: paystackRef, orderId: order._id });
 });
 
-// Export all functions
+// ─── EXPORT (only order functions) ────────────────────────────────────────
 export {
-  // Profile functions
-  getUserProfile,
-  updateUserProfile,
-  uploadProfilePhoto,
-  addAddress,
-  getOrderStats,
-  getRecentOrders,
-  getUserAddresses,
-  deleteAddress,
-  setDefaultAddress,
-  // Order functions
   createOrder,
   getOrder,
   getOrders,

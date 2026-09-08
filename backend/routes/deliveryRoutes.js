@@ -1,4 +1,3 @@
-// routes/deliveryRoutes.js
 import express from "express";
 import {
   getAvailableDeliveries,
@@ -9,41 +8,21 @@ import {
   getDeliveryDetails,
   getRiderEarnings,
 } from "../controllers/deliveryController.js";
-
-import {
-  protect,
-  authenticateAdmin,
-  authenticateRider,
-} from "../middleware/authMiddleware.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// rider
-router.get("/available", authenticateRider, getAvailableDeliveries);
-router.get("/my-deliveries", authenticateRider, getMyAssignedDeliveries);
-router.get("/rider/earnings", authenticateRider, getRiderEarnings);
-router.put("/:id/accept", authenticateRider, acceptDelivery);
-router.put("/:id/status", authenticateRider, updateDeliveryProgress);
+// ─── Rider‑only routes (check role in controller) ─────────────────────────
+router.get("/available", protect, getAvailableDeliveries);
+router.get("/my-deliveries", protect, getMyAssignedDeliveries);
+router.get("/rider/earnings", protect, getRiderEarnings);
+router.put("/:id/accept", protect, acceptDelivery);
+router.put("/:id/status", protect, updateDeliveryProgress);
 
-// customer
+// ─── Customer confirms delivery ────────────────────────────────────────────
 router.put("/:id/confirm", protect, confirmDeliveryByCustomer);
 
-// mixed access
-router.get("/:id", (req, res, next) => {
-  authenticateRider(req, res, (err) => {
-    if (!err) return getDeliveryDetails(req, res, next);
-
-    protect(req, res, (err2) => {
-      if (!err2) return getDeliveryDetails(req, res, next);
-
-      authenticateAdmin(req, res, (err3) => {
-        if (!err3) return getDeliveryDetails(req, res, next);
-
-        res.status(401);
-        return next(new Error("Not authorized"));
-      });
-    });
-  });
-});
+// ─── Mixed access (rider, user, admin) – handled in controller ────────────
+router.get("/:id", protect, getDeliveryDetails);
 
 export default router;
