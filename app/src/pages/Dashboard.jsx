@@ -1,3 +1,4 @@
+// Dashboard.jsx
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -12,6 +13,8 @@ import {
   Eye,
   EyeOff,
   X,
+  MapPin,
+  Navigation,
 } from "lucide-react";
 import {
   BarChart,
@@ -22,14 +25,36 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { useGetProfileQuery } from "../features/userApiSlice";
 import {
   useGetMyOrdersQuery,
   useGetMyTotalSpentQuery,
   useGetMyActiveOrderQuery,
 } from "../features/orderApiSlice";
+import { useGetTrackingQuery } from "../features/trackingApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
+
+// ─── Leaflet icon fix ──────────────────────────────────────
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+const greenIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -69,6 +94,15 @@ const Dashboard = () => {
     data: activeOrder,
     isLoading: activeLoading,
   } = useGetMyActiveOrderQuery();
+
+  // ─── Quick Tracking ────────────────────────────────────────
+  const {
+    data: trackingData,
+    isLoading: trackingLoading,
+  } = useGetTrackingQuery(
+    activeOrder?._id,
+    { skip: !activeOrder }
+  );
 
   // ─── Derived data ──────────────────────────────────────────
   const totalOrders = orders.length;
@@ -253,10 +287,9 @@ const Dashboard = () => {
     </div>
   );
 
-  // ─── Mobile Hero Card (exact workspace style) ──────────────
+  // ─── Mobile Hero Card ──────────────────────────────────────
   const HeroCard = () => (
     <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
-      {/* Header row */}
       <div className="flex items-center justify-between mb-3">
         <div>
           <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">
@@ -274,7 +307,6 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* Main stats row */}
       <div className="flex items-end justify-between mb-3">
         <div>
           <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -294,7 +326,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Fuel & Gas row with button */}
       <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-5">
           <div>
@@ -320,6 +351,169 @@ const Dashboard = () => {
       </div>
     </div>
   );
+
+  // ─── Live Tracking Card ──────────────────────────────────
+  const LiveTracking = () => {
+    const hasActiveOrder = !!activeOrder;
+    const hasTracking = !!trackingData && trackingData.status === "active";
+    const isLoadingState = trackingLoading;
+
+    const defaultCenter = [6.5244, 3.3792];
+    const mapCenter = trackingData?.riderLocation
+      ? [trackingData.riderLocation.lat, trackingData.riderLocation.lng]
+      : trackingData?.userLocation
+      ? [trackingData.userLocation.lat, trackingData.userLocation.lng]
+      : defaultCenter;
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-[#13ec5b]" />
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Live Tracking
+            </h3>
+          </div>
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+              hasTracking
+                ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                : hasActiveOrder
+                ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                : "bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full mr-1.5 inline-block bg-current" />
+            {hasTracking ? "Live" : hasActiveOrder ? "Waiting" : "Inactive"}
+          </span>
+        </div>
+
+        {/* Map */}
+        <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+          {hasActiveOrder ? (
+            <MapContainer
+              center={mapCenter}
+              zoom={13}
+              style={{ height: "100%", width: "100%" }}
+              zoomControl={false}
+              attributionControl={false}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              />
+              {trackingData?.riderLocation && (
+                <Marker position={[trackingData.riderLocation.lat, trackingData.riderLocation.lng]} icon={greenIcon}>
+                  <Popup>Rider</Popup>
+                </Marker>
+              )}
+              {trackingData?.userLocation && (
+                <Marker position={[trackingData.userLocation.lat, trackingData.userLocation.lng]}>
+                  <Popup>You</Popup>
+                </Marker>
+              )}
+              {trackingData?.route?.polyline && (
+                <Polyline
+                  positions={L.Polyline.fromEncoded(trackingData.route.polyline).getLatLngs()}
+                  color="#13ec5b"
+                  weight={3}
+                  opacity={0.8}
+                />
+              )}
+            </MapContainer>
+          ) : (
+            <div className="relative h-full w-full bg-gray-300 dark:bg-gray-600">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                <div className="bg-white/90 dark:bg-gray-800/90 rounded-2xl p-6 text-center max-w-xs mx-4 shadow-xl">
+                  <Navigation className="h-10 w-10 text-[#13ec5b] mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    No active delivery
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Place an order to start tracking
+                  </p>
+                  <button
+                    onClick={() => navigate("/order/fuel")}
+                    className="mt-3 px-4 py-2 bg-[#13ec5b] hover:bg-[#10d04e] text-white text-sm font-medium rounded-lg transition shadow-sm"
+                  >
+                    Place an order now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tracking info */}
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-between">
+          {isLoadingState ? (
+            <div className="space-y-2 animate-pulse">
+              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          ) : hasActiveOrder ? (
+            <>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Order #{activeOrder.orderId}
+                  </span>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      hasTracking
+                        ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                        : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                    }`}
+                  >
+                    {hasTracking ? "Active" : "Processing"}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                  {activeOrder.orderType === "fuel"
+                    ? `${activeOrder.quantity} L of ${activeOrder.fuelType}`
+                    : `${activeOrder.gasDetails?.quantityKg} kg gas (${activeOrder.gasDetails?.cylinderSize})`}
+                </p>
+                {hasTracking && trackingData?.rider && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    Rider: {trackingData.rider.name}
+                  </p>
+                )}
+                {hasTracking && trackingData?.route?.distanceText && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Distance: {trackingData.route.distanceText} · ETA: {trackingData.route.durationText}
+                  </p>
+                )}
+                {!hasTracking && (
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                    Waiting for rider to accept and start tracking...
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => navigate(`/tracking/${activeOrder._id}`)}
+                className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium self-start"
+              >
+                {hasTracking ? "View full tracking →" : "Check status →"}
+              </button>
+            </>
+          ) : (
+            <div className="text-center py-1 flex-1 flex flex-col justify-center">
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                No orders to track
+              </p>
+              <button
+                onClick={() => navigate("/order/fuel")}
+                className="mt-2 text-[#13ec5b] hover:underline text-sm font-medium self-center"
+              >
+                Place an order now
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // ─── Desktop Stat Card ─────────────────────────────────────
   const StatCard = ({ icon: Icon, label, value }) => (
@@ -536,68 +730,89 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Active order & Gas subscription (desktop) */}
-          <div className="hidden lg:grid grid-cols-2 gap-6 mb-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Active Order
-              </h3>
-              {isLoading ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
-                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                  <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
-                </div>
-              ) : activeOrder ? (
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      #{activeOrder.orderId}
-                    </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                        activeOrder.deliveryStatus
-                      )}`}
-                    >
-                      {activeOrder.deliveryStatus}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
-                    {activeOrder.orderType === "fuel"
-                      ? `${activeOrder.quantity} L of ${activeOrder.fuelType}`
-                      : `${activeOrder.gasDetails?.quantityKg} kg gas (${activeOrder.gasDetails?.cylinderSize})`}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {activeOrder.deliveryAddress}
-                  </p>
-                  {activeOrder.rider && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                      <User className="h-4 w-4" />
-                      <span>{activeOrder.rider.name}</span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => navigate(`/order/${activeOrder._id}`)}
-                    className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium"
-                  >
-                    View details →
-                  </button>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <Clock className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500 dark:text-gray-400">
-                    No active orders
-                  </p>
-                  <button
-                    onClick={() => navigate("/order/fuel")}
-                    className="mt-2 text-[#13ec5b] hover:underline text-sm font-medium"
-                  >
-                    Place an order
-                  </button>
-                </div>
-              )}
+          {/* 2‑column layout: Live Tracking + Gas Subscription (desktop) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
+            {/* Live Tracking - takes 2 columns on desktop, hidden on mobile */}
+            <div className="hidden lg:block lg:col-span-2 h-full">
+              <LiveTracking />
             </div>
+
+            {/* Gas Subscription - takes 1 column on desktop, hidden on mobile */}
+            <div className="hidden lg:block h-full">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm h-full flex flex-col">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Gas Subscription
+                </h3>
+                {isLoading ? (
+                  <div className="space-y-3 animate-pulse flex-1">
+                    <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
+                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+                  </div>
+                ) : hasGasSubscription ? (
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Cylinder: {latestGasOrder?.gasDetails?.cylinderSize}
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            isExpired || subscriptionStatus === "expired"
+                              ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                              : subscriptionStatus === "active"
+                              ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                              : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                          }`}
+                        >
+                          {isExpired || subscriptionStatus === "expired"
+                            ? "Expired"
+                            : subscriptionStatus === "active"
+                            ? "Active"
+                            : "Inactive"}
+                        </span>
+                      </div>
+                      {dueDate && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                          {isExpired
+                            ? `Expired on ${dueDate.toLocaleDateString()}`
+                            : `Renews on ${dueDate.toLocaleDateString()}`}
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {isExpired
+                          ? "Your cylinder subscription has expired. Please renew."
+                          : "Swap your empty cylinder anytime."}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate("/order/gas")}
+                      className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium self-start"
+                    >
+                      {isExpired ? "Renew Subscription →" : "Order Gas →"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 flex-1 flex flex-col justify-center">
+                    <Package className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500 dark:text-gray-400">
+                      No gas subscription yet
+                    </p>
+                    <button
+                      onClick={() => navigate("/order/gas")}
+                      className="mt-2 text-[#13ec5b] hover:underline text-sm font-medium"
+                    >
+                      Get your first cylinder
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile: Live Tracking + Gas Subscription (stacked) */}
+          <div className="lg:hidden space-y-6 mb-6">
+            <LiveTracking />
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -667,7 +882,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Recent Orders – list style */}
+          {/* Recent Orders */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">

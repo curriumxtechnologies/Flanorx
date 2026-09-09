@@ -1,7 +1,7 @@
 // components/MoreDrawer.jsx
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   X,
   User,
@@ -10,6 +10,9 @@ import {
   Sun,
   Moon,
   Monitor,
+  Truck,
+  Wallet,
+  MapPin,
 } from "lucide-react";
 import { logout } from "../features/auth/authSlice";
 import { useTheme } from "../context/ThemeContext";
@@ -18,6 +21,8 @@ const MoreDrawer = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { theme, toggleTheme, setSystemTheme } = useTheme();
+  const { userInfo } = useSelector((state) => state.auth);
+  const isRider = userInfo?.role === "rider";
   const drawerRef = useRef(null);
 
   // Close on outside click
@@ -48,6 +53,11 @@ const MoreDrawer = ({ isOpen, onClose }) => {
 
   const menuItems = [
     {
+      label: "Tracking",
+      icon: MapPin,
+      onClick: () => { navigate("/tracking"); onClose(); },
+    },
+    {
       label: "Profile",
       icon: User,
       onClick: () => { navigate("/profile"); onClose(); },
@@ -57,17 +67,24 @@ const MoreDrawer = ({ isOpen, onClose }) => {
       icon: Settings,
       onClick: () => { navigate("/settings"); onClose(); },
     },
+  ];
+
+  // Rider-specific items
+  const riderItems = [
     {
-      label: "Logout",
-      icon: LogOut,
-      onClick: handleLogout,
-      className: "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
+      label: "Deliveries",
+      icon: Truck,
+      onClick: () => { navigate("/rider/deliveries"); onClose(); },
+    },
+    {
+      label: "Earnings",
+      icon: Wallet,
+      onClick: () => { navigate("/rider/earnings"); onClose(); },
     },
   ];
 
   return (
     <>
-      {/* Overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-50 transition-opacity"
@@ -75,7 +92,6 @@ const MoreDrawer = ({ isOpen, onClose }) => {
         />
       )}
 
-      {/* Drawer from left */}
       <div
         ref={drawerRef}
         className={`fixed top-0 left-0 h-full w-72 bg-white dark:bg-gray-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
@@ -129,20 +145,47 @@ const MoreDrawer = ({ isOpen, onClose }) => {
 
           <hr className="my-3 border-gray-200 dark:border-gray-800" />
 
-          {/* Other menu items */}
+          {/* Main menu items */}
           {menuItems.map((item) => (
             <button
               key={item.label}
               onClick={item.onClick}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                item.className ||
-                "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
             </button>
           ))}
+
+          {/* Rider-specific items */}
+          {isRider && (
+            <>
+              <hr className="my-3 border-gray-200 dark:border-gray-800" />
+              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1">
+                Rider
+              </p>
+              {riderItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.onClick}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* Logout */}
+          <hr className="my-3 border-gray-200 dark:border-gray-800" />
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Logout</span>
+          </button>
         </div>
       </div>
     </>

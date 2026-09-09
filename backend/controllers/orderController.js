@@ -2,10 +2,19 @@
 import asyncHandler from "express-async-handler";
 import axios from "axios";
 import Order from "../models/orderModel.js";
+import User from "../models/userModel.js";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Gas constants ────────────────────────────────────────────
+const GAS_PRICE_PER_KG = 1300;
+const CYLINDER_COST = {
+  "3kg": 600,
+  "6kg": 1200,
+  "12kg": 3000,
+};
+
+// ─── Helpers ──────────────────────────────────────────────────
 const parseMonthYear = (month, year) => {
   const m = Number(month);
   const y = Number(year);
@@ -56,21 +65,29 @@ const verifyPaystackPayment = async (reference) => {
   return verifyResp?.data?.data || null;
 };
 
-// ─── Gas price & cylinder cost ─────────────────────────────────────────────
-const GAS_PRICE_PER_KG = 1300;
-const CYLINDER_COST = { "3kg": 600, "6kg": 1200, "12kg": 3000 };
+// ─── Helper: Check user gas subscription status ──────────────
+const getGasSubscriptionStatus = async (userId) => {
+  const user = await User.findById(userId).select("gasSubscription");
+  if (!user) return { active: false, subscription: null };
 
-const calculateGasOrder = (cylinderSize, quantityKg, isFirstTime) => {
-  const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
-  const cylinderCost = isFirstTime ? (CYLINDER_COST[cylinderSize] || 0) : 0;
-  const subtotal = gasContentCost + cylinderCost;
-  const deliveryFee = 500;
-  const serviceTax = Math.round(subtotal * 0.075);
-  const total = subtotal + deliveryFee + serviceTax;
-  return { gasContentCost, cylinderCost, subtotal, deliveryFee, serviceTax, total };
+  const sub = user.gasSubscription;
+  if (!sub || sub.status !== "active") return { active: false, subscription: null };
+
+  const now = new Date();
+  const nextBilling = sub.nextBillingDate ? new Date(sub.nextBillingDate) : null;
+  const graceEnd = sub.gracePeriodEnd ? new Date(sub.gracePeriodEnd) : null;
+
+  let isActive = false;
+  if (nextBilling && now < nextBilling) {
+    isActive = true;
+  } else if (graceEnd && now < graceEnd) {
+    isActive = true; // still in grace
+  }
+
+  return { active: isActive, subscription: sub };
 };
 
-// ─── CREATE ORDER (Fuel & Gas) ─────────────────────────────────────────────
+// ─── CREATE ORDER (Fuel & Gas) ────────────────────────────────
 const createOrder = asyncHandler(async (req, res) => {
   const {
     orderType,
@@ -130,7 +147,7 @@ const createOrder = asyncHandler(async (req, res) => {
     orderData.scheduledTime = scheduledTime;
   }
 
-  // ─── FUEL ──────────────────────────────────────────────────────────────
+  // ─── FUEL ────────────────────────────────────────────────────
   if (orderType === "fuel") {
     if (!fuelType || !quantity) {
       res.status(400);
@@ -153,7 +170,7 @@ const createOrder = asyncHandler(async (req, res) => {
     orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 30;
   }
 
-  // ─── GAS ──────────────────────────────────────────────────────────────
+  // ─── GAS ────────────────────────────────────────────────────
   else if (orderType === "gas") {
     const { cylinderSize, quantityKg, isFirstTime } = gasDetails || {};
     if (!cylinderSize || !quantityKg) {
@@ -169,20 +186,62 @@ const createOrder = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("quantityKg must be a positive number");
     }
-    const firstTime = isFirstTime === true;
-    const gasCalc = calculateGasOrder(cylinderSize, kg, firstTime);
+
+    // ─── Check subscription ──────────────────────────────────
+    const { active: isSubActive, subscription } = await getGasSubscriptionStatus(req.user._id);
+
+    let cylinderCost = 0;
+    let isFirstTimeActual = isFirstTime === true;
+    let isUpgrade = false;
+    let previousSize = null;
+
+    if (isFirstTimeActual) {
+      // First time: if no active subscription, charge full cylinder cost
+      if (!isSubActive) {
+        cylinderCost = CYLINDER_COST[cylinderSize] || 0;
+      } else {
+        // Already has active subscription – treat as swap with existing cylinder
+        cylinderCost = 0;
+        isFirstTimeActual = false; // not really first time
+      }
+    } else {
+      // Swap case
+      if (isSubActive && subscription.cylinderSize) {
+        previousSize = subscription.cylinderSize;
+        const currentCost = CYLINDER_COST[previousSize] || 0;
+        const newCost = CYLINDER_COST[cylinderSize] || 0;
+        if (newCost > currentCost) {
+          isUpgrade = true;
+          cylinderCost = newCost - currentCost;
+        } else {
+          cylinderCost = 0; // downgrade or same size free
+        }
+      } else {
+        // No subscription: treat as first time (must pay full cylinder)
+        cylinderCost = CYLINDER_COST[cylinderSize] || 0;
+        isFirstTimeActual = true;
+      }
+    }
+
+    const gasContentCost = kg * GAS_PRICE_PER_KG;
+    const subtotal = gasContentCost + cylinderCost;
+    const deliveryFee = 5.99;
+    const serviceTax = subtotal * 0.075;
+    const total = subtotal + deliveryFee + serviceTax;
 
     orderData.gasDetails = {
       cylinderSize,
       quantityKg: kg,
-      isFirstTime: firstTime,
-      cylinderCost: gasCalc.cylinderCost,
-      gasContentCost: gasCalc.gasContentCost,
+      isFirstTime: isFirstTimeActual,
+      cylinderCost,
+      gasContentCost,
+      previousCylinderSize: previousSize,
+      upgradeCost: isUpgrade ? cylinderCost : 0,
     };
-    orderData.subtotal = gasCalc.subtotal;
-    orderData.deliveryFee = gasCalc.deliveryFee;
-    orderData.serviceTax = gasCalc.serviceTax;
-    orderData.totalAmount = gasCalc.total;
+    orderData.subtotal = subtotal;
+    orderData.deliveryFee = deliveryFee;
+    orderData.serviceTax = serviceTax;
+    orderData.totalAmount = total;
     orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 45;
   }
 
@@ -218,7 +277,7 @@ const createOrder = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── PAY ORDER (verify & mark paid) ────────────────────────────────────────
+// ─── PAY ORDER (verify & mark paid) ───────────────────────────
 const payOrder = asyncHandler(async (req, res) => {
   const { paymentReference } = req.body;
   if (!req.user?._id) {
@@ -257,7 +316,7 @@ const payOrder = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: "Payment verified", order: updatedOrder });
 });
 
-// ─── GET SINGLE ORDER ──────────────────────────────────────────────────────
+// ─── GET SINGLE ORDER ──────────────────────────────────────────
 const getOrder = asyncHandler(async (req, res) => {
   const { userId, riderId, isAdmin } = getAuthActor(req);
   if (!userId && !riderId && !isAdmin) {
@@ -278,7 +337,7 @@ const getOrder = asyncHandler(async (req, res) => {
   res.status(200).json(order);
 });
 
-// ─── GET MY ORDERS ─────────────────────────────────────────────────────────
+// ─── GET MY ORDERS ─────────────────────────────────────────────
 const getMyOrders = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -301,7 +360,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
   res.status(200).json(orders);
 });
 
-// ─── GET MY TOTAL SPENT ────────────────────────────────────────────────────
+// ─── GET MY TOTAL SPENT ────────────────────────────────────────
 const getMyTotalSpent = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -343,7 +402,7 @@ const getMyTotalSpent = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── GET ACTIVE ORDER ──────────────────────────────────────────────────────
+// ─── GET ACTIVE ORDER ──────────────────────────────────────────
 const getMyActiveOrder = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -360,7 +419,7 @@ const getMyActiveOrder = asyncHandler(async (req, res) => {
   res.status(200).json(activeOrder || null);
 });
 
-// ─── GET DELIVERY STATUS ──────────────────────────────────────────────────
+// ─── GET DELIVERY STATUS ──────────────────────────────────────
 const getDeliveryStatus = asyncHandler(async (req, res) => {
   const { userId, riderId, isAdmin } = getAuthActor(req);
   if (!userId && !riderId && !isAdmin) {
@@ -393,7 +452,7 @@ const getDeliveryStatus = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── ADMIN: GET ALL ORDERS ─────────────────────────────────────────────────
+// ─── ADMIN: GET ALL ORDERS ─────────────────────────────────────
 const getOrders = asyncHandler(async (req, res) => {
   const { month, year, status, paid, deliveryStatus, orderType } = req.query;
   const filter = {};
@@ -413,7 +472,7 @@ const getOrders = asyncHandler(async (req, res) => {
   res.status(200).json(orders);
 });
 
-// ─── ADMIN: UPDATE ORDER STATUS ──────────────────────────────────────────
+// ─── ADMIN: UPDATE ORDER STATUS ──────────────────────────────
 const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status, deliveryStatus } = req.body;
   const allowedOrderStatuses = ["pending", "processing", "completed", "cancelled", "failed"];
@@ -442,7 +501,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   res.status(200).json(updatedOrder);
 });
 
-// ─── ADMIN: DASHBOARD STATS ──────────────────────────────────────────────
+// ─── ADMIN: DASHBOARD STATS ──────────────────────────────────
 const getDashboardStats = asyncHandler(async (req, res) => {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -493,7 +552,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── VERIFY PAYMENT & GET ORDER ───────────────────────────────────────────
+// ─── VERIFY PAYMENT & GET ORDER ──────────────────────────────
 const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   const { reference } = req.params;
   if (!reference) {
@@ -532,7 +591,7 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   res.status(200).json({ order: refreshedOrder });
 });
 
-// ─── INITIALIZE PAYMENT FOR EXISTING ORDER ───────────────────────────────
+// ─── INITIALIZE PAYMENT FOR EXISTING ORDER ────────────────────
 const initializePaymentForOrder = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -571,7 +630,7 @@ const initializePaymentForOrder = asyncHandler(async (req, res) => {
   res.status(200).json({ authorization_url: authUrl, reference: paystackRef, orderId: order._id });
 });
 
-// ─── EXPORT (only order functions) ────────────────────────────────────────
+// ─── EXPORT ────────────────────────────────────────────────────
 export {
   createOrder,
   getOrder,

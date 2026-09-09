@@ -12,7 +12,13 @@ import App from "./App.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Orders from "./pages/Orders.jsx";
+import Fuel from "./pages/Fuel.jsx"; 
+import Gas from "./pages/Gas.jsx";
+import Tracking from "./pages/Tracking.jsx";
+
 import NotFound from "./pages/NotFound.jsx";
+
 
 const router = createBrowserRouter([
   {
@@ -23,7 +29,11 @@ const router = createBrowserRouter([
       { path: "login", element: <Login /> },
       { path: "register", element: <Signup /> },
       { path: "dashboard", element: <Dashboard /> },
+      {path: "orders", element: <Orders />},
+      {path: "order/fuel", element: <Fuel />},
+      {path: "order/gas", element: <Gas />},
       {path: "*", element: <NotFound />},
+      {path: "tracking", element: <Tracking />},
     ],
   },
 ]);

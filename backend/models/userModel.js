@@ -1,7 +1,8 @@
+// models/userModel.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-// Address sub‑document
+// ─── Address sub‑document ─────────────────────────────────────
 const addressSchema = mongoose.Schema(
   {
     label: {
@@ -27,6 +28,7 @@ const addressSchema = mongoose.Schema(
 
 const userSchema = mongoose.Schema(
   {
+    // ─── Basic info ──────────────────────────────────────────
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -34,38 +36,85 @@ const userSchema = mongoose.Schema(
     profilePhoto: { type: String, default: "" },
     addresses: [addressSchema],
 
-    // Google OAuth
+    // ─── Google OAuth ─────────────────────────────────────────
     googleId: { type: String, default: null },
 
-    // OTP for email verification
+    // ─── OTP for email verification ──────────────────────────
     otp: { type: String },
     otpExpires: { type: Date },
 
-    // OTP for password reset
+    // ─── OTP for password reset ──────────────────────────────
     resetOtp: { type: String },
     resetOtpExpires: { type: Date },
 
+    // ─── Account status ──────────────────────────────────────
     isVerified: { type: Boolean, default: false },
     authMethod: { type: String, enum: ["email", "google"], default: "email" },
 
-    // 🆕 Role-based access
+    // ─── Role‑based access ──────────────────────────────────
     role: {
       type: String,
       enum: ["user", "admin", "rider"],
       default: "user",
     },
+
+    // ─── Rider‑specific fields (only relevant for riders) ──
+    // Application data (submitted when applying)
+    nin: { type: String, default: null },
+    fuelingStation: { type: String, default: null },
+    proofOfAddress: { type: String, default: null },        // Cloudinary URL
+    ninPicture: { type: String, default: null },            // Cloudinary URL
+    bankAccountNumber: { type: String, default: null },
+    bankName: { type: String, default: null },
+    accountName: { type: String, default: null },
+
+    // Verification status
+    verificationStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+    },
+    rejectionReason: { type: String, default: null },
+
+    // Timestamps for application lifecycle
+    verificationSubmittedAt: { type: Date, default: null },
+    verificationReviewedAt: { type: Date, default: null },
+    verificationReviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // ─── Gas Subscription ────────────────────────────────────
+    gasSubscription: {
+      cylinderSize: {
+        type: String,
+        enum: ["3kg", "6kg", "12kg"],
+        default: null,
+      },
+      status: {
+        type: String,
+        enum: ["active", "expired", "cancelled", "pending"],
+        default: null,
+      },
+      startDate: { type: Date, default: null },
+      nextBillingDate: { type: Date, default: null },
+      gracePeriodEnd: { type: Date, default: null }, // 6 days after expiry
+      createdAt: { type: Date, default: null },
+      updatedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );
 
-// Hash password before saving
+// ─── Hash password before saving ─────────────────────────────
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Compare entered password with stored hash
+// ─── Compare entered password with stored hash ──────────────
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };

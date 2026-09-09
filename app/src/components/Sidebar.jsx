@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   LayoutDashboard,
   Package,
@@ -11,6 +11,9 @@ import {
   Settings,
   Sun,
   Moon,
+  MapPin,
+  Truck,
+  Wallet,
 } from "lucide-react";
 import { logout } from "../features/auth/authSlice";
 import { useTheme } from "../context/ThemeContext";
@@ -19,6 +22,8 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { theme, toggleTheme } = useTheme();
+  const { userInfo } = useSelector((state) => state.auth);
+  const isRider = userInfo?.role === "rider";
 
   const handleLogout = () => {
     dispatch(logout());
@@ -31,7 +36,14 @@ const Sidebar = () => {
     { to: "/orders", icon: Package, label: "Orders" },
     { to: "/order/fuel", icon: Fuel, label: "Fuel" },
     { to: "/order/gas", icon: Flame, label: "Gas" },
+    { to: "/tracking", icon: MapPin, label: "Tracking" },
     { to: "/profile", icon: User, label: "Profile" },
+  ];
+
+  // Rider-specific links
+  const riderLinks = [
+    { to: "/rider/deliveries", icon: Truck, label: "Deliveries" },
+    { to: "/rider/earnings", icon: Wallet, label: "Earnings" },
   ];
 
   return (
@@ -59,11 +71,37 @@ const Sidebar = () => {
             <span>{item.label}</span>
           </NavLink>
         ))}
+
+        {/* Rider-specific links */}
+        {isRider && (
+          <>
+            <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="px-4 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                Rider
+              </p>
+            </div>
+            {riderLinks.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-[#13ec5b]/10 text-[#13ec5b]"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`
+                }
+              >
+                <item.icon className="h-5 w-5" />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </>
+        )}
       </nav>
 
       {/* Bottom actions */}
       <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
-        {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
