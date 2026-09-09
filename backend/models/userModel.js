@@ -58,25 +58,21 @@ const userSchema = mongoose.Schema(
       default: "user",
     },
 
-    // ─── Rider‑specific fields (only relevant for riders) ──
-    // Application data (submitted when applying)
+    // ─── Rider‑specific fields ──────────────────────────────
     nin: { type: String, default: null },
     fuelingStation: { type: String, default: null },
-    proofOfAddress: { type: String, default: null },        // Cloudinary URL
-    ninPicture: { type: String, default: null },            // Cloudinary URL
+    proofOfAddress: { type: String, default: null },
+    ninPicture: { type: String, default: null },
     bankAccountNumber: { type: String, default: null },
     bankName: { type: String, default: null },
     accountName: { type: String, default: null },
 
-    // Verification status
     verificationStatus: {
       type: String,
       enum: ["none", "pending", "approved", "rejected"],
       default: "none",
     },
     rejectionReason: { type: String, default: null },
-
-    // Timestamps for application lifecycle
     verificationSubmittedAt: { type: Date, default: null },
     verificationReviewedAt: { type: Date, default: null },
     verificationReviewedBy: {
@@ -87,21 +83,20 @@ const userSchema = mongoose.Schema(
 
     // ─── Gas Subscription ────────────────────────────────────
     gasSubscription: {
-      cylinderSize: {
-        type: String,
-        enum: ["3kg", "6kg", "12kg"],
-        default: null,
-      },
-      status: {
-        type: String,
-        enum: ["active", "expired", "cancelled", "pending"],
-        default: null,
-      },
+      cylinderSize: { type: String, enum: ["3kg", "6kg", "12kg"], default: null },
+      status: { type: String, enum: ["active", "expired", "cancelled", "pending"], default: null },
       startDate: { type: Date, default: null },
       nextBillingDate: { type: Date, default: null },
-      gracePeriodEnd: { type: Date, default: null }, // 6 days after expiry
+      gracePeriodEnd: { type: Date, default: null },
       createdAt: { type: Date, default: null },
       updatedAt: { type: Date, default: null },
+    },
+
+    // ─── Auto‑delete unverified accounts after 6 minutes ───
+    deleteAfter: {
+      type: Date,
+      default: null,
+      index: { expireAfterSeconds: 0 }, // TTL index – deletes document at this exact time
     },
   },
   { timestamps: true }

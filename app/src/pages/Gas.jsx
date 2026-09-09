@@ -401,8 +401,9 @@ const Gas = () => {
           </button>
         </header>
 
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 lg:py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        {/* ─── Full-width container ────────────────────────────── */}
+        <div className="w-full px-1 sm:px-4 lg:px-6 py-4 lg:py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {/* ─── Main form ─────────────────────────────────────── */}
             <div className="lg:col-span-2">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -453,7 +454,44 @@ const Gas = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Cylinder Size
                     </label>
-                    <div className="relative">
+
+                    {/* Mobile: grid buttons (3 columns) */}
+                    <div className="lg:hidden grid grid-cols-3 gap-2">
+                      {CYLINDER_SIZES.map((size) => {
+                        const isSelected = cylinderSize === size.value;
+                        const isCurrent = isActive && currentCylinderSize === size.value;
+                        let costLabel = "";
+                        if (!isActive) {
+                          costLabel = `+₦${CYLINDER_COST[size.value]}`;
+                        } else if (isCurrent) {
+                          costLabel = "current";
+                        } else {
+                          const currentCost = CYLINDER_COST[currentCylinderSize] || 0;
+                          const newCost = CYLINDER_COST[size.value] || 0;
+                          const diff = newCost - currentCost;
+                          if (diff > 0) costLabel = `+₦${diff}`;
+                          else costLabel = "free";
+                        }
+                        return (
+                          <button
+                            key={size.value}
+                            type="button"
+                            onClick={() => handleCylinderSelect(size.value)}
+                            className={`py-2.5 px-1 rounded-xl text-sm font-medium transition-all border-2 ${
+                              isSelected
+                                ? "border-[#13ec5b] bg-[#13ec5b] text-white shadow-lg shadow-[#13ec5b]/20"
+                                : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
+                            }`}
+                          >
+                            <div className="font-semibold">{size.label}</div>
+                            <div className="text-[10px] opacity-80">{costLabel}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop: dropdown */}
+                    <div className="hidden lg:block relative">
                       <button
                         type="button"
                         onClick={() => setShowCylinderDropdown(!showCylinderDropdown)}

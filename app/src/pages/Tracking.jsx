@@ -1,5 +1,5 @@
 // pages/Tracking.jsx
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -13,6 +13,10 @@ import {
   AlertCircle,
   RefreshCw,
   PlusCircle,
+  Maximize,
+  Minimize,
+  Minus,
+  Plus,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
@@ -56,6 +60,9 @@ const Tracking = () => {
   const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.auth);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [mapHeight, setMapHeight] = useState(500);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const mapContainerRef = useRef(null);
 
   // ─── If no orderId in URL, try to get the user's active order ──
   const {
@@ -90,6 +97,40 @@ const Tracking = () => {
   const isLoading = trackingLoading || orderLoading || activeLoading;
   const error = trackingError || orderError || activeError;
 
+  // ─── Fullscreen toggle ──────────────────────────────────────
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      if (mapContainerRef.current) {
+        if (mapContainerRef.current.requestFullscreen) {
+          mapContainerRef.current.requestFullscreen();
+        } else if (mapContainerRef.current.webkitRequestFullscreen) {
+          mapContainerRef.current.webkitRequestFullscreen();
+        }
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  const increaseHeight = () => setMapHeight((prev) => Math.min(prev + 50, 800));
+  const decreaseHeight = () => setMapHeight((prev) => Math.max(prev - 50, 250));
+
   const toggleAutoRefresh = () => {
     setAutoRefresh((prev) => !prev);
   };
@@ -116,7 +157,7 @@ const Tracking = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
             Live Tracking
           </h1>
@@ -137,10 +178,10 @@ const Tracking = () => {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-              <div className="h-96 w-full relative z-0">
+        <div className="w-full px-0 sm:px-4 lg:px-6 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+              <div className="relative w-full" style={{ height: `${mapHeight}px` }}>
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
                   <div className="bg-white/90 dark:bg-gray-800/90 rounded-2xl p-6 text-center max-w-xs mx-4 shadow-xl">
                     <MapPin className="h-10 w-10 text-[#13ec5b] mx-auto mb-3 opacity-50" />
@@ -187,8 +228,8 @@ const Tracking = () => {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Order Details
@@ -198,7 +239,7 @@ const Tracking = () => {
                   No order to display
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Truck className="h-4 w-4 text-[#13ec5b]" />
@@ -209,7 +250,7 @@ const Tracking = () => {
                   No rider assigned
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Navigation className="h-4 w-4 text-[#13ec5b]" />
@@ -325,7 +366,7 @@ const Tracking = () => {
       <Sidebar />
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
             Live Tracking
           </h1>
@@ -349,11 +390,15 @@ const Tracking = () => {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="w-full px-0 sm:px-4 lg:px-6 py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* ─── Map ───────────────────────────────────────────── */}
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-              <div className="h-96 w-full relative z-0">
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+              <div
+                ref={mapContainerRef}
+                className="relative w-full transition-all duration-300"
+                style={{ height: `${mapHeight}px` }}
+              >
                 <MapContainer
                   center={mapCenter}
                   zoom={14}
@@ -400,6 +445,35 @@ const Tracking = () => {
                     />
                   )}
                 </MapContainer>
+
+                {/* ─── Map controls ───────────────────────────────── */}
+                <div className="absolute bottom-3 right-3 z-10 flex flex-col gap-2">
+                  <button
+                    onClick={toggleFullscreen}
+                    className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    title="Toggle fullscreen"
+                  >
+                    {isFullscreen ? (
+                      <Minimize className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                    ) : (
+                      <Maximize className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                    )}
+                  </button>
+                  <button
+                    onClick={increaseHeight}
+                    className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    title="Increase map height"
+                  >
+                    <Plus className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                  </button>
+                  <button
+                    onClick={decreaseHeight}
+                    className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    title="Decrease map height"
+                  >
+                    <Minus className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                  </button>
+                </div>
               </div>
               <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                 <div className="flex items-center gap-4">
@@ -425,8 +499,8 @@ const Tracking = () => {
             </div>
 
             {/* ─── Order info ───────────────────────────────────── */}
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Order Details
@@ -485,7 +559,7 @@ const Tracking = () => {
               </div>
 
               {/* Rider info */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Truck className="h-4 w-4 text-[#13ec5b]" />
@@ -532,7 +606,7 @@ const Tracking = () => {
 
               {/* Distance & duration */}
               {trackingData?.route && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <Navigation className="h-4 w-4 text-[#13ec5b]" />

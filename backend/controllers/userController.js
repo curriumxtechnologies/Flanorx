@@ -7,16 +7,13 @@ import { sendOtpEmail } from "../utils/resendOTP.js";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Helper: generate random 6-digit OTP
+// ─── Helpers ──────────────────────────────────────────────────
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
-// Helper: set OTP expiry (10 minutes)
 const getOtpExpiry = () => new Date(Date.now() + 10 * 60 * 1000);
 
-// ----------------------------------------------------------------------
-// GOOGLE AUTH (unchanged)
-// ----------------------------------------------------------------------
+// ─── Google Auth ──────────────────────────────────────────────
 const getUserInfoFromAccessToken = async (accessToken) => {
   const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -29,6 +26,7 @@ const getUserInfoFromAccessToken = async (accessToken) => {
   return response.json();
 };
 
+// ─── Google Auth ──────────────────────────────────────────────
 const googleAuth = asyncHandler(async (req, res) => {
   const { token: googleToken } = req.body;
 
@@ -100,17 +98,11 @@ const googleAuth = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------------------------------------------------
-// EMAIL / PASSWORD AUTH
-// ----------------------------------------------------------------------
-
-// @desc    Register a new user (send OTP)
-// @route   POST /api/users/register
-// @access  Public
+// ─── Register ──────────────────────────────────────────────────
 const registerUser = asyncHandler(async (req, res) => {
   const { email, password, name, username } = req.body;
 
-  // Basic validations
+  // ─── Validations ────────────────────────────────────────────
   if (!email || !password || !name) {
     res.status(400);
     throw new Error("Please provide email, password, and name");
@@ -120,14 +112,23 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Password must be at least 8 characters");
   }
 
-  // Check if user already exists
-  const userExists = await User.findOne({ $or: [{ email }, { username }] });
-  if (userExists) {
+  // ─── Check for existing user ──────────────────────────────
+  const existingUser = await User.findOne({ email });
+
+  // If user exists and is verified, block registration
+  if (existingUser && existingUser.isVerified) {
     res.status(400);
-    throw new Error("User already exists with that email or username");
+    throw new Error("User already exists with this email");
   }
 
-  // Generate a unique username if not provided
+  // If user exists but is NOT verified, delete the old record
+  // (this handles cases where OTP verification failed or page was reloaded)
+  if (existingUser && !existingUser.isVerified) {
+    await User.deleteOne({ _id: existingUser._id });
+    console.log(`🗑️ Deleted unverified user: ${email} (ID: ${existingUser._id})`);
+  }
+
+  // ─── Generate unique username ──────────────────────────────
   let finalUsername = username;
   if (!finalUsername) {
     const base = email.split("@")[0].toLowerCase().replace(/\s+/g, "");
@@ -138,7 +139,6 @@ const registerUser = asyncHandler(async (req, res) => {
     }
     finalUsername = candidate;
   } else {
-    // Check uniqueness
     const existing = await User.findOne({ username: finalUsername });
     if (existing) {
       res.status(400);
@@ -146,11 +146,11 @@ const registerUser = asyncHandler(async (req, res) => {
     }
   }
 
-  // Generate OTP
+  // ─── Generate OTP ────────────────────────────────────────────
   const otp = generateOtp();
   const otpExpires = getOtpExpiry();
 
-  // Create user (not verified yet)
+  // ─── Create user ─────────────────────────────────────────────
   const user = await User.create({
     email,
     password,
@@ -160,9 +160,10 @@ const registerUser = asyncHandler(async (req, res) => {
     authMethod: "email",
     otp,
     otpExpires,
+    deleteAfter: new Date(Date.now() + 6 * 60 * 1000), // delete after 6 minutes
   });
 
-  // Send OTP via email
+  // ─── Send OTP email ─────────────────────────────────────────
   await sendOtpEmail(email, otp);
 
   res.status(201).json({
@@ -171,9 +172,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Verify OTP
-// @route   POST /api/users/verify-otp
-// @access  Public
+// ─── Verify OTP ───────────────────────────────────────────────
 const verifyOtp = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
 
@@ -203,6 +202,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
   user.isVerified = true;
   user.otp = undefined;
   user.otpExpires = undefined;
+  user.deleteAfter = null; // prevent auto-deletion
   await user.save();
 
   // Generate token and send response
@@ -218,9 +218,7 @@ const verifyOtp = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Resend OTP
-// @route   POST /api/users/resend-otp
-// @access  Public
+// ─── Resend OTP ───────────────────────────────────────────────
 const resendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
@@ -246,6 +244,7 @@ const resendOtp = asyncHandler(async (req, res) => {
 
   user.otp = otp;
   user.otpExpires = otpExpires;
+  user.deleteAfter = new Date(Date.now() + 6 * 60 * 1000); // reset deletion timer
   await user.save();
 
   await sendOtpEmail(email, otp);
@@ -253,9 +252,7 @@ const resendOtp = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "New OTP sent to your email" });
 });
 
-// @desc    Login user (email + password)
-// @route   POST /api/users/login
-// @access  Public
+// ─── Login ─────────────────────────────────────────────────────
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -273,7 +270,9 @@ const loginUser = asyncHandler(async (req, res) => {
   // Check if user is verified (unless Google auth)
   if (!user.isVerified && user.authMethod === "email") {
     res.status(401);
-    throw new Error("Please verify your email first. Check OTP or request a new one.");
+    throw new Error(
+      "Please verify your email first. Check OTP or request a new one."
+    );
   }
 
   // Validate password (for email auth)
@@ -284,7 +283,6 @@ const loginUser = asyncHandler(async (req, res) => {
       throw new Error("Invalid email or password");
     }
   } else {
-    // If user has google auth, they shouldn't login with password
     res.status(400);
     throw new Error("This account uses Google Sign-In. Please use Google login.");
   }
@@ -301,13 +299,7 @@ const loginUser = asyncHandler(async (req, res) => {
   });
 });
 
-// ----------------------------------------------------------------------
-// PASSWORD RESET (FORGOT / RESET)
-// ----------------------------------------------------------------------
-
-// @desc    Request password reset OTP
-// @route   POST /api/users/forgot-password
-// @access  Public
+// ─── Forgot Password ──────────────────────────────────────────
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
@@ -317,12 +309,12 @@ const forgotPassword = asyncHandler(async (req, res) => {
   }
 
   const user = await User.findOne({ email });
-  // For security, do not reveal if user exists
   if (!user) {
-    return res.status(200).json({ message: "If that email exists, an OTP has been sent." });
+    return res.status(200).json({
+      message: "If that email exists, an OTP has been sent.",
+    });
   }
 
-  // Generate OTP for password reset
   const resetOtp = generateOtp();
   const resetOtpExpires = getOtpExpiry();
 
@@ -332,12 +324,12 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   await sendOtpEmail(email, resetOtp, "Password Reset OTP");
 
-  res.status(200).json({ message: "If that email exists, an OTP has been sent." });
+  res.status(200).json({
+    message: "If that email exists, an OTP has been sent.",
+  });
 });
 
-// @desc    Reset password using OTP
-// @route   POST /api/users/reset-password
-// @access  Public
+// ─── Reset Password ───────────────────────────────────────────
 const resetPassword = asyncHandler(async (req, res) => {
   const { email, otp, newPassword } = req.body;
 
@@ -357,13 +349,11 @@ const resetPassword = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // Check reset OTP
   if (user.resetOtp !== otp || user.resetOtpExpires < new Date()) {
     res.status(400);
     throw new Error("Invalid or expired OTP");
   }
 
-  // Update password and clear reset fields
   user.password = newPassword;
   user.resetOtp = undefined;
   user.resetOtpExpires = undefined;
@@ -372,15 +362,11 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Password reset successfully" });
 });
 
-// ----------------------------------------------------------------------
-// AUTHENTICATED USER ACTIONS
-// ----------------------------------------------------------------------
-
-// @desc    Get current user profile
-// @route   GET /api/users/profile
-// @access  Private
+// ─── Get Profile ──────────────────────────────────────────────
 const getProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password -otp -otpExpires -resetOtp -resetOtpExpires");
+  const user = await User.findById(req.user._id).select(
+    "-password -otp -otpExpires -resetOtp -resetOtpExpires -deleteAfter"
+  );
   if (!user) {
     res.status(404);
     throw new Error("User not found");
@@ -388,9 +374,7 @@ const getProfile = asyncHandler(async (req, res) => {
   res.status(200).json(user);
 });
 
-// @desc    Update user profile (name, username, profile photo)
-// @route   PUT /api/users/profile
-// @access  Private
+// ─── Update Profile ────────────────────────────────────────────
 const updateProfile = asyncHandler(async (req, res) => {
   const { name, username, profilePhoto } = req.body;
   const user = await User.findById(req.user._id);
@@ -400,22 +384,21 @@ const updateProfile = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // Update fields if provided
   if (name) user.name = name;
+
   if (username) {
-    // Check if username is taken (by another user)
-    const existing = await User.findOne({ username, _id: { $ne: user._id } });
+    const existing = await User.findOne({
+      username,
+      _id: { $ne: user._id },
+    });
     if (existing) {
       res.status(400);
       throw new Error("Username already taken");
     }
     user.username = username;
   }
+
   if (profilePhoto) {
-    // Validate base64 image size etc (similar to uploadProfilePhoto)
-    // We'll reuse the same validation, but we can call uploadProfilePhoto separately
-    // For simplicity, we'll allow updating profilePhoto here as well.
-    // But we can keep both; we'll add validation.
     if (!profilePhoto.startsWith("data:image/")) {
       res.status(400);
       throw new Error("Invalid image format. Please provide a valid image.");
@@ -435,20 +418,18 @@ const updateProfile = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  // Return updated user (without sensitive fields)
   const updatedUser = user.toObject();
   delete updatedUser.password;
   delete updatedUser.otp;
   delete updatedUser.otpExpires;
   delete updatedUser.resetOtp;
   delete updatedUser.resetOtpExpires;
+  delete updatedUser.deleteAfter;
 
   res.status(200).json(updatedUser);
 });
 
-// @desc    Change password (authenticated user)
-// @route   PUT /api/users/change-password
-// @access  Private
+// ─── Change Password ──────────────────────────────────────────
 const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const user = await User.findById(req.user._id);
@@ -460,7 +441,9 @@ const changePassword = asyncHandler(async (req, res) => {
 
   if (user.authMethod === "google") {
     res.status(400);
-    throw new Error("Google accounts use Google Sign-In. Password cannot be changed here.");
+    throw new Error(
+      "Google accounts use Google Sign-In. Password cannot be changed here."
+    );
   }
 
   const isMatch = await user.matchPassword(currentPassword);
@@ -480,17 +463,13 @@ const changePassword = asyncHandler(async (req, res) => {
   res.json({ message: "Password updated successfully" });
 });
 
-// @desc    Upload profile photo (separate endpoint, but can be integrated into updateProfile)
-// @route   POST /api/users/upload-profile-photo
-// @access  Private
-// Modified uploadProfilePhoto to work with multer + Cloudinary
+// ─── Upload Profile Photo ─────────────────────────────────────
 const uploadProfilePhoto = asyncHandler(async (req, res) => {
   if (!req.file) {
     res.status(400);
     throw new Error("No image file uploaded");
   }
 
-  // Cloudinary returns the URL in req.file.path or req.file.location
   const imageUrl = req.file.path || req.file.location;
 
   const user = await User.findById(req.user._id);
@@ -508,9 +487,7 @@ const uploadProfilePhoto = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Delete account
-// @route   DELETE /api/users/delete-account
-// @access  Private
+// ─── Delete Account ───────────────────────────────────────────
 const deleteAccount = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) {
@@ -520,7 +497,6 @@ const deleteAccount = asyncHandler(async (req, res) => {
 
   await user.deleteOne();
 
-  // Clear cookie
   const isProd = process.env.NODE_ENV === "production";
   res.cookie("jwt", "", {
     httpOnly: true,
@@ -533,9 +509,7 @@ const deleteAccount = asyncHandler(async (req, res) => {
   res.json({ message: "Account deleted successfully" });
 });
 
-// @desc    Logout user
-// @route   POST /api/users/logout
-// @access  Private
+// ─── Logout ───────────────────────────────────────────────────
 const logoutUser = asyncHandler(async (req, res) => {
   const isProd = process.env.NODE_ENV === "production";
 
@@ -550,9 +524,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Logged out successfully" });
 });
 
-// ----------------------------------------------------------------------
-// EXPORTS
-// ----------------------------------------------------------------------
+// ─── Exports ──────────────────────────────────────────────────
 export {
   googleAuth,
   registerUser,

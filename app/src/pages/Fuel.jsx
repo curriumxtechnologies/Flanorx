@@ -17,7 +17,7 @@ import {
   Navigation,
   X,
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useCreateOrderMutation } from "../features/orderApiSlice";
@@ -33,7 +33,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-// Green marker for selected address
 const greenIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -44,7 +43,6 @@ const greenIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-// Blue marker for current location
 const blueIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -53,26 +51,23 @@ const blueIcon = new L.Icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
-  className: "blue-marker", // we can style via CSS if needed
 });
 
-// ─── Reverse geocode using Nominatim ──────────────────────
+// ─── Reverse geocode ──────────────────────────────────────
 const reverseGeocode = async (lat, lng) => {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
     );
     const data = await res.json();
-    if (data && data.display_name) {
-      return data.display_name;
-    }
+    if (data && data.display_name) return data.display_name;
     return null;
   } catch {
     return null;
   }
 };
 
-// ─── Draggable marker component ─────────────────────────────
+// ─── Draggable marker ─────────────────────────────────────
 const DraggableMarker = ({ position, setPosition, onAddressUpdate }) => {
   const markerRef = useRef(null);
 
@@ -100,10 +95,9 @@ const DraggableMarker = ({ position, setPosition, onAddressUpdate }) => {
   );
 };
 
-// ─── Map events to handle clicks ────────────────────────────
+// ─── Map click handler ────────────────────────────────────
 const MapClickHandler = ({ setPosition, onAddressUpdate }) => {
-  const map = useMap();
-  useMapEvents({
+  const map = useMapEvents({
     click(e) {
       const { lat, lng } = e.latlng;
       setPosition([lat, lng]);
@@ -116,13 +110,11 @@ const MapClickHandler = ({ setPosition, onAddressUpdate }) => {
   return null;
 };
 
-// ─── Component to fly to location ────────────────────────────
+// ─── Fly to location ──────────────────────────────────────
 const FlyToLocation = ({ position }) => {
   const map = useMap();
   useEffect(() => {
-    if (position) {
-      map.flyTo(position, 16);
-    }
+    if (position) map.flyTo(position, 16);
   }, [map, position]);
   return null;
 };
@@ -148,23 +140,23 @@ const Fuel = () => {
 
   // ─── Map state ──────────────────────────────────────────────
   const [showMap, setShowMap] = useState(false);
-  const [mapPosition, setMapPosition] = useState([6.5244, 3.3792]); // Lagos
+  const [mapPosition, setMapPosition] = useState([6.5244, 3.3792]);
   const [markerPosition, setMarkerPosition] = useState([6.5244, 3.3792]);
-  const [userLocation, setUserLocation] = useState(null); // for blue marker
+  const [userLocation, setUserLocation] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
 
   const [priceBreakdown, setPriceBreakdown] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ─── Fuel prices per liter ──────────────────────────────────
+  // ─── Fuel prices ──────────────────────────────────────────
   const fuelPrices = {
     Petrol: 850,
     "Petrol (95 Octane)": 850,
     Diesel: 1320,
   };
 
-  // ─── Calculate price whenever fuelType or quantity changes ──
+  // ─── Calculate price ──────────────────────────────────────
   useEffect(() => {
     const pricePerLiter = fuelPrices[fuelType] || 0;
     const subtotal = pricePerLiter * quantity;
@@ -180,7 +172,7 @@ const Fuel = () => {
     });
   }, [fuelType, quantity]);
 
-  // ─── Handle address selection ──────────────────────────────
+  // ─── Addresses ────────────────────────────────────────────
   const addresses = user?.addresses || [];
   const defaultAddress = addresses.find((a) => a.isDefault);
   const addressOptions = addresses.map((a) => ({
@@ -209,15 +201,14 @@ const Fuel = () => {
     setShowFuelDropdown(false);
   };
 
-  // ─── Handle map address update ─────────────────────────────
+  // ─── Map handlers ────────────────────────────────────────
   const handleMapAddressUpdate = (addr) => {
     if (addr) {
       setDeliveryAddress(addr);
-      setUseSavedAddress(false); // uncheck saved address when using map
+      setUseSavedAddress(false);
     }
   };
 
-  // ─── Current location ───────────────────────────────────────
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
@@ -229,8 +220,8 @@ const Fuel = () => {
         const { latitude, longitude } = pos.coords;
         const newPos = [latitude, longitude];
         setMapPosition(newPos);
-        setMarkerPosition(newPos); // move green marker to current location
-        setUserLocation(newPos);   // set blue marker
+        setMarkerPosition(newPos);
+        setUserLocation(newPos);
         reverseGeocode(latitude, longitude).then((addr) => {
           if (addr) {
             setDeliveryAddress(addr);
@@ -248,7 +239,7 @@ const Fuel = () => {
     );
   };
 
-  // ─── Handle form submit ──────────────────────────────────────
+  // ─── Submit ──────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -258,12 +249,10 @@ const Fuel = () => {
       setError("Please provide a delivery address");
       return;
     }
-
     if (quantity < 5 || quantity > 500) {
       setError("Quantity must be between 5 and 500 liters");
       return;
     }
-
     if (scheduleType === "scheduled" && (!scheduledDate || !scheduledTime)) {
       setError("Please select both date and time for scheduled delivery");
       return;
@@ -287,9 +276,7 @@ const Fuel = () => {
       };
 
       const result = await createOrder(orderData).unwrap();
-
       setSuccess("Order placed! Redirecting to payment...");
-
       if (result.authorization_url) {
         window.location.href = result.authorization_url;
       } else {
@@ -301,11 +288,7 @@ const Fuel = () => {
   };
 
   const isLoading = userLoading || orderLoading;
-
-  // ─── Fuel types ──────────────────────────────────────────────
   const fuelTypes = ["Petrol", "Petrol (95 Octane)", "Diesel"];
-
-  // ─── Quantity presets ────────────────────────────────────────
   const quantityPresets = [10, 20, 30, 50];
 
   return (
@@ -325,8 +308,9 @@ const Fuel = () => {
           </button>
         </header>
 
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 lg:py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        {/* ─── Full-width container ────────────────────────────── */}
+        <div className="w-full px-1 sm:px-4 lg:px-6 py-4 lg:py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {/* ─── Main form ─────────────────────────────────────── */}
             <div className="lg:col-span-2">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -341,7 +325,6 @@ const Fuel = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5">
-                  {/* Error / Success */}
                   {error && (
                     <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800 flex items-center gap-2">
                       <span>⚠️</span>
@@ -360,7 +343,32 @@ const Fuel = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Fuel Type
                     </label>
-                    <div className="relative">
+
+                    {/* Mobile: grid buttons (3 columns) */}
+                    <div className="lg:hidden grid grid-cols-3 gap-2">
+                      {fuelTypes.map((type) => {
+                        const isSelected = fuelType === type;
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => handleFuelSelect(type)}
+                            className={`py-2.5 px-1 rounded-xl text-sm font-medium transition-all border-2 ${
+                              isSelected
+                                ? "border-[#13ec5b] bg-[#13ec5b] text-white shadow-lg shadow-[#13ec5b]/20"
+                                : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
+                            }`}
+                          >
+                            <div className="font-semibold text-xs sm:text-sm">
+                              {type === "Petrol (95 Octane)" ? "95 Octane" : type}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop: dropdown */}
+                    <div className="hidden lg:block relative">
                       <button
                         type="button"
                         onClick={() => setShowFuelDropdown(!showFuelDropdown)}
@@ -552,7 +560,6 @@ const Fuel = () => {
                               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                             />
-                            {/* Green draggable marker (selected address) */}
                             <DraggableMarker
                               position={markerPosition}
                               setPosition={(pos) => {
@@ -561,15 +568,9 @@ const Fuel = () => {
                               }}
                               onAddressUpdate={handleMapAddressUpdate}
                             />
-                            {/* Blue marker for current location (non-draggable) */}
                             {userLocation && (
-                              <Marker
-                                position={userLocation}
-                                icon={blueIcon}
-                                interactive={false}
-                              />
+                              <Marker position={userLocation} icon={blueIcon} interactive={false} />
                             )}
-                            {/* Click handler for map */}
                             <MapClickHandler
                               setPosition={(pos) => {
                                 setMarkerPosition(pos);
@@ -577,7 +578,6 @@ const Fuel = () => {
                               }}
                               onAddressUpdate={handleMapAddressUpdate}
                             />
-                            {/* Fly to location when userLocation changes */}
                             <FlyToLocation position={userLocation} />
                           </MapContainer>
                         </div>
@@ -628,7 +628,6 @@ const Fuel = () => {
                     </div>
                   </div>
 
-                  {/* ─── Scheduled Date & Time ──────────────────── */}
                   {scheduleType === "scheduled" && (
                     <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
                       <div>
@@ -658,7 +657,6 @@ const Fuel = () => {
                     </div>
                   )}
 
-                  {/* ─── Notes ───────────────────────────────────── */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Special Instructions
