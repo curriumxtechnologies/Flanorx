@@ -1,4 +1,4 @@
-// Login.jsx – with updated image
+// Login.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { useDispatch } from "react-redux";
@@ -176,7 +176,7 @@ const Login = () => {
 
   return (
     <div className="h-screen overflow-hidden flex bg-white dark:bg-gray-950 font-sans">
-      {/* LEFT – fixed image */}
+      {/* LEFT – fixed image (desktop) */}
       <div className="hidden lg:flex lg:w-1/2 h-full relative overflow-hidden">
         <img
           src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
@@ -192,17 +192,16 @@ const Login = () => {
         </div>
       </div>
 
-      {/* RIGHT – form panel */}
+      {/* RIGHT – form panel (scrollable, centered when short) */}
       <div className="w-full lg:w-1/2 h-full overflow-y-auto bg-white dark:bg-gray-950">
-        {/* ===================== DESKTOP ===================== */}
-        <div className="hidden lg:flex lg:flex-col lg:justify-center lg:h-full px-6 py-12 sm:px-12 lg:px-16 xl:px-20">
+        <div className="hidden lg:flex lg:flex-col lg:justify-center lg:min-h-full px-6 py-12 sm:px-12 lg:px-16 xl:px-20">
           <div className="max-w-md w-full mx-auto">
             <div className="flex items-center justify-center md:justify-start mb-8">
               <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
             </div>
 
             {!isForgotMode ? (
-              // ----- LOGIN FORM -----
+              // ----- LOGIN FORM (desktop) -----
               <>
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Welcome back</h1>
                 <p className="text-slate-500 dark:text-slate-400 mt-2">
@@ -348,7 +347,7 @@ const Login = () => {
                 </p>
               </>
             ) : (
-              // ----- FORGOT PASSWORD FORM -----
+              // ----- FORGOT PASSWORD (desktop) -----
               <>
                 <div className="flex items-center gap-2 mb-2">
                   <button
@@ -424,7 +423,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* ===================== MOBILE ===================== */}
+        {/* ===================== MOBILE (same as Signup) ===================== */}
         <div className="lg:hidden flex flex-col h-full bg-white dark:bg-gray-950">
           {/* Hero header with arched bottom edge */}
           <div className="relative shrink-0 h-[38vh] min-h-[240px] max-h-[320px]">
@@ -484,7 +483,7 @@ const Login = () => {
           <div className="flex-1 min-h-0 overflow-y-auto -mt-9 relative z-10 bg-white dark:bg-gray-950 rounded-t-[2rem] shadow-[0_-8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.4)] px-6 pt-7 pb-8">
             <div className="min-h-full flex flex-col justify-center max-w-md w-full mx-auto">
               {!isForgotMode ? (
-                // ----- LOGIN FORM -----
+                // ----- LOGIN FORM (mobile) -----
                 <>
                   {error && (
                     <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800">
@@ -603,7 +602,7 @@ const Login = () => {
                   </p>
                 </>
               ) : (
-                // ----- FORGOT PASSWORD FORM -----
+                // ----- FORGOT PASSWORD (mobile) -----
                 <>
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                     Reset Password
