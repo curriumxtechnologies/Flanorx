@@ -1,8 +1,34 @@
 // controllers/riderController.js
 import asyncHandler from "express-async-handler";
+import axios from "axios";
 import User from "../models/userModel.js";
 
-// ─── Helper to get uploaded file URL from multer ──────────────
+const PAYSTACK_BASE = "https://api.paystack.co";
+
+// ─── Helpers ──────────────────────────────────────────────────
+const getPaystackHeaders = () => ({
+  Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+  "Content-Type": "application/json",
+});
+
+// ─── Resolve bank account using Paystack ────────────────────
+const resolveBankAccount = async (accountNumber, bankCode) => {
+  try {
+    const response = await axios.get(
+      `${PAYSTACK_BASE}/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+      { headers: getPaystackHeaders() }
+    );
+    if (response.data.status) {
+      return response.data.data; // { account_number, account_name, bank_code }
+    }
+    throw new Error(response.data.message || "Bank resolution failed");
+  } catch (error) {
+    console.error("Bank resolution error:", error.response?.data || error.message);
+    throw new Error("Could not verify bank account. Please check the number and bank.");
+  }
+};
+
+// ─── Helper to get uploaded file URL from multer ────────────
 const getFileUrl = (files, fieldName) => {
   const file = files?.[fieldName]?.[0];
   return file?.path || file?.secure_url || null;
@@ -20,6 +46,7 @@ const applyForRider = asyncHandler(async (req, res) => {
     fuelingStation,
     bankAccountNumber,
     bankName,
+    bankCode,
     accountName,
     phone,
   } = req.body;
@@ -29,6 +56,10 @@ const applyForRider = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("NIN and fueling station are required");
   }
+  if (!bankAccountNumber || !bankCode || !accountName) {
+    res.status(400);
+    throw new Error("Bank details are required");
+  }
 
   // Validate NIN (11 digits)
   const cleanedNin = String(nin).replace(/\s+/g, "");
@@ -37,7 +68,7 @@ const applyForRider = asyncHandler(async (req, res) => {
     throw new Error("NIN must be 11 digits");
   }
 
-  // Check if NIN already used by another user
+  // Check if NIN already used
   const existingNin = await User.findOne({
     nin: cleanedNin,
     _id: { $ne: userId },
@@ -53,7 +84,7 @@ const applyForRider = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // If already a rider or application pending, prevent re‑submission
+  // Check existing status
   if (user.role === "rider") {
     res.status(400);
     throw new Error("You are already a verified rider");
@@ -63,7 +94,7 @@ const applyForRider = asyncHandler(async (req, res) => {
     throw new Error("Your application is already pending review");
   }
 
-  // Get uploaded files (Cloudinary URLs)
+  // Get uploaded files
   const profilePicture = getFileUrl(req.files, "profilePicture");
   const ninPicture = getFileUrl(req.files, "ninPicture");
   const proofOfAddress = getFileUrl(req.files, "proofOfAddress");
@@ -73,18 +104,26 @@ const applyForRider = asyncHandler(async (req, res) => {
     throw new Error("Proof of address image is required");
   }
 
+  // ✅ Verify bank account via Paystack
+  try {
+    await resolveBankAccount(bankAccountNumber, bankCode);
+  } catch (error) {
+    res.status(400);
+    throw new Error(`Bank verification failed: ${error.message}`);
+  }
+
   // Save verification details
   user.nin = cleanedNin;
   user.fuelingStation = fuelingStation;
   user.proofOfAddress = proofOfAddress;
   if (profilePicture) user.profilePicture = profilePicture;
   if (ninPicture) user.ninPicture = ninPicture;
-  if (bankAccountNumber) user.bankAccountNumber = bankAccountNumber;
-  if (bankName) user.bankName = bankName;
-  if (accountName) user.accountName = accountName;
+  user.bankAccountNumber = bankAccountNumber;
+  user.bankName = bankName;
+  user.bankCode = bankCode; // ← added field
+  user.accountName = accountName;
   if (phone) user.phone = phone;
 
-  // Set status to pending – role remains "user" until approved
   user.verificationStatus = "pending";
   user.verificationSubmittedAt = new Date();
 
@@ -102,7 +141,7 @@ const applyForRider = asyncHandler(async (req, res) => {
 // @access  Private (user only)
 const getRiderApplicationStatus = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select(
-    "nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName accountName phone verificationStatus rejectionReason verificationSubmittedAt role"
+    "nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName bankCode accountName phone verificationStatus rejectionReason verificationSubmittedAt role"
   );
 
   if (!user) {
@@ -123,13 +162,14 @@ const getRiderApplicationStatus = asyncHandler(async (req, res) => {
       ninPicture: user.ninPicture,
       bankAccountNumber: user.bankAccountNumber,
       bankName: user.bankName,
+      bankCode: user.bankCode,
       accountName: user.accountName,
       phone: user.phone,
     },
   });
 });
 
-// ─── Update rider application (if pending or rejected) ──────
+// ─── Update rider application ──────────────────────────────────
 // @desc    Update verification details (if status pending/rejected)
 // @route   PUT /api/users/rider/update
 // @access  Private (user only)
@@ -140,7 +180,6 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // Only allow updates if status is pending or rejected
   if (user.verificationStatus === "approved" || user.role === "rider") {
     res.status(400);
     throw new Error("You cannot update an approved application");
@@ -151,6 +190,7 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
     fuelingStation,
     bankAccountNumber,
     bankName,
+    bankCode,
     accountName,
     phone,
   } = req.body;
@@ -162,7 +202,6 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("NIN must be 11 digits");
     }
-    // Check uniqueness
     const existingNin = await User.findOne({
       nin: cleanedNin,
       _id: { $ne: user._id },
@@ -174,10 +213,21 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
     user.nin = cleanedNin;
   }
 
-  if (fuelingStation) user.fuelingStation = fuelingStation;
-  if (bankAccountNumber) user.bankAccountNumber = bankAccountNumber;
+  // Update bank details if provided
+  if (bankAccountNumber && bankCode) {
+    try {
+      await resolveBankAccount(bankAccountNumber, bankCode);
+    } catch (error) {
+      res.status(400);
+      throw new Error(`Bank verification failed: ${error.message}`);
+    }
+    user.bankAccountNumber = bankAccountNumber;
+    user.bankCode = bankCode;
+  }
   if (bankName) user.bankName = bankName;
   if (accountName) user.accountName = accountName;
+
+  if (fuelingStation) user.fuelingStation = fuelingStation;
   if (phone) user.phone = phone;
 
   // Update files if new ones uploaded
@@ -189,7 +239,7 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
   if (ninPicture) user.ninPicture = ninPicture;
   if (proofOfAddress) user.proofOfAddress = proofOfAddress;
 
-  // If previously rejected, reset to pending for re‑review
+  // Reset to pending if previously rejected
   if (user.verificationStatus === "rejected") {
     user.verificationStatus = "pending";
     user.rejectionReason = null;
@@ -204,23 +254,48 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
   });
 });
 
+// ─── Resolve bank account (public endpoint for frontend) ──────
+// @desc    Verify bank account and return account name
+// @route   POST /api/riders/resolve-bank
+// @access  Private (user only)
+const resolveBank = asyncHandler(async (req, res) => {
+  const { accountNumber, bankCode } = req.body;
+  if (!accountNumber || !bankCode) {
+    res.status(400);
+    throw new Error("Account number and bank code are required");
+  }
+
+  try {
+    const data = await resolveBankAccount(accountNumber, bankCode);
+    res.status(200).json({
+      success: true,
+      account_name: data.account_name,
+      account_number: data.account_number,
+      bank_code: data.bank_code,
+    });
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message || "Bank resolution failed");
+  }
+});
+
 // ─── Admin: Get all rider applications ──────────────────────
 // @desc    Admin get all applications (filter by status)
 // @route   GET /api/admin/riders/applications
 // @access  Private/Admin
 const getRiderApplications = asyncHandler(async (req, res) => {
-  const { status } = req.query; // pending, approved, rejected, none
+  const { status } = req.query;
 
-  const filter = { verificationStatus: status || { $ne: null } };
-  // Also get those who have submitted at least some data
-  // We'll only return users with verificationStatus set
-  if (!status) {
+  const filter = {};
+  if (status) {
+    filter.verificationStatus = status;
+  } else {
     filter.verificationStatus = { $in: ["pending", "approved", "rejected"] };
   }
 
   const users = await User.find(filter)
     .select(
-      "name email phone nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName accountName verificationStatus rejectionReason verificationSubmittedAt role createdAt"
+      "name email phone nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName bankCode accountName verificationStatus rejectionReason verificationSubmittedAt role createdAt"
     )
     .sort({ verificationSubmittedAt: -1 });
 
@@ -246,9 +321,12 @@ const approveRider = asyncHandler(async (req, res) => {
   }
 
   user.verificationStatus = "approved";
-  user.role = "rider"; // 🎯 role changes to rider
+  user.role = "rider";
   user.verificationReviewedAt = new Date();
   user.verificationReviewedBy = req.user._id;
+
+  // Optionally, create a Paystack recipient here for future commissions
+  // (optional – could be done later)
 
   await user.save();
 
@@ -294,7 +372,6 @@ const rejectRider = asyncHandler(async (req, res) => {
   user.verificationReviewedAt = new Date();
   user.verificationReviewedBy = req.user._id;
 
-  // Role stays "user"
   await user.save();
 
   res.status(200).json({
@@ -309,10 +386,28 @@ const rejectRider = asyncHandler(async (req, res) => {
   });
 });
 
+const getBanks = asyncHandler(async (req, res) => {
+  const response = await axios.get(`${PAYSTACK_BASE}/bank`, {
+    headers: getPaystackHeaders()
+  });
+  if (response.data.status) {
+    const banks = response.data.data.map(b => ({
+      code: b.code,
+      name: b.name,
+    }));
+    res.status(200).json(banks);
+  } else {
+    res.status(500);
+    throw new Error('Failed to fetch banks');
+  }
+});
+
 export {
   applyForRider,
   getRiderApplicationStatus,
   updateRiderApplication,
+  getBanks, // new endpoint
+  resolveBank, // new endpoint
   getRiderApplications,
   approveRider,
   rejectRider,

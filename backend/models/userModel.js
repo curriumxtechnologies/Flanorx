@@ -65,6 +65,7 @@ const userSchema = mongoose.Schema(
     ninPicture: { type: String, default: null },
     bankAccountNumber: { type: String, default: null },
     bankName: { type: String, default: null },
+    bankCode: { type: String, default: null }, // ✅ Paystack bank code for commission payouts
     accountName: { type: String, default: null },
 
     verificationStatus: {
@@ -96,7 +97,7 @@ const userSchema = mongoose.Schema(
     deleteAfter: {
       type: Date,
       default: null,
-      index: { expireAfterSeconds: 0 }, // TTL index – deletes document at this exact time
+      index: { expireAfterSeconds: 0 },
     },
   },
   { timestamps: true }

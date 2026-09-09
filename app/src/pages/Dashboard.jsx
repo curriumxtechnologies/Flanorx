@@ -17,11 +17,10 @@ import {
   Navigation,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
@@ -72,15 +71,17 @@ const Dashboard = () => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
+  // Get ALL orders (including pending/unpaid) for recent list and total count
   const {
     data: orders = [],
     isLoading: ordersLoading,
   } = useGetMyOrdersQuery({
     month: currentMonth,
     year: currentYear,
-    paid: true,
+    // no paid filter – get all orders
   });
 
+  // Separate query for paid totals (spending)
   const {
     data: totalSpentData,
     isLoading: spentLoading,
@@ -131,7 +132,7 @@ const Dashboard = () => {
   else if (hasGasSubscription && isExpired) subStatus = "expired";
   else subStatus = "none";
 
-  // ─── Chart data ────────────────────────────────────────────
+  // ─── Chart data (only paid orders contribute to spending) ──
   const chartData = useMemo(() => {
     const days = [];
     const today = new Date();
@@ -140,7 +141,7 @@ const Dashboard = () => {
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       const dayTotal = orders
-        .filter((o) => o.createdAt && o.createdAt.startsWith(dateStr))
+        .filter((o) => o.createdAt && o.createdAt.startsWith(dateStr) && o.paid)
         .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
       days.push({
         date: d.toLocaleDateString("en-US", { weekday: "short" }),
@@ -550,10 +551,10 @@ const Dashboard = () => {
           </p>
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-              order.deliveryStatus
+              order.deliveryStatus || order.status
             )}`}
           >
-            {order.deliveryStatus}
+            {order.deliveryStatus || order.status || "pending"}
           </span>
         </div>
         <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
@@ -562,6 +563,11 @@ const Dashboard = () => {
           <span>₦{order.totalAmount.toFixed(2)}</span>
           <span>·</span>
           <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+          {!order.paid && (
+            <span className="text-orange-500 bg-orange-100 dark:bg-orange-900/20 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
+              Unpaid
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -572,7 +578,7 @@ const Dashboard = () => {
       <Sidebar />
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
             Dashboard
           </h1>
@@ -598,7 +604,8 @@ const Dashboard = () => {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* ─── MAIN CONTAINER – minimal padding on mobile ── */}
+        <div className="w-full px-1 sm:px-4 lg:px-6 py-4">
           <HeroCard />
 
           {/* Desktop stats */}
@@ -672,17 +679,14 @@ const Dashboard = () => {
               ) : (
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ left: 0, right: 0, top: 5, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12 }}
-                        stroke="#9ca3af"
-                        tickMargin={5}
-                      />
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="spendingGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#13ec5b" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" tickMargin={5} />
                       <YAxis
                         tick={{ fontSize: 12 }}
                         stroke="#9ca3af"
@@ -698,8 +702,15 @@ const Dashboard = () => {
                           boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
                         }}
                       />
-                      <Bar dataKey="amount" fill="#13ec5b" radius={[4, 4, 0, 0]} />
-                    </BarChart>
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="#13ec5b"
+                        strokeWidth={2}
+                        fill="url(#spendingGradient)"
+                        dot={{ r: 2, fill: "#13ec5b" }}
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               )}
@@ -732,12 +743,9 @@ const Dashboard = () => {
 
           {/* 2‑column layout: Live Tracking + Gas Subscription (desktop) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
-            {/* Live Tracking - takes 2 columns on desktop, hidden on mobile */}
             <div className="hidden lg:block lg:col-span-2 h-full">
               <LiveTracking />
             </div>
-
-            {/* Gas Subscription - takes 1 column on desktop, hidden on mobile */}
             <div className="hidden lg:block h-full">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm h-full flex flex-col">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
@@ -813,7 +821,6 @@ const Dashboard = () => {
           {/* Mobile: Live Tracking + Gas Subscription (stacked) */}
           <div className="lg:hidden space-y-6 mb-6">
             <LiveTracking />
-
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                 Gas Subscription
@@ -882,7 +889,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Recent Orders */}
+          {/* Recent Orders – full width, matches admin style */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">

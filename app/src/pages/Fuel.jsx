@@ -149,19 +149,19 @@ const Fuel = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ─── Fuel prices ──────────────────────────────────────────
+  // ─── Fuel prices (all ₦10 for testing) ──────────────────
   const fuelPrices = {
     Petrol: 10,
-    "Petrol (95 Octane)": 850,
-    Diesel: 1320,
+    "Petrol (95 Octane)": 10,
+    Diesel: 10,
   };
 
   // ─── Calculate price ──────────────────────────────────────
   useEffect(() => {
     const pricePerLiter = fuelPrices[fuelType] || 0;
     const subtotal = pricePerLiter * quantity;
-    const deliveryFee = 4.99;
-    const serviceTax = subtotal * 0.05;
+    const deliveryFee = 1.00; // reduced for testing
+    const serviceTax = subtotal * 0.01; // 1% tax
     const total = subtotal + deliveryFee + serviceTax;
     setPriceBreakdown({
       pricePerLiter,
@@ -308,12 +308,12 @@ const Fuel = () => {
           </button>
         </header>
 
-        {/* ─── Full-width container ────────────────────────────── */}
-        <div className="w-full px-1 sm:px-4 lg:px-6 py-4 lg:py-6">
+        {/* ─── Full-width container – no side padding on mobile ── */}
+        <div className="w-full px-0 sm:px-4 lg:px-6 py-4 lg:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {/* ─── Main form ─────────────────────────────────────── */}
             <div className="lg:col-span-2">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
                 <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <FuelIcon className="h-5 w-5 text-[#13ec5b]" />
@@ -547,7 +547,7 @@ const Fuel = () => {
 
                     {/* ─── Map ───────────────────────────────────── */}
                     {showMap && (
-                      <div className="mt-3 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
+                      <div className="mt-3 rounded-none sm:rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
                         <div className="h-56 w-full bg-gray-200 dark:bg-gray-700 relative">
                           <MapContainer
                             center={mapPosition}
@@ -629,7 +629,7 @@ const Fuel = () => {
                   </div>
 
                   {scheduleType === "scheduled" && (
-                    <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
+                    <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700/30 rounded-none sm:rounded-xl p-4 border border-gray-200 dark:border-gray-600">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Date
@@ -676,7 +676,7 @@ const Fuel = () => {
 
             {/* ─── Order Summary ────────────────────────────────── */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div className="sticky top-24 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
                 <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-700">
                   <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <ShoppingBag className="h-5 w-5 text-[#13ec5b]" />
@@ -720,7 +720,7 @@ const Fuel = () => {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Service Tax (5%)</span>
+                          <span className="text-gray-500 dark:text-gray-400">Service Tax (1%)</span>
                           <span className="text-gray-900 dark:text-white">
                             ₦{priceBreakdown.serviceTax.toFixed(2)}
                           </span>

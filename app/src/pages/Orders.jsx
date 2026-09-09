@@ -1,4 +1,3 @@
-// pages/Orders.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -8,10 +7,16 @@ import {
   Filter,
   X,
   ChevronRight,
-  Calendar,
   Loader2,
+  AlertCircle,
+  CreditCard,
+  Clock,
+  Truck,
+  CheckCircle,
+  MapPin,
+  Calendar,
 } from "lucide-react";
-import { useGetMyOrdersQuery } from "../features/orderApiSlice";
+import { useGetMyOrdersQuery, useInitializePaymentMutation } from "../features/orderApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
 
@@ -24,6 +29,7 @@ const Orders = () => {
     year: "",
   });
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   // For custom dropdowns (desktop)
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -42,13 +48,17 @@ const Orders = () => {
     data: orders = [],
     isLoading,
     error,
+    refetch,
   } = useGetMyOrdersQuery({
     month: filters.month || currentMonth,
     year: filters.year || currentYear,
     orderType: filters.orderType || undefined,
     status: filters.status || undefined,
-    paid: true,
+    // Do not filter by paid – we want all orders including pending
+    paid: undefined,
   });
+
+  const [initializePayment, { isLoading: paymentLoading }] = useInitializePaymentMutation();
 
   // ─── Status colors ─────────────────────────────────────────
   const getStatusColor = (status) => {
@@ -63,6 +73,23 @@ const Orders = () => {
         return "text-green-600 bg-green-50 dark:bg-green-900/20";
       case "confirmed":
         return "text-green-700 bg-green-100 dark:bg-green-900/30";
+      default:
+        return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+    }
+  };
+
+  const getOrderStatusColor = (status) => {
+    switch (status) {
+      case "pending":
+        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "processing":
+        return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "completed":
+        return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "cancelled":
+        return "text-red-600 bg-red-50 dark:bg-red-900/20";
+      case "failed":
+        return "text-red-700 bg-red-100 dark:bg-red-900/30";
       default:
         return "text-gray-600 bg-gray-50 dark:bg-gray-800";
     }
@@ -173,14 +200,14 @@ const Orders = () => {
     );
   };
 
-  // ─── Filter bottom sheet (mobile) ──────────────────────────
+  // ─── Filter bottom sheet (mobile) – full width, no corners ─
   const FilterSheet = () => (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
       onClick={() => setShowFilterSheet(false)}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-t-2xl w-full max-w-md p-6 max-h-[80vh] overflow-y-auto"
+        className="bg-white dark:bg-gray-900 w-full max-w-full p-6 max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
@@ -306,6 +333,190 @@ const Orders = () => {
     </div>
   );
 
+  // ─── Detail Modal (bottom sheet) ──────────────────────────
+  const DetailModal = () => {
+    if (!selectedOrder) return null;
+
+    const order = selectedOrder;
+    const isPaid = order.paid;
+    const isPendingPayment = !isPaid && order.status !== "cancelled";
+
+    const handlePayNow = async () => {
+      try {
+        const result = await initializePayment(order._id).unwrap();
+        if (result?.authorization_url) {
+          window.location.href = result.authorization_url;
+        } else {
+          alert("Payment initialization failed. Please try again.");
+        }
+      } catch (err) {
+        alert(err.data?.message || "Failed to initialize payment");
+      }
+    };
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
+        onClick={() => setSelectedOrder(null)}
+      >
+        <div
+          className="bg-white dark:bg-gray-900 w-full max-w-full p-6 max-h-[85vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              Order #{order.orderId || order._id.slice(-6)}
+            </h3>
+            <button
+              onClick={() => setSelectedOrder(null)}
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            >
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Type</p>
+                <span className="flex items-center gap-1 capitalize">
+                  {order.orderType === "fuel" ? (
+                    <Flame className="h-4 w-4 text-[#13ec5b]" />
+                  ) : (
+                    <Package className="h-4 w-4 text-[#13ec5b]" />
+                  )}
+                  {order.orderType}
+                </span>
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Status</p>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(
+                    order.status
+                  )}`}
+                >
+                  {order.status || "pending"}
+                </span>
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Delivery</p>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                    order.deliveryStatus || "pending"
+                  )}`}
+                >
+                  {order.deliveryStatus || "pending"}
+                </span>
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Total</p>
+                <p className="font-bold text-gray-900 dark:text-white">
+                  ₦{order.totalAmount?.toFixed(2) || "0.00"}
+                </p>
+              </div>
+            </div>
+
+            {order.deliveryAddress && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Delivery Address</p>
+                <p className="text-gray-900 dark:text-white text-sm">{order.deliveryAddress}</p>
+              </div>
+            )}
+
+            {order.fuelType && order.quantity && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Fuel Details</p>
+                <p className="text-gray-900 dark:text-white text-sm">
+                  {order.fuelType} – {order.quantity} L
+                </p>
+              </div>
+            )}
+
+            {order.gasDetails && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Gas Details</p>
+                <p className="text-gray-900 dark:text-white text-sm">
+                  {order.gasDetails.cylinderSize} – {order.gasDetails.quantityKg} kg
+                  {order.gasDetails.isFirstTime ? " (New cylinder)" : " (Swap)"}
+                </p>
+              </div>
+            )}
+
+            {isPendingPayment && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <button
+                  onClick={handlePayNow}
+                  disabled={paymentLoading}
+                  className="w-full py-3 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  {paymentLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-5 w-5" />
+                  )}
+                  Pay Now
+                </button>
+              </div>
+            )}
+
+            {isPaid && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Payment confirmed</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Mobile Slim List Item ──────────────────────────────
+  const SlimOrderItem = ({ order }) => {
+    const isPaid = order.paid;
+    const isPendingPayment = !isPaid && order.status !== "cancelled";
+
+    return (
+      <div
+        onClick={() => setSelectedOrder(order)}
+        className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-600 cursor-pointer transition"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
+              #{order.orderId || order._id.slice(-6)}
+            </span>
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getOrderStatusColor(
+                order.status
+              )}`}
+            >
+              {order.status || "pending"}
+            </span>
+            {isPendingPayment && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                Unpaid
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            <span>{order.orderType === "fuel" ? "Fuel" : "Gas"}</span>
+            <span>·</span>
+            <span>₦{order.totalAmount?.toFixed(2) || "0.00"}</span>
+            <span>·</span>
+            <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0 ml-2" />
+      </div>
+    );
+  };
+
+  // ─── Main render ──────────────────────────────────────────
+  const isModalOpen = !!selectedOrder || showFilterSheet;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
@@ -325,7 +536,7 @@ const Orders = () => {
           </button>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full px-0 sm:px-4 lg:px-8 py-4">
           {/* Desktop filters */}
           <div className="hidden lg:flex flex-wrap items-center gap-3 mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
             <FilterDropdown
@@ -365,7 +576,7 @@ const Orders = () => {
           </div>
 
           {/* Orders list */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {orders.length} {orders.length === 1 ? "Order" : "Orders"} found
@@ -387,6 +598,7 @@ const Orders = () => {
               </div>
             ) : error ? (
               <div className="text-center py-8 text-red-500 dark:text-red-400">
+                <AlertCircle className="h-12 w-12 mx-auto mb-2" />
                 Failed to load orders. Please try again.
               </div>
             ) : orders.length === 0 ? (
@@ -401,54 +613,117 @@ const Orders = () => {
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {orders.map((order) => (
-                  <div
-                    key={order._id}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition"
-                    onClick={() => navigate(`/order/${order._id}`)}
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-[#13ec5b]/10 flex items-center justify-center flex-shrink-0">
-                      {order.orderType === "fuel" ? (
-                        <Flame className="h-4 w-4 text-[#13ec5b]" />
-                      ) : (
-                        <Package className="h-4 w-4 text-[#13ec5b]" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          #{order.orderId}
-                        </p>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            order.deliveryStatus
-                          )}`}
-                        >
-                          {order.deliveryStatus}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                        <span>{order.orderType === "fuel" ? "Fuel" : "Gas"}</span>
-                        <span>·</span>
-                        <span>₦{order.totalAmount.toFixed(2)}</span>
-                        <span>·</span>
-                        <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-                  </div>
-                ))}
-              </div>
+              <>
+                {/* Desktop table */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Order
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Type
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Amount
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Status
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Delivery
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Date
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => {
+                        const isPaid = order.paid;
+                        const isPendingPayment = !isPaid && order.status !== "cancelled";
+                        return (
+                          <tr
+                            key={order._id}
+                            className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                            onClick={() => setSelectedOrder(order)}
+                          >
+                            <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
+                              #{order.orderId || order._id.slice(-6)}
+                            </td>
+                            <td className="py-2.5 px-3 capitalize">{order.orderType}</td>
+                            <td className="py-2.5 px-3">₦{order.totalAmount?.toFixed(2) || "0.00"}</td>
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(
+                                  order.status
+                                )}`}
+                              >
+                                {order.status || "pending"}
+                              </span>
+                              {isPendingPayment && (
+                                <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                                  Unpaid
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                  order.deliveryStatus || "pending"
+                                )}`}
+                              >
+                                {order.deliveryStatus || "pending"}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              {isPendingPayment && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedOrder(order);
+                                  }}
+                                  className="text-xs bg-[#13ec5b] hover:bg-[#10d04e] text-white px-3 py-1 rounded-lg transition"
+                                >
+                                  Pay
+                                </button>
+                              )}
+                              {isPaid && (
+                                <span className="text-xs text-green-600 dark:text-green-400">Paid</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile slim list */}
+                <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                  {orders.map((order) => (
+                    <SlimOrderItem key={order._id} order={order} />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
       </div>
 
-      <Bottombar />
+      {/* Bottom bar - hidden when modal open */}
+      {!isModalOpen && <Bottombar />}
 
-      {/* Mobile filter bottom sheet */}
+      {/* Modals */}
       {showFilterSheet && <FilterSheet />}
+      {selectedOrder && <DetailModal />}
     </div>
   );
 };

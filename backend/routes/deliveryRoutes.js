@@ -23,6 +23,7 @@ router.put("/:id/status", protect, updateDeliveryProgress);
 router.put("/:id/confirm", protect, confirmDeliveryByCustomer);
 
 // ─── Mixed access (rider, user, admin) – handled in controller ────────────
+// ⚠️ This must come LAST!
 router.get("/:id", protect, getDeliveryDetails);
 
 export default router;

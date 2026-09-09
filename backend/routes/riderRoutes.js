@@ -3,11 +3,13 @@ import {
   applyForRider,
   getRiderApplicationStatus,
   updateRiderApplication,
+  resolveBank,
+  getBanks, // 👈 new import
   getRiderApplications,
   approveRider,
   rejectRider,
 } from "../controllers/riderController.js";
-import { protect } from "../middleware/authMiddleware.js";  // ✅ role checks are inside controller
+import { protect } from "../middleware/authMiddleware.js";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
@@ -38,10 +40,10 @@ cloudinary.api
   .catch((err) => console.error("❌ Cloudinary not connected:", err?.message));
 
 // ──────────────────────────────────────────────────────────────
-// 🔹 USER (logged‑in) endpoints – access via /api/users/rider
+// 🔹 USER (logged‑in) endpoints – access via /api/riders
 // ──────────────────────────────────────────────────────────────
 
-// @route   POST /api/users/rider/apply
+// @route   POST /api/riders/apply
 // @desc    Submit application to become a rider
 // @access  Private (user only)
 router.post(
@@ -55,12 +57,12 @@ router.post(
   applyForRider
 );
 
-// @route   GET /api/users/rider/status
+// @route   GET /api/riders/status
 // @desc    Get current application status and submitted data
 // @access  Private (user only)
 router.get("/status", protect, getRiderApplicationStatus);
 
-// @route   PUT /api/users/rider/update
+// @route   PUT /api/riders/update
 // @desc    Update application details (if pending/rejected)
 // @access  Private (user only)
 router.put(
@@ -73,6 +75,18 @@ router.put(
   ]),
   updateRiderApplication
 );
+
+// ─── 🆕 Bank resolution ──────────────────────────────────────
+// @route   POST /api/riders/resolve-bank
+// @desc    Resolve bank account number and return account name
+// @access  Private (user only)
+router.post("/resolve-bank", protect, resolveBank);
+
+// ─── 🆕 Get bank list from Paystack ──────────────────────────
+// @route   GET /api/riders/banks
+// @desc    Get list of Nigerian banks from Paystack
+// @access  Private (user only)
+router.get("/banks", protect, getBanks);
 
 // ──────────────────────────────────────────────────────────────
 // 🔸 ADMIN‑only endpoints – access via /api/admin/riders

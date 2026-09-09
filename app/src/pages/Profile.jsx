@@ -1,3 +1,4 @@
+// pages/Profile.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
@@ -20,6 +21,7 @@ import {
   Loader2,
   Camera,
   Key,
+  UserCheck,
 } from "lucide-react";
 import { useGetProfileQuery, useUpdateProfileMutation } from "../features/userApiSlice";
 import {
@@ -28,6 +30,7 @@ import {
   useCancelGasSubscriptionMutation,
   useUpgradeGasSubscriptionMutation,
 } from "../features/gasApiSlice";
+import { useGetRiderApplicationStatusQuery } from "../features/riderApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
 
@@ -187,6 +190,13 @@ const Profile = () => {
   const [cancelGas, { isLoading: cancelLoading }] = useCancelGasSubscriptionMutation();
   const [upgradeGas, { isLoading: upgradeLoading }] = useUpgradeGasSubscriptionMutation();
 
+  // ─── Rider application status ──────────────────────────────
+  const {
+    data: riderStatusData,
+    isLoading: riderStatusLoading,
+    refetch: refetchRiderStatus,
+  } = useGetRiderApplicationStatusQuery();
+
   // ─── State ─────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -295,7 +305,6 @@ const Profile = () => {
       toast.error("Password must be at least 8 characters");
       return;
     }
-    // Stub – replace with API call
     toast.success("Password changed (stub)");
     setShowPasswordForm(false);
     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -306,17 +315,65 @@ const Profile = () => {
   const isActive = subscriptionData?.isActive || false;
   const daysRemaining = subscriptionData?.daysRemaining || 0;
 
-  // Check if user is admin
+  // ─── Rider status ──────────────────────────────────────────
+  const riderStatus = riderStatusData?.verificationStatus; // "none", "pending", "approved", "rejected"
+  const riderRole = user?.role === "rider";
+
+  const renderRiderButton = () => {
+    if (riderRole) {
+      return (
+        <button
+          onClick={() => navigate("/rider/dashboard")}
+          className="px-4 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition flex items-center gap-2 text-sm"
+        >
+          <UserCheck className="h-4 w-4" />
+          Rider Dashboard
+        </button>
+      );
+    }
+    if (riderStatus === "pending") {
+      return (
+        <button
+          disabled
+          className="px-4 py-2 bg-yellow-500 text-white rounded-lg opacity-70 cursor-not-allowed flex items-center gap-2 text-sm"
+        >
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Application pending
+        </button>
+      );
+    }
+    if (riderStatus === "rejected") {
+      return (
+        <button
+          onClick={() => navigate("/rider/apply")}
+          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition flex items-center gap-2 text-sm"
+        >
+          <UserCheck className="h-4 w-4" />
+          Re-apply
+        </button>
+      );
+    }
+    // "none" or undefined
+    return (
+      <button
+        onClick={() => navigate("/rider/apply")}
+        className="px-4 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition flex items-center gap-2 text-sm"
+      >
+        <UserCheck className="h-4 w-4" />
+        Become a Rider
+      </button>
+    );
+  };
+
   const isAdmin = user?.role === "admin" || userInfo?.role === "admin";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Profile</h1>
           <div className="flex items-center gap-3">
-            {/* Admin button – visible only to admins */}
             {isAdmin && (
               <button
                 onClick={() => navigate("/superuser/dashboard")}
@@ -331,88 +388,144 @@ const Profile = () => {
           </div>
         </header>
 
-        <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
+        {/* ─── FULL-WIDTH CONTAINER – minimal padding ────── */}
+        <div className="w-full px-0 sm:px-4 lg:px-6 py-4">
           <div className="max-w-4xl mx-auto space-y-5">
 
-            {/* ─── Profile Card ─────────────────────────────────── */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-              <div className="p-5 flex flex-col sm:flex-row items-center gap-5">
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden border-2 border-[#13ec5b]/30">
-                    {user?.profilePhoto ? (
-                      <img src={user.profilePhoto} alt={user.name} className="w-full h-full object-cover" />
+            {/* ─── Profile Card ──────────────────────────────────── */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
+              <div className="p-5">
+                <div className="flex flex-col sm:flex-row items-start gap-5">
+                  {/* Avatar */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden border-2 border-[#13ec5b]/30">
+                      {user?.profilePhoto ? (
+                        <img src={user.profilePhoto} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="h-10 w-10 sm:h-12 sm:w-12 text-[#13ec5b]" />
+                      )}
+                    </div>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="absolute bottom-0 right-0 p-1.5 bg-[#13ec5b] text-white rounded-full shadow-md hover:bg-[#10d04e] transition disabled:opacity-50"
+                    >
+                      {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                  </div>
+
+                  {/* Info - left aligned */}
+                  <div className="flex-1 w-full text-left">
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</label>
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phone</label>
+                          <input
+                            type="tel"
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2 mt-1">
+                          <button onClick={handleUpdateProfile} disabled={isLoading} className="px-4 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition flex items-center gap-2 disabled:opacity-50 text-sm">
+                            <Save className="h-4 w-4" /> Save
+                          </button>
+                          <button onClick={() => setIsEditing(false)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      <User className="h-10 w-10 sm:h-12 sm:w-12 text-[#13ec5b]" />
+                      <>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name || "User"}</h2>
+                          {riderRole && (
+                            <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-[#13ec5b]/10 text-[#13ec5b] border border-[#13ec5b]/20">
+                              Rider
+                            </span>
+                          )}
+                          {user?.role === "admin" && (
+                            <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-start gap-1 sm:gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center gap-1"><Mail className="h-4 w-4" /> {user?.email}</span>
+                          {user?.phone && <span className="flex items-center gap-1"><Phone className="h-4 w-4" /> {user.phone}</span>}
+                        </div>
+                        <button onClick={() => setIsEditing(true)} className="mt-2 text-sm text-[#13ec5b] hover:underline flex items-center gap-1">
+                          <Edit className="h-4 w-4" /> Edit Profile
+                        </button>
+                      </>
                     )}
                   </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="absolute bottom-0 right-0 p-1.5 bg-[#13ec5b] text-white rounded-full shadow-md hover:bg-[#10d04e] transition disabled:opacity-50"
-                  >
-                    {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-                  </button>
-                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                </div>
 
-                {/* Info */}
-                <div className="flex-1 w-full text-center sm:text-left">
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</label>
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phone</label>
-                        <input
-                          type="tel"
-                          value={editPhone}
-                          onChange={(e) => setEditPhone(e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent text-sm"
-                        />
-                      </div>
-                      <div className="flex gap-2 mt-1">
-                        <button onClick={handleUpdateProfile} disabled={isLoading} className="px-4 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition flex items-center gap-2 disabled:opacity-50 text-sm">
-                          <Save className="h-4 w-4" /> Save
-                        </button>
-                        <button onClick={() => setIsEditing(false)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm">
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name || "User"}</h2>
-                      <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="flex items-center gap-1"><Mail className="h-4 w-4" /> {user?.email}</span>
-                        {user?.phone && <span className="flex items-center gap-1"><Phone className="h-4 w-4" /> {user.phone}</span>}
-                      </div>
-                      <button onClick={() => setIsEditing(true)} className="mt-2 text-sm text-[#13ec5b] hover:underline flex items-center gap-1">
-                        <Edit className="h-4 w-4" /> Edit Profile
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex-shrink-0">
-                  {user?.role && (
-                    <span className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 capitalize">
-                      {user.role}
-                    </span>
-                  )}
+                  {/* Role badge */}
+                  <div className="flex-shrink-0 self-start sm:self-center">
+                    {user?.role && (
+                      <span className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 capitalize">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* ─── Rider Status Card ────────────────────────────── */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
+              <div className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <UserCheck className="h-5 w-5 text-[#13ec5b] flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Rider Status</span>
+                    {riderRole ? (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                        Approved
+                      </span>
+                    ) : riderStatus === "pending" ? (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                        Pending
+                      </span>
+                    ) : riderStatus === "rejected" ? (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        Rejected
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                        Not applied
+                      </span>
+                    )}
+                  </div>
+                  {renderRiderButton()}
+                </div>
+                {riderStatus === "pending" && (
+                  <div className="mt-2 text-sm text-yellow-600 dark:text-yellow-400">
+                    Your application is being reviewed by admin.
+                  </div>
+                )}
+                {riderStatus === "rejected" && riderStatusData?.rejectionReason && (
+                  <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    Rejection reason: {riderStatusData.rejectionReason}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* ─── Addresses ────────────────────────────────────── */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
               <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-[#13ec5b]" /> Saved Addresses
@@ -475,7 +588,7 @@ const Profile = () => {
             </div>
 
             {/* ─── Gas Subscription ──────────────────────────────── */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
               <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                 <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Flame className="h-5 w-5 text-[#13ec5b]" /> Gas Subscription
@@ -527,7 +640,7 @@ const Profile = () => {
             </div>
 
             {/* ─── Change Password ───────────────────────────────── */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
               <button
                 onClick={() => setShowPasswordForm(!showPasswordForm)}
                 className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
