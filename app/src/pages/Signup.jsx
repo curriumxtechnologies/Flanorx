@@ -1,4 +1,4 @@
-// Signup.jsx
+// Signup.jsx – fixed desktop layout
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router";
 import { useDispatch } from "react-redux";
@@ -238,7 +238,7 @@ const Signup = () => {
       {/* LEFT – fixed image */}
       <div className="hidden lg:flex lg:w-1/2 h-full relative overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+          src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
           alt="Fuel and Gas delivery"
           className="w-full h-full object-cover"
         />
@@ -251,10 +251,9 @@ const Signup = () => {
         </div>
       </div>
 
-      {/* RIGHT – form panel */}
+      {/* RIGHT – form panel – properly centered and scrollable on desktop */}
       <div className="w-full lg:w-1/2 h-full overflow-y-auto bg-white dark:bg-gray-950">
-        {/* ===================== DESKTOP ===================== */}
-        <div className="hidden lg:flex lg:flex-col lg:justify-center lg:h-full px-6 py-12 sm:px-12 lg:px-16 xl:px-20">
+        <div className="hidden lg:flex lg:flex-col lg:justify-center lg:min-h-full px-6 py-12 sm:px-12 lg:px-16 xl:px-20">
           <div className="max-w-md w-full mx-auto">
             <div className="flex items-center justify-center md:justify-start mb-8">
               <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
@@ -513,13 +512,13 @@ const Signup = () => {
           </div>
         </div>
 
-        {/* ===================== MOBILE ===================== */}
+        {/* ===================== MOBILE (unchanged) ===================== */}
         <div className="lg:hidden flex flex-col h-full bg-white dark:bg-gray-950">
           {/* Hero header with arched bottom edge */}
           <div className="relative shrink-0 h-[38vh] min-h-[240px] max-h-[320px]">
             <div className="absolute inset-0 overflow-hidden rounded-b-[3rem]">
               <img
-                src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
                 alt="Fuel and Gas delivery"
                 className="w-full h-full object-cover"
               />

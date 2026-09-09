@@ -1,4 +1,4 @@
-// Login.jsx
+// Login.jsx – with updated image
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { useDispatch } from "react-redux";
@@ -179,7 +179,7 @@ const Login = () => {
       {/* LEFT – fixed image */}
       <div className="hidden lg:flex lg:w-1/2 h-full relative overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+          src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
           alt="Fuel and Gas delivery"
           className="w-full h-full object-cover"
         />
@@ -430,11 +430,11 @@ const Login = () => {
           <div className="relative shrink-0 h-[38vh] min-h-[240px] max-h-[320px]">
             <div className="absolute inset-0 overflow-hidden rounded-b-[3rem]">
               <img
-                src="https://images.unsplash.com/photo-1605810230434-7631ac76ec81?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
                 alt="Fuel and Gas delivery"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/75" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/30 to-black/60 dark:from-black/20 dark:via-black/40 dark:to-black/70" />
             </div>
 
             <svg
