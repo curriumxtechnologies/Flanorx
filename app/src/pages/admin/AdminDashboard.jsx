@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -13,6 +13,11 @@ import {
   ChevronRight,
   ShoppingBag,
   UserCheck,
+  Loader2,
+  AlertCircle,
+  X,
+  Flame,
+  ChevronDown,
 } from "lucide-react";
 import {
   AreaChart,
@@ -24,50 +29,106 @@ import {
 } from "recharts";
 import AdminSidebar from "../../components/admin/Sidebar";
 import AdminBottombar from "../../components/admin/Bottombar";
-
-// ─── Mock data ──────────────────────────────────────────────
-// In a real app, fetch this from your API
-const mockStats = {
-  totalOrders: 1284,
-  revenue: 4200000,
-  totalUsers: 3456,
-  activeRiders: 87,
-  pendingOrders: 23,
-  completedOrders: 1261,
-};
-
-const mockChartData = [
-  { date: "Mon", orders: 45, revenue: 180000 },
-  { date: "Tue", orders: 52, revenue: 210000 },
-  { date: "Wed", orders: 38, revenue: 150000 },
-  { date: "Thu", orders: 61, revenue: 240000 },
-  { date: "Fri", orders: 73, revenue: 290000 },
-  { date: "Sat", orders: 42, revenue: 170000 },
-  { date: "Sun", orders: 30, revenue: 120000 },
-];
-
-const mockRecentOrders = [
-  { id: "ORD-001", customer: "John Doe", amount: 8500, status: "delivered", date: "2026-09-09" },
-  { id: "ORD-002", customer: "Jane Smith", amount: 12000, status: "processing", date: "2026-09-08" },
-  { id: "ORD-003", customer: "Bob Johnson", amount: 6200, status: "pending", date: "2026-09-08" },
-  { id: "ORD-004", customer: "Alice Brown", amount: 15000, status: "delivered", date: "2026-09-07" },
-  { id: "ORD-005", customer: "Charlie Wilson", amount: 9200, status: "processing", date: "2026-09-07" },
-];
+import {
+  useGetDashboardStatsQuery,
+  useGetAllOrdersQuery,
+  useGetAllUsersQuery,
+  useGetAllRidersQuery,
+  useUpdateOrderStatusMutation,
+} from "../../features/adminApiSlice";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.auth);
-  const [hideStats, setHideStats] = React.useState(false);
+  const [hideStats, setHideStats] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const stats = [
-    { label: "Total Orders", value: hideStats ? "••••" : mockStats.totalOrders, icon: ShoppingBag },
-    { label: "Revenue", value: hideStats ? "••••" : `₦${(mockStats.revenue / 1000000).toFixed(1)}M`, icon: DollarSign },
-    { label: "Total Users", value: hideStats ? "••••" : mockStats.totalUsers, icon: Users },
-    { label: "Active Riders", value: hideStats ? "••••" : mockStats.activeRiders, icon: Truck },
-    { label: "Pending Orders", value: hideStats ? "••••" : mockStats.pendingOrders, icon: Clock },
-    { label: "Completed", value: hideStats ? "••••" : mockStats.completedOrders, icon: UserCheck },
-  ];
+  // ─── Queries ──────────────────────────────────────────────
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useGetDashboardStatsQuery();
 
+  const {
+    data: ordersData = [],
+    isLoading: ordersLoading,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useGetAllOrdersQuery({});
+
+  const {
+    data: usersData = [],
+    isLoading: usersLoading,
+    error: usersError,
+  } = useGetAllUsersQuery({});
+
+  const {
+    data: ridersData = [],
+    isLoading: ridersLoading,
+    error: ridersError,
+  } = useGetAllRidersQuery();
+
+  const [updateOrderStatus, { isLoading: updateLoading }] = useUpdateOrderStatusMutation();
+
+  // ─── Derived data ──────────────────────────────────────────
+  const isLoading = statsLoading || ordersLoading || usersLoading || ridersLoading;
+  const error = statsError || ordersError || usersError || ridersError;
+
+  const stats = useMemo(() => {
+    if (!statsData) return [];
+    return [
+      { label: "Total Orders", value: hideStats ? "••••" : statsData.totalOrders, icon: ShoppingBag },
+      { label: "Revenue (This Month)", value: hideStats ? "••••" : `₦${(statsData.monthRevenue / 1000000).toFixed(1)}M`, icon: DollarSign },
+      { label: "Total Users", value: hideStats ? "••••" : usersData.length, icon: Users },
+      { label: "Active Riders", value: hideStats ? "••••" : ridersData.filter(r => r.verificationStatus === 'approved').length, icon: Truck },
+      { label: "Pending Orders", value: hideStats ? "••••" : statsData.pendingOrders, icon: Clock },
+      { label: "Completed Orders", value: hideStats ? "••••" : statsData.completedOrders, icon: UserCheck },
+    ];
+  }, [statsData, usersData, ridersData, hideStats]);
+
+  // ─── Chart data from orders ───────────────────────────────
+  const chartData = useMemo(() => {
+    if (!ordersData || ordersData.length === 0) {
+      return [
+        { date: "Mon", orders: 0, revenue: 0 },
+        { date: "Tue", orders: 0, revenue: 0 },
+        { date: "Wed", orders: 0, revenue: 0 },
+        { date: "Thu", orders: 0, revenue: 0 },
+        { date: "Fri", orders: 0, revenue: 0 },
+        { date: "Sat", orders: 0, revenue: 0 },
+        { date: "Sun", orders: 0, revenue: 0 },
+      ];
+    }
+
+    const days = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const dayTotal = ordersData
+        .filter((o) => o.createdAt && o.createdAt.startsWith(dateStr))
+        .reduce((acc, o) => ({
+          orders: acc.orders + 1,
+          revenue: acc.revenue + (o.totalAmount || 0),
+        }), { orders: 0, revenue: 0 });
+      days.push({
+        date: d.toLocaleDateString("en-US", { weekday: "short" }),
+        orders: dayTotal.orders,
+        revenue: dayTotal.revenue,
+      });
+    }
+    return days;
+  }, [ordersData]);
+
+  // ─── Recent orders (full objects for modal) ──────────────
+  const recentOrders = useMemo(() => {
+    if (!ordersData || ordersData.length === 0) return [];
+    return ordersData.slice(0, 5);
+  }, [ordersData]);
+
+  // ─── Status colors ──────────────────────────────────────
   const getStatusColor = (status) => {
     switch (status) {
       case "delivered":
@@ -80,6 +141,293 @@ const AdminDashboard = () => {
         return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
     }
   };
+
+  const getOrderStatusColor = (status) => {
+    switch (status) {
+      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "processing": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "completed": return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "cancelled": return "text-red-600 bg-red-50 dark:bg-red-900/20";
+      case "failed": return "text-red-700 bg-red-100 dark:bg-red-900/30";
+      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+    }
+  };
+
+  const getDeliveryStatusColor = (status) => {
+    switch (status) {
+      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "accepted": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "picked_up": return "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20";
+      case "in_transit": return "text-purple-600 bg-purple-50 dark:bg-purple-900/20";
+      case "delivered": return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "confirmed": return "text-green-700 bg-green-100 dark:bg-green-900/30";
+      case "cancelled": return "text-red-600 bg-red-50 dark:bg-red-900/20";
+      case "failed": return "text-red-700 bg-red-100 dark:bg-red-900/30";
+      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+    }
+  };
+
+  // ─── Status update options ──────────────────────────────
+  const statusOptions = [
+    { label: "Pending", value: "pending" },
+    { label: "Processing", value: "processing" },
+    { label: "Completed", value: "completed" },
+    { label: "Cancelled", value: "cancelled" },
+    { label: "Failed", value: "failed" },
+  ];
+
+  const deliveryOptions = [
+    { label: "Pending", value: "pending" },
+    { label: "Accepted", value: "accepted" },
+    { label: "Picked Up", value: "picked_up" },
+    { label: "In Transit", value: "in_transit" },
+    { label: "Delivered", value: "delivered" },
+    { label: "Confirmed", value: "confirmed" },
+  ];
+
+  // ─── Custom Dropdown ─────────────────────────────────────
+  const CustomDropdown = ({ value, options, onChange, placeholder, className = "" }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const ref = React.useRef(null);
+
+    React.useEffect(() => {
+      const handler = (e) => {
+        if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+      };
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    const selected = options.find(opt => opt.value === value);
+    const display = selected ? selected.label : placeholder;
+
+    return (
+      <div className={`relative ${className}`} ref={ref}>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#13ec5b]/50"
+        >
+          <span>{display}</span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        </button>
+        {isOpen && (
+          <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-60 overflow-auto py-1">
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition ${
+                  opt.value === value
+                    ? "bg-[#13ec5b]/10 text-[#13ec5b]"
+                    : "text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ─── Status update handler ──────────────────────────────
+  const handleStatusUpdate = async (orderId, newStatus, deliveryStatus) => {
+    try {
+      await updateOrderStatus({ id: orderId, status: newStatus, deliveryStatus }).unwrap();
+      refetchOrders();
+      if (selectedOrder && selectedOrder._id === orderId) {
+        const updated = ordersData.find(o => o._id === orderId);
+        if (updated) setSelectedOrder(updated);
+      }
+    } catch (err) {
+      alert(err.data?.message || "Failed to update order status");
+    }
+  };
+
+  // ─── Detail Modal ────────────────────────────────────────
+  const DetailModal = () => {
+    if (!selectedOrder) return null;
+
+    const order = selectedOrder;
+    const [localOrderStatus, setLocalOrderStatus] = useState(order.status || "pending");
+    const [localDeliveryStatus, setLocalDeliveryStatus] = useState(order.deliveryStatus || "pending");
+
+    const handleOrderChange = (val) => {
+      setLocalOrderStatus(val);
+      handleStatusUpdate(order._id, val, undefined);
+    };
+
+    const handleDeliveryChange = (val) => {
+      setLocalDeliveryStatus(val);
+      handleStatusUpdate(order._id, undefined, val);
+    };
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
+        onClick={() => setSelectedOrder(null)}
+      >
+        <div
+          className="bg-white dark:bg-gray-900 w-full max-w-full p-6 max-h-[85vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              Order #{order.orderId || order._id.slice(-6)}
+            </h3>
+            <button onClick={() => setSelectedOrder(null)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
+
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Customer</p>
+                <p className="text-gray-900 dark:text-white font-medium">{order.user?.name || "Unknown"}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{order.user?.email || ""}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Date</p>
+                <p className="text-gray-900 dark:text-white">{new Date(order.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Type</p>
+                <span className="flex items-center gap-1 capitalize">
+                  {order.orderType === "fuel" ? <Flame className="h-4 w-4 text-[#13ec5b]" /> : <Package className="h-4 w-4 text-[#13ec5b]" />}
+                  {order.orderType}
+                </span>
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Total</p>
+                <p className="font-bold text-gray-900 dark:text-white">₦{order.totalAmount?.toFixed(2) || "0.00"}</p>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Order Status</p>
+              <CustomDropdown
+                value={localOrderStatus}
+                options={statusOptions}
+                onChange={handleOrderChange}
+                placeholder="Select status"
+              />
+            </div>
+
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Delivery Status</p>
+              <CustomDropdown
+                value={localDeliveryStatus}
+                options={deliveryOptions}
+                onChange={handleDeliveryChange}
+                placeholder="Select delivery"
+              />
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Items</p>
+              {order.items?.map((item, idx) => (
+                <div key={idx} className="flex justify-between text-sm py-1">
+                  <span>{item.name || `Item ${idx+1}`}</span>
+                  <span>₦{item.price?.toFixed(2) || "0.00"} x {item.quantity || 1}</span>
+                </div>
+              ))}
+              {!order.items?.length && <p className="text-gray-400 dark:text-gray-500 text-xs">No items listed</p>}
+            </div>
+
+            <button
+              onClick={() => { navigate(`/superuser/orders/${order._id}`); setSelectedOrder(null); }}
+              className="w-full py-2.5 bg-[#13ec5b] text-white rounded-lg font-medium hover:bg-[#0fc44e] transition"
+            >
+              View Full Details
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Mobile Slim Order Item ──────────────────────────────
+  const SlimOrderItem = ({ order }) => (
+    <div
+      onClick={() => setSelectedOrder(order)}
+      className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-600 cursor-pointer transition"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
+            #{order.orderId || order._id.slice(-6)}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {order.user?.name || "Unknown"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            ₦{order.totalAmount?.toFixed(2) || "0.00"}
+          </span>
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getOrderStatusColor(order.status)}`}>
+            {order.status || "pending"}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 ml-2">
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getDeliveryStatusColor(order.deliveryStatus || "pending")}`}>
+          {order.deliveryStatus || "pending"}
+        </span>
+        <ChevronDown className="h-4 w-4 text-gray-400 rotate-[-90deg]" />
+      </div>
+    </div>
+  );
+
+  // ─── Loading state ─────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <AdminSidebar />
+        <div className="lg:ml-64 pb-20 lg:pb-8">
+          <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
+              Admin Dashboard
+            </h1>
+          </header>
+          <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-[#13ec5b]" />
+            </div>
+          </div>
+        </div>
+        <AdminBottombar />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <AdminSidebar />
+        <div className="lg:ml-64 pb-20 lg:pb-8">
+          <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
+              Admin Dashboard
+            </h1>
+          </header>
+          <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
+            <div className="flex flex-col items-center justify-center h-64">
+              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+              <p className="text-red-600 dark:text-red-400">Failed to load dashboard data</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                {error?.data?.message || error?.message || "Please try again"}
+              </p>
+            </div>
+          </div>
+        </div>
+        <AdminBottombar />
+      </div>
+    );
+  }
 
   // ─── Mobile Hero Card ──────────────────────────────────────
   const HeroCard = () => (
@@ -107,7 +455,7 @@ const AdminDashboard = () => {
             Total Orders
           </span>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {hideStats ? "••" : mockStats.totalOrders}
+            {hideStats ? "••" : statsData?.totalOrders}
           </p>
         </div>
         <div className="text-right">
@@ -115,7 +463,7 @@ const AdminDashboard = () => {
             Revenue
           </span>
           <p className="text-xl font-bold text-gray-900 dark:text-white">
-            {hideStats ? "••••" : `₦${(mockStats.revenue / 1000000).toFixed(1)}M`}
+            {hideStats ? "••••" : `₦${(statsData?.monthRevenue / 1000000).toFixed(1)}M`}
           </p>
         </div>
       </div>
@@ -125,13 +473,13 @@ const AdminDashboard = () => {
           <div>
             <span className="text-[10px] text-gray-500 dark:text-gray-400">Users</span>
             <p className="text-sm font-bold text-gray-900 dark:text-white">
-              {hideStats ? "••" : mockStats.totalUsers}
+              {hideStats ? "••" : usersData.length}
             </p>
           </div>
           <div>
             <span className="text-[10px] text-gray-500 dark:text-gray-400">Riders</span>
             <p className="text-sm font-bold text-gray-900 dark:text-white">
-              {hideStats ? "••" : mockStats.activeRiders}
+              {hideStats ? "••" : ridersData.filter(r => r.verificationStatus === 'approved').length}
             </p>
           </div>
         </div>
@@ -186,7 +534,7 @@ const AdminDashboard = () => {
         </div>
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={mockChartData}>
+            <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="adminChartGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#13ec5b" stopOpacity={0.3} />
@@ -258,9 +606,9 @@ const AdminDashboard = () => {
     </div>
   );
 
-  // ─── Recent Orders ────────────────────────────────────────
+  // ─── Recent Orders (Desktop & Mobile) ────────────────────
   const RecentOrders = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Orders</h3>
         <button
@@ -270,7 +618,9 @@ const AdminDashboard = () => {
           View all
         </button>
       </div>
-      <div className="overflow-x-auto">
+
+      {/* Desktop Table */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-gray-700">
@@ -282,39 +632,60 @@ const AdminDashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {mockRecentOrders.map((order) => (
-              <tr
-                key={order.id}
-                className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                onClick={() => navigate(`/superuser/orders/${order.id}`)}
-              >
-                <td className="py-2 px-3 text-gray-900 dark:text-white font-medium">#{order.id}</td>
-                <td className="py-2 px-3 text-gray-600 dark:text-gray-300">{order.customer}</td>
-                <td className="py-2 px-3 text-gray-900 dark:text-white">₦{order.amount.toLocaleString()}</td>
-                <td className="py-2 px-3">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                      order.status
-                    )}`}
-                  >
-                    {order.status}
-                  </span>
+            {recentOrders.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-6 text-gray-500 dark:text-gray-400">
+                  No orders found
                 </td>
-                <td className="py-2 px-3 text-gray-500 dark:text-gray-400">{order.date}</td>
               </tr>
-            ))}
+            ) : (
+              recentOrders.map((order) => (
+                <tr
+                  key={order._id}
+                  className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                  onClick={() => setSelectedOrder(order)}
+                >
+                  <td className="py-2 px-3 text-gray-900 dark:text-white font-medium">#{order.orderId || order._id.slice(-6)}</td>
+                  <td className="py-2 px-3 text-gray-600 dark:text-gray-300">{order.user?.name || "Unknown"}</td>
+                  <td className="py-2 px-3 text-gray-900 dark:text-white">₦{order.totalAmount?.toLocaleString() || "0.00"}</td>
+                  <td className="py-2 px-3">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                        order.deliveryStatus || order.status || "pending"
+                      )}`}
+                    >
+                      {order.deliveryStatus || order.status || "pending"}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-gray-500 dark:text-gray-400">
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ""}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Slim List – full width, no padding, no rounded corners */}
+      <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
+        {recentOrders.length === 0 ? (
+          <div className="text-center py-6 text-gray-500 dark:text-gray-400">No orders found</div>
+        ) : (
+          recentOrders.map((order) => <SlimOrderItem key={order._id} order={order} />)
+        )}
+      </div>
     </div>
   );
+
+  // ─── Main render ──────────────────────────────────────────
+  const isModalOpen = !!selectedOrder;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <AdminSidebar />
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        {/* Header */}
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
             Admin Dashboard
@@ -327,21 +698,17 @@ const AdminDashboard = () => {
         </header>
 
         <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
-          {/* Mobile Hero Card */}
           <HeroCard />
-
-          {/* Desktop Stats Grid */}
           <StatsGrid />
-
-          {/* Chart + Quick Actions */}
           <ChartAndActions />
-
-          {/* Recent Orders */}
           <RecentOrders />
         </div>
       </div>
 
-      <AdminBottombar />
+      {/* Conditionally hide bottom bar when modal is open */}
+      {!isModalOpen && <AdminBottombar />}
+
+      {selectedOrder && <DetailModal />}
     </div>
   );
 };

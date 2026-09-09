@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound.jsx";
 
 //Admin 
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import AdminOrders from "./pages/admin/AdminOrders.jsx";
 
 
 const router = createBrowserRouter([
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
 
       //Admin
       {path: "superuser/dashboard", element: <AdminDashboard />},
+      {path: "superuser/orders", element: <AdminOrders />},
     ],
   },
 ]);
