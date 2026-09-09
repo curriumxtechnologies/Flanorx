@@ -151,7 +151,7 @@ const Fuel = () => {
 
   // ─── Fuel prices ──────────────────────────────────────────
   const fuelPrices = {
-    Petrol: 850,
+    Petrol: 10,
     "Petrol (95 Octane)": 850,
     Diesel: 1320,
   };

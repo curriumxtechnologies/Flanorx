@@ -22,6 +22,10 @@ import Profile from "./pages/Profile.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
 
+//Admin 
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -37,6 +41,9 @@ const router = createBrowserRouter([
       {path: "profile", element: <Profile />},
       {path: "*", element: <NotFound />},
       {path: "tracking", element: <Tracking />},
+
+      //Admin
+      {path: "superuser/dashboard", element: <AdminDashboard />},
     ],
   },
 ]);

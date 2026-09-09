@@ -306,13 +306,29 @@ const Profile = () => {
   const isActive = subscriptionData?.isActive || false;
   const daysRemaining = subscriptionData?.daysRemaining || 0;
 
+  // Check if user is admin
+  const isAdmin = user?.role === "admin" || userInfo?.role === "admin";
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="lg:ml-64 pb-20 lg:pb-8">
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Profile</h1>
-          <button onClick={() => navigate("/settings")} className="text-sm text-[#13ec5b] hover:underline">Settings</button>
+          <div className="flex items-center gap-3">
+            {/* Admin button – visible only to admins */}
+            {isAdmin && (
+              <button
+                onClick={() => navigate("/superuser/dashboard")}
+                className="text-sm font-medium bg-[#13ec5b] text-white px-3 py-1.5 rounded-lg hover:bg-[#10d04e] transition"
+              >
+                Admin Dashboard
+              </button>
+            )}
+            <button onClick={() => navigate("/settings")} className="text-sm text-[#13ec5b] hover:underline">
+              Settings
+            </button>
+          </div>
         </header>
 
         <div className="w-full px-3 sm:px-4 lg:px-6 py-4">
