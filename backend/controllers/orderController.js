@@ -6,13 +6,15 @@ import User from "../models/userModel.js";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
-// ─── Gas constants ────────────────────────────────────────────
-const GAS_PRICE_PER_KG = 1300;
+// ─── Gas test constants ──────────────────────────────────────
+const GAS_PRICE_PER_KG = 10;
 const CYLINDER_COST = {
-  "3kg": 600,
-  "6kg": 1200,
-  "12kg": 3000,
+  "3kg": 100,
+  "6kg": 200,
+  "12kg": 300,
 };
+const SUBSCRIPTION_DAYS = 30;
+const GRACE_DAYS = 6;
 
 // ─── Helpers ──────────────────────────────────────────────────
 const parseMonthYear = (month, year) => {
@@ -81,7 +83,7 @@ const getGasSubscriptionStatus = async (userId) => {
   if (nextBilling && now < nextBilling) {
     isActive = true;
   } else if (graceEnd && now < graceEnd) {
-    isActive = true; // still in grace
+    isActive = true;
   }
 
   return { active: isActive, subscription: sub };
@@ -164,7 +166,6 @@ const createOrder = asyncHandler(async (req, res) => {
       throw new Error("Quantity must be a positive number");
     }
 
-    // ✅ Use frontend-sent price values directly
     orderData.fuelType = fuelType;
     orderData.quantity = parsedQuantity;
     orderData.fuelPricePerLiter = fuelPricePerLiter || 0;
@@ -177,80 +178,38 @@ const createOrder = asyncHandler(async (req, res) => {
 
   // ─── GAS ────────────────────────────────────────────────────
   else if (orderType === "gas") {
-    const { cylinderSize, quantityKg, isFirstTime } = gasDetails || {};
-    if (!cylinderSize || !quantityKg) {
+    if (!gasDetails || !gasDetails.cylinderSize || !gasDetails.quantityKg) {
       res.status(400);
       throw new Error("gasDetails: cylinderSize and quantityKg are required");
     }
-    if (!["3kg", "6kg", "12kg"].includes(cylinderSize)) {
+    if (!["3kg", "6kg", "12kg"].includes(gasDetails.cylinderSize)) {
       res.status(400);
       throw new Error("Invalid cylinderSize, must be 3kg, 6kg, or 12kg");
     }
-    const kg = Number(quantityKg);
+    const kg = Number(gasDetails.quantityKg);
     if (!Number.isFinite(kg) || kg <= 0) {
       res.status(400);
       throw new Error("quantityKg must be a positive number");
     }
 
-    // ─── Check subscription ──────────────────────────────────
-    const { active: isSubActive, subscription } = await getGasSubscriptionStatus(req.user._id);
-
-    let cylinderCost = 0;
-    let isFirstTimeActual = isFirstTime === true;
-    let isUpgrade = false;
-    let previousSize = null;
-
-    if (isFirstTimeActual) {
-      if (!isSubActive) {
-        cylinderCost = CYLINDER_COST[cylinderSize] || 0;
-      } else {
-        cylinderCost = 0;
-        isFirstTimeActual = false;
-      }
-    } else {
-      if (isSubActive && subscription.cylinderSize) {
-        previousSize = subscription.cylinderSize;
-        const currentCost = CYLINDER_COST[previousSize] || 0;
-        const newCost = CYLINDER_COST[cylinderSize] || 0;
-        if (newCost > currentCost) {
-          isUpgrade = true;
-          cylinderCost = newCost - currentCost;
-        } else {
-          cylinderCost = 0;
-        }
-      } else {
-        cylinderCost = CYLINDER_COST[cylinderSize] || 0;
-        isFirstTimeActual = true;
-      }
-    }
-
-    const gasContentCost = kg * GAS_PRICE_PER_KG;
-    const computedSubtotal = gasContentCost + cylinderCost;
-    const computedDeliveryFee = 5.99;
-    const computedServiceTax = computedSubtotal * 0.075;
-    const computedTotal = computedSubtotal + computedDeliveryFee + computedServiceTax;
-
     orderData.gasDetails = {
-      cylinderSize,
+      cylinderSize: gasDetails.cylinderSize,
       quantityKg: kg,
-      isFirstTime: isFirstTimeActual,
-      cylinderCost,
-      gasContentCost,
-      previousCylinderSize: previousSize,
-      upgradeCost: isUpgrade ? cylinderCost : 0,
+      isFirstTime: gasDetails.isFirstTime === true,
+      cylinderCost: gasDetails.cylinderCost || 0,
+      gasContentCost: gasDetails.gasContentCost || 0,
+      previousCylinderSize: gasDetails.previousCylinderSize || null,
+      upgradeCost: gasDetails.upgradeCost || 0,
     };
-    // Use frontend values if provided, else fallback to computed
-    orderData.subtotal = subtotal || computedSubtotal;
-    orderData.deliveryFee = deliveryFee || computedDeliveryFee;
-    orderData.serviceTax = serviceTax || computedServiceTax;
-    orderData.totalAmount = totalAmount || computedTotal;
+    orderData.subtotal = subtotal || 0;
+    orderData.deliveryFee = deliveryFee || 0;
+    orderData.serviceTax = serviceTax || 0;
+    orderData.totalAmount = totalAmount || 0;
     orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 45;
   }
 
-  // Create order
   const created = await Order.create(orderData);
 
-  // Initiate Paystack
   const amountInKobo = Math.round(Number(created.totalAmount) * 100);
   const reference = `FLX_${created._id}_${Date.now()}`;
   const paystackData = await initializePaystackPayment({
@@ -555,17 +514,105 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 });
 
 // ─── VERIFY PAYMENT & GET ORDER ──────────────────────────────
+// Handles both normal orders (FLX_) and subscriptions (SUB_)
 const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   const { reference } = req.params;
   if (!reference) {
     res.status(400);
     throw new Error("Reference is required");
   }
+
+  // ─── Verify payment with Paystack ──────────────────────────
   const data = await verifyPaystackPayment(reference);
   if (!data || data.status !== "success") {
     res.status(400);
     throw new Error("Payment not successful");
   }
+
+  // ─── Handle subscription references (SUB_) ────────────────
+  if (reference.startsWith("SUB_")) {
+    const userId = data.metadata?.userId;
+    if (!userId) {
+      console.error("Missing userId in metadata for SUB_ reference:", data.metadata);
+      res.status(400);
+      throw new Error("User not found in payment metadata");
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+
+    const { cylinderSize, quantityKg } = data.metadata;
+    if (!cylinderSize || !quantityKg) {
+      console.error("Missing cylinder metadata:", data.metadata);
+      res.status(400);
+      throw new Error("Invalid subscription metadata");
+    }
+
+    // Activate subscription
+    const now = new Date();
+    const nextBilling = new Date(now);
+    nextBilling.setDate(nextBilling.getDate() + SUBSCRIPTION_DAYS);
+    const graceEnd = new Date(nextBilling);
+    graceEnd.setDate(graceEnd.getDate() + GRACE_DAYS);
+
+    user.gasSubscription = {
+      cylinderSize,
+      status: "active",
+      startDate: now,
+      nextBillingDate: nextBilling,
+      gracePeriodEnd: graceEnd,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await user.save();
+
+    // Create order
+    const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
+    const cylinderCost = CYLINDER_COST[cylinderSize] || 0;
+    const total = gasContentCost + cylinderCost;
+
+    // Check if an order already exists for this reference (idempotency)
+    let order = await Order.findOne({ paymentReference: reference });
+    if (!order) {
+      order = await Order.create({
+        user: user._id,
+        orderType: "gas",
+        gasDetails: {
+          cylinderSize,
+          quantityKg: quantityKg,
+          isFirstTime: true,
+          cylinderCost,
+          gasContentCost,
+        },
+        deliveryAddress: "", // optional now
+        scheduleType: "now",
+        status: "completed",
+        paid: true,
+        paymentReference: reference,
+        paymentMethod: "card",
+        paymentDate: new Date(),
+        subtotal: gasContentCost + cylinderCost,
+        deliveryFee: 0,
+        serviceTax: 0,
+        totalAmount: total,
+        deliveryStatus: "confirmed",
+      });
+    }
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate("user", "name email")
+      .populate("rider", "name email profilePicture phone");
+
+    return res.status(200).json({
+      order: populatedOrder,
+      subscription: user.gasSubscription,
+      isSubscription: true,
+    });
+  }
+
+  // ─── Handle normal order references (FLX_) ────────────────
   const order = await Order.findOne({ paymentReference: reference })
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone");
@@ -573,12 +620,14 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Order not found");
   }
+
   const isOwner = req.user && String(order.user._id) === String(req.user._id);
   const hasValidRef = reference === order.paymentReference;
   if (!isOwner && !hasValidRef) {
     res.status(403);
     throw new Error("Not allowed");
   }
+
   if (!order.paid) {
     const expectedKobo = Math.round(Number(order.totalAmount) * 100);
     if (Number(data.amount) !== expectedKobo) {
@@ -587,10 +636,11 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
     }
     await order.markAsPaid(reference, "card");
   }
+
   const refreshedOrder = await Order.findById(order._id)
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone");
-  res.status(200).json({ order: refreshedOrder });
+  res.status(200).json({ order: refreshedOrder, isSubscription: false });
 });
 
 // ─── INITIALIZE PAYMENT FOR EXISTING ORDER ────────────────────
@@ -632,7 +682,6 @@ const initializePaymentForOrder = asyncHandler(async (req, res) => {
   res.status(200).json({ authorization_url: authUrl, reference: paystackRef, orderId: order._id });
 });
 
-// ─── EXPORT ────────────────────────────────────────────────────
 export {
   createOrder,
   getOrder,

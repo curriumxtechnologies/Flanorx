@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import toast from "react-hot-toast";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import {
   Package,
   Flame,
@@ -17,11 +19,14 @@ import {
   CheckCircle,
   MapPin,
   Calendar,
+  Download,
+  FileImage,
 } from "lucide-react";
 import { useGetMyOrdersQuery, useInitializePaymentMutation } from "../features/orderApiSlice";
 import { useConfirmDeliveryMutation } from "../features/deliveryApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
+import ReceiptTemplate from "../components/ReceiptTemplate";
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -41,6 +46,10 @@ const Orders = () => {
     month: useRef(null),
     year: useRef(null),
   };
+
+  const receiptRef = useRef(null);
+  const [generating, setGenerating] = useState(null); // "pdf" | "jpg" | null
+  const [downloadError, setDownloadError] = useState("");
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
@@ -131,6 +140,47 @@ const Orders = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openDropdown]);
+
+  // ─── Receipt download handler ───────────────────────────────
+  // Only meaningful for a completed + paid order, gated in the UI below.
+  const handleDownloadReceipt = async (format) => {
+    if (!selectedOrder || !receiptRef.current) return;
+
+    setDownloadError("");
+    setGenerating(format);
+
+    try {
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const fileBase = `Flanorx-Receipt-${selectedOrder.orderId || selectedOrder._id.slice(-6)}`;
+
+      if (format === "pdf") {
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${fileBase}.pdf`);
+      } else {
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const link = document.createElement("a");
+        link.href = imgData;
+        link.download = `${fileBase}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error("Failed to generate receipt:", err);
+      setDownloadError("Couldn't generate the receipt. Please try again.");
+    } finally {
+      setGenerating(null);
+    }
+  };
 
   // ─── Desktop filter dropdown ───────────────────────────────
   const FilterDropdown = ({ label, name, value, options, onSelect }) => {
@@ -286,6 +336,7 @@ const Orders = () => {
     const isPaid = order.paid;
     const isPendingPayment = !isPaid && order.status !== "cancelled";
     const canConfirm = order.deliveryStatus === "delivered" && order.status !== "completed";
+    const canDownloadReceipt = isPaid && order.status === "completed";
 
     const handlePayNow = async () => {
       try {
@@ -386,6 +437,40 @@ const Orders = () => {
                   {order.gasDetails.cylinderSize} – {order.gasDetails.quantityKg} kg
                   {order.gasDetails.isFirstTime ? " (New cylinder)" : " (Swap)"}
                 </p>
+              </div>
+            )}
+
+            {/* Receipt Download — completed + paid orders only */}
+            {canDownloadReceipt && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Receipt</p>
+                <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                  <button
+                    onClick={() => handleDownloadReceipt("pdf")}
+                    disabled={generating !== null}
+                    className="flex-1 py-2.5 border border-[#13ec5b] text-[#0f9c46] dark:text-[#13ec5b] rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-[#13ec5b]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {generating === "pdf" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={() => handleDownloadReceipt("jpg")}
+                    disabled={generating !== null}
+                    className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {generating === "jpg" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileImage className="h-4 w-4" />
+                    )}
+                    Download JPG
+                  </button>
+                </div>
+                {downloadError && <p className="text-xs text-red-500 mt-2">{downloadError}</p>}
               </div>
             )}
 
@@ -577,7 +662,12 @@ const Orders = () => {
                                 </button>
                               )}
                               {isPaid && order.status === "completed" && (
-                                <span className="text-xs text-green-600 dark:text-green-400">Completed</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                                  className="text-xs text-green-600 dark:text-green-400 hover:underline"
+                                >
+                                  Completed · Receipt
+                                </button>
                               )}
                               {canConfirm && (
                                 <button
@@ -611,6 +701,19 @@ const Orders = () => {
 
       {showFilterSheet && <FilterSheet />}
       {selectedOrder && <DetailModal />}
+
+      {/* ── Off-screen receipt used as the html2canvas source ──── */}
+      {selectedOrder && selectedOrder.paid && selectedOrder.status === "completed" && (
+        <div style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }} aria-hidden="true">
+          <ReceiptTemplate
+            ref={receiptRef}
+            order={selectedOrder}
+            reference={selectedOrder.paymentReference || selectedOrder.reference || selectedOrder.orderId}
+            isSubscription={false}
+            paymentData={null}
+          />
+        </div>
+      )}
     </div>
   );
 };

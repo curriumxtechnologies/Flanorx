@@ -1,5 +1,5 @@
 // pages/Gas.jsx
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -16,7 +16,6 @@ import {
   ShoppingBag,
   Navigation,
   X,
-  AlertCircle,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -66,7 +65,6 @@ const reverseGeocode = async (lat, lng) => {
 // ─── Draggable marker ─────────────────────────────────────
 const DraggableMarker = ({ position, setPosition, onAddressUpdate }) => {
   const markerRef = useRef(null);
-
   const eventHandlers = {
     dragend() {
       const marker = markerRef.current;
@@ -153,12 +151,12 @@ const Gas = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ─── Gas constants ──────────────────────────────────────────
-  const GAS_PRICE_PER_KG = 1300;
+  // ─── Gas constants (TESTING – tiny prices) ────────────────
+  const GAS_PRICE_PER_KG = 10; // ₦10 per kg for testing
   const CYLINDER_COST = {
-    "3kg": 600,
-    "6kg": 1200,
-    "12kg": 3000,
+    "3kg": 100,
+    "6kg": 200,
+    "12kg": 300,
   };
   const CYLINDER_SIZES = [
     { label: "3kg", value: "3kg" },
@@ -205,8 +203,8 @@ const Gas = () => {
 
     const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
     const subtotal = gasContentCost + cylinderCost;
-    const deliveryFee = 5.99;
-    const serviceTax = subtotal * 0.075;
+    const deliveryFee = 1.00;
+    const serviceTax = subtotal * 0.01;
     const total = subtotal + deliveryFee + serviceTax;
 
     setPriceBreakdown({
@@ -883,7 +881,7 @@ const Gas = () => {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Service Tax (7.5%)</span>
+                          <span className="text-gray-500 dark:text-gray-400">Service Tax (1%)</span>
                           <span className="text-gray-900 dark:text-white">
                             ₦{priceBreakdown.serviceTax.toFixed(2)}
                           </span>

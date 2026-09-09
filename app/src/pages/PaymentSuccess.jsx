@@ -1,15 +1,23 @@
 // src/pages/PaymentSuccess.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { CheckCircle, XCircle, Loader2, Package, ArrowRight } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Package, ArrowRight, Download, FileImage } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { useVerifyPaymentQuery } from "../features/orderApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
+import ReceiptTemplate from "../components/ReceiptTemplate";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const reference = searchParams.get("reference");
+  // Paystack sometimes uses "trxref" – fallback to it
+  const reference = searchParams.get("reference") || searchParams.get("trxref");
+
+  const receiptRef = useRef(null);
+  const [generating, setGenerating] = useState(null); // "pdf" | "jpg" | null
+  const [downloadError, setDownloadError] = useState("");
 
   // ─── Redirect if no reference ──────────────────────────────
   useEffect(() => {
@@ -28,7 +36,48 @@ const PaymentSuccess = () => {
   });
 
   const order = paymentData?.order || null;
+  const isSubscription = paymentData?.isSubscription || false;
   const isSuccess = paymentData && !error;
+
+  // ─── Receipt download handler ───────────────────────────────
+  const handleDownload = async (format) => {
+    if (!order || !receiptRef.current) return;
+
+    setDownloadError("");
+    setGenerating(format);
+
+    try {
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const fileBase = `Flanorx-Receipt-${order.orderId || reference}`;
+
+      if (format === "pdf") {
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${fileBase}.pdf`);
+      } else {
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const link = document.createElement("a");
+        link.href = imgData;
+        link.download = `${fileBase}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error("Failed to generate receipt:", err);
+      setDownloadError("Couldn't generate the receipt. Please try again.");
+    } finally {
+      setGenerating(null);
+    }
+  };
 
   // ─── Loading state ──────────────────────────────────────────
   if (isLoading) {
@@ -75,15 +124,19 @@ const PaymentSuccess = () => {
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
               <div className="p-6 text-center border-b border-gray-100 dark:border-gray-700">
                 <CheckCircle className="h-16 w-16 text-[#13ec5b] mx-auto mb-3" />
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Payment Successful!</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {isSubscription ? "Subscription Activated!" : "Payment Successful!"}
+                </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  Your order has been confirmed and is being processed.
+                  {isSubscription
+                    ? "Your gas subscription has been activated successfully."
+                    : "Your order has been confirmed and is being processed."}
                 </p>
               </div>
 
               <div className="p-6 space-y-4">
                 {/* Order Details */}
-                {order && (
+                {order ? (
                   <>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
@@ -132,6 +185,40 @@ const PaymentSuccess = () => {
                       </div>
                     )}
 
+                    {/* Receipt Download */}
+                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                      <span className="text-gray-500 dark:text-gray-400 text-xs">Receipt</span>
+                      <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                        <button
+                          onClick={() => handleDownload("pdf")}
+                          disabled={generating !== null}
+                          className="flex-1 py-2.5 border border-[#13ec5b] text-[#0f9c46] dark:text-[#13ec5b] rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-[#13ec5b]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {generating === "pdf" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          Download PDF
+                        </button>
+                        <button
+                          onClick={() => handleDownload("jpg")}
+                          disabled={generating !== null}
+                          className="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {generating === "jpg" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileImage className="h-4 w-4" />
+                          )}
+                          Download JPG
+                        </button>
+                      </div>
+                      {downloadError && (
+                        <p className="text-xs text-red-500 mt-2">{downloadError}</p>
+                      )}
+                    </div>
+
                     <div className="pt-4 flex flex-col sm:flex-row gap-3">
                       <button
                         onClick={() => navigate(`/order/${order._id}`)}
@@ -147,6 +234,17 @@ const PaymentSuccess = () => {
                       </button>
                     </div>
                   </>
+                ) : (
+                  <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                    <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                    <p>Order details not available.</p>
+                    <button
+                      onClick={() => navigate("/orders")}
+                      className="mt-3 text-[#13ec5b] hover:underline"
+                    >
+                      View all orders
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -155,9 +253,19 @@ const PaymentSuccess = () => {
             <div className="mt-5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-600 dark:text-gray-300">
               <p className="font-medium text-gray-800 dark:text-gray-200">What happens next?</p>
               <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
-                <li>Your order will be assigned to a rider shortly.</li>
-                <li>You'll receive tracking updates via email and in‑app notifications.</li>
-                <li>You can track your delivery status in the Orders page.</li>
+                {isSubscription ? (
+                  <>
+                    <li>Your gas subscription is now active for 30 days.</li>
+                    <li>You can swap your cylinder anytime during your subscription.</li>
+                    <li>You'll receive a reminder before your subscription expires.</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Your order will be assigned to a rider shortly.</li>
+                    <li>You'll receive tracking updates via email and in‑app notifications.</li>
+                    <li>You can track your delivery status in the Orders page.</li>
+                  </>
+                )}
               </ul>
             </div>
           </div>
@@ -165,6 +273,19 @@ const PaymentSuccess = () => {
       </div>
 
       <Bottombar />
+
+      {/* ── Off-screen receipt used as the html2canvas source ──── */}
+      {order && (
+        <div style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }} aria-hidden="true">
+          <ReceiptTemplate
+            ref={receiptRef}
+            order={order}
+            reference={reference}
+            isSubscription={isSubscription}
+            paymentData={paymentData}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
-// Dashboard.jsx
+// src/pages/Dashboard.jsx
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { useSelector } from "react-redux";
 import {
   User,
   Package,
@@ -34,6 +35,7 @@ import {
   useGetMyActiveOrderQuery,
 } from "../features/orderApiSlice";
 import { useGetTrackingQuery } from "../features/trackingApiSlice";
+import { useGetGasSubscriptionQuery } from "../features/gasApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
 
@@ -57,6 +59,7 @@ const greenIcon = new L.Icon({
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { userInfo } = useSelector((state) => state.auth);
   const [hideStats, setHideStats] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);
 
@@ -71,17 +74,15 @@ const Dashboard = () => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
-  // Get ALL orders (including pending/unpaid) for recent list and total count
   const {
     data: orders = [],
     isLoading: ordersLoading,
   } = useGetMyOrdersQuery({
     month: currentMonth,
     year: currentYear,
-    // no paid filter – get all orders
+    // get all orders (including unpaid)
   });
 
-  // Separate query for paid totals (spending)
   const {
     data: totalSpentData,
     isLoading: spentLoading,
@@ -96,7 +97,6 @@ const Dashboard = () => {
     isLoading: activeLoading,
   } = useGetMyActiveOrderQuery();
 
-  // ─── Quick Tracking ────────────────────────────────────────
   const {
     data: trackingData,
     isLoading: trackingLoading,
@@ -105,34 +105,35 @@ const Dashboard = () => {
     { skip: !activeOrder }
   );
 
+  // ─── Gas Subscription (dedicated query) ──────────────────
+  const {
+    data: subscriptionData,
+    isLoading: subLoading,
+  } = useGetGasSubscriptionQuery();
+
   // ─── Derived data ──────────────────────────────────────────
   const totalOrders = orders.length;
   const monthlySpent = totalSpentData?.totalSpent || 0;
   const totalLiters = totalSpentData?.totalLiters || 0;
   const totalKg = totalSpentData?.totalKg || 0;
 
-  // ─── Subscription status ──────────────────────────────────
-  const hasGasSubscription = orders.some(
-    (o) => o.orderType === "gas" && o.gasDetails?.isFirstTime
-  );
-  const latestGasOrder = orders
-    .filter((o) => o.orderType === "gas")
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-  const subscriptionStatus = latestGasOrder?.subscriptionStatus || "inactive";
-  const dueDate = latestGasOrder?.subscriptionDueDate
-    ? new Date(latestGasOrder.subscriptionDueDate)
-    : null;
-  const isExpired = dueDate && new Date() > dueDate;
-  const isNearExpiry =
-    dueDate && !isExpired && (dueDate - new Date()) / (1000 * 60 * 60 * 24) <= 7;
+  // Subscription status from dedicated query
+  const hasGasSubscription = subscriptionData?.isActive || false;
+  const cylinderSize = subscriptionData?.cylinderSize || null;
+  const daysRemaining = subscriptionData?.daysRemaining || 0;
+  const subscription = subscriptionData?.subscription || null;
+  const isActive = hasGasSubscription;
+  const dueDate = subscription?.nextBillingDate ? new Date(subscription.nextBillingDate) : null;
+  const isExpired = !isActive && subscription?.status === "expired";
+  const isNearExpiry = isActive && daysRemaining <= 7;
 
   let subStatus = "none";
-  if (hasGasSubscription && !isExpired && !isNearExpiry) subStatus = "active";
-  else if (hasGasSubscription && isNearExpiry) subStatus = "near";
-  else if (hasGasSubscription && isExpired) subStatus = "expired";
+  if (isActive && !isNearExpiry) subStatus = "active";
+  else if (isActive && isNearExpiry) subStatus = "near";
+  else if (isExpired) subStatus = "expired";
   else subStatus = "none";
 
-  // ─── Chart data (only paid orders contribute to spending) ──
+  // ─── Chart data (only paid orders) ────────────────────────
   const chartData = useMemo(() => {
     const days = [];
     const today = new Date();
@@ -152,7 +153,7 @@ const Dashboard = () => {
   }, [orders]);
 
   // ─── Loading & errors ──────────────────────────────────────
-  const isLoading = userLoading || ordersLoading || spentLoading || activeLoading;
+  const isLoading = userLoading || ordersLoading || spentLoading || activeLoading || subLoading;
 
   if (userError) {
     return (
@@ -168,18 +169,11 @@ const Dashboard = () => {
   // ─── Helper: status color ──────────────────────────────────
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending":
-        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
-      case "accepted":
-      case "picked_up":
-      case "in_transit":
-        return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
-      case "delivered":
-        return "text-green-600 bg-green-50 dark:bg-green-900/20";
-      case "confirmed":
-        return "text-green-700 bg-green-100 dark:bg-green-900/30";
-      default:
-        return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "accepted": case "picked_up": case "in_transit": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "delivered": return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "confirmed": return "text-green-700 bg-green-100 dark:bg-green-900/30";
+      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
     }
   };
 
@@ -194,31 +188,19 @@ const Dashboard = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            Gas Subscription
-          </h3>
-          <button
-            onClick={() => setShowSubModal(false)}
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-          >
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Gas Subscription</h3>
+          <button onClick={() => setShowSubModal(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
             <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
-        {!hasGasSubscription ? (
+        {!isActive ? (
           <div className="text-center py-6">
             <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-600 dark:text-gray-300">
-              You don't have an active gas subscription.
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Get your first cylinder to enjoy hassle‑free gas swaps.
-            </p>
+            <p className="text-gray-600 dark:text-gray-300">You don't have an active gas subscription.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Get your first cylinder to enjoy hassle‑free gas swaps.</p>
             <button
-              onClick={() => {
-                setShowSubModal(false);
-                navigate("/order/gas");
-              }}
+              onClick={() => { setShowSubModal(false); navigate("/order/gas"); }}
               className="mt-4 px-6 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition font-medium"
             >
               Order Gas
@@ -228,56 +210,39 @@ const Dashboard = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500 dark:text-gray-400">Cylinder</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {latestGasOrder?.gasDetails?.cylinderSize}
-              </span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">{cylinderSize}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  isExpired || subscriptionStatus === "expired"
+                  isExpired
                     ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                    : subscriptionStatus === "active"
+                    : isActive
                     ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
                     : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
                 }`}
               >
-                {isExpired || subscriptionStatus === "expired"
-                  ? "Expired"
-                  : subscriptionStatus === "active"
-                  ? "Active"
-                  : "Inactive"}
+                {isExpired ? "Expired" : isActive ? "Active" : "Inactive"}
               </span>
             </div>
             {dueDate && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500 dark:text-gray-400">Renewal Date</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {dueDate.toLocaleDateString()}
-                </span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{dueDate.toLocaleDateString()}</span>
               </div>
             )}
             <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
               {isExpired ? (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  Your subscription has expired. Please renew.
-                </p>
+                <p className="text-sm text-red-600 dark:text-red-400">Your subscription has expired. Please renew.</p>
               ) : isNearExpiry ? (
-                <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                  Expires in {Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24))} days.
-                </p>
+                <p className="text-sm text-yellow-600 dark:text-yellow-400">Expires in {daysRemaining} days.</p>
               ) : (
-                <p className="text-sm text-green-600 dark:text-green-400">
-                  Active – swap your empty cylinder anytime.
-                </p>
+                <p className="text-sm text-green-600 dark:text-green-400">Active – swap your empty cylinder anytime.</p>
               )}
             </div>
             <button
-              onClick={() => {
-                setShowSubModal(false);
-                navigate("/order/gas");
-              }}
+              onClick={() => { setShowSubModal(false); navigate("/order/gas"); }}
               className="w-full mt-3 py-2.5 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition font-medium"
             >
               {isExpired ? "Renew Subscription" : "Order Gas Swap"}
@@ -293,9 +258,7 @@ const Dashboard = () => {
     <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-            Welcome back
-          </span>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">Welcome back</span>
           <h1 className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white">
             {user?.name ? user.name.split(" ")[0] : "User"}!
           </h1>
@@ -310,20 +273,12 @@ const Dashboard = () => {
 
       <div className="flex items-end justify-between mb-3">
         <div>
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Total Orders
-          </span>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
-            {hideStats ? "••" : totalOrders}
-          </p>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Orders</span>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{hideStats ? "••" : totalOrders}</p>
         </div>
         <div className="text-right">
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            This Month
-          </span>
-          <p className="text-xl font-bold text-gray-900 dark:text-white">
-            {hideStats ? "••••" : `₦${monthlySpent.toFixed(0)}`}
-          </p>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">This Month</span>
+          <p className="text-xl font-bold text-gray-900 dark:text-white">{hideStats ? "••••" : `₦${monthlySpent.toFixed(0)}`}</p>
         </div>
       </div>
 
@@ -331,23 +286,18 @@ const Dashboard = () => {
         <div className="flex items-center gap-5">
           <div>
             <span className="text-[10px] text-gray-500 dark:text-gray-400">Fuel</span>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">
-              {hideStats ? "••" : `${totalLiters.toFixed(1)}L`}
-            </p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">{hideStats ? "••" : `${totalLiters.toFixed(1)}L`}</p>
           </div>
           <div>
             <span className="text-[10px] text-gray-500 dark:text-gray-400">Gas</span>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">
-              {hideStats ? "••" : `${totalKg.toFixed(1)}kg`}
-            </p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">{hideStats ? "••" : `${totalKg.toFixed(1)}kg`}</p>
           </div>
         </div>
         <button
           onClick={() => navigate("/orders")}
           className="flex items-center gap-1 text-xs font-medium text-white bg-[#13ec5b] hover:bg-[#10d04e] px-3 py-1.5 rounded-lg border border-[#13ec5b] transition shadow-sm"
         >
-          View all
-          <ChevronRight className="h-3 w-3" />
+          View all <ChevronRight className="h-3 w-3" />
         </button>
       </div>
     </div>
@@ -368,13 +318,10 @@ const Dashboard = () => {
 
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm h-full flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-[#13ec5b]" />
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Live Tracking
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Live Tracking</h3>
           </div>
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -389,21 +336,10 @@ const Dashboard = () => {
             {hasTracking ? "Live" : hasActiveOrder ? "Waiting" : "Inactive"}
           </span>
         </div>
-
-        {/* Map */}
         <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 flex-shrink-0">
           {hasActiveOrder ? (
-            <MapContainer
-              center={mapCenter}
-              zoom={13}
-              style={{ height: "100%", width: "100%" }}
-              zoomControl={false}
-              attributionControl={false}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
+            <MapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} zoomControl={false} attributionControl={false}>
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
               {trackingData?.riderLocation && (
                 <Marker position={[trackingData.riderLocation.lat, trackingData.riderLocation.lng]} icon={greenIcon}>
                   <Popup>Rider</Popup>
@@ -428,12 +364,8 @@ const Dashboard = () => {
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
                 <div className="bg-white/90 dark:bg-gray-800/90 rounded-2xl p-6 text-center max-w-xs mx-4 shadow-xl">
                   <Navigation className="h-10 w-10 text-[#13ec5b] mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    No active delivery
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Place an order to start tracking
-                  </p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No active delivery</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Place an order to start tracking</p>
                   <button
                     onClick={() => navigate("/order/fuel")}
                     className="mt-3 px-4 py-2 bg-[#13ec5b] hover:bg-[#10d04e] text-white text-sm font-medium rounded-lg transition shadow-sm"
@@ -445,8 +377,6 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-
-        {/* Tracking info */}
         <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-between">
           {isLoadingState ? (
             <div className="space-y-2 animate-pulse">
@@ -457,9 +387,7 @@ const Dashboard = () => {
             <>
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Order #{activeOrder.orderId}
-                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Order #{activeOrder.orderId}</span>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       hasTracking
@@ -476,19 +404,13 @@ const Dashboard = () => {
                     : `${activeOrder.gasDetails?.quantityKg} kg gas (${activeOrder.gasDetails?.cylinderSize})`}
                 </p>
                 {hasTracking && trackingData?.rider && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                    Rider: {trackingData.rider.name}
-                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Rider: {trackingData.rider.name}</p>
                 )}
                 {hasTracking && trackingData?.route?.distanceText && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Distance: {trackingData.route.distanceText} · ETA: {trackingData.route.durationText}
-                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Distance: {trackingData.route.distanceText} · ETA: {trackingData.route.durationText}</p>
                 )}
                 {!hasTracking && (
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-                    Waiting for rider to accept and start tracking...
-                  </p>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">Waiting for rider to accept and start tracking...</p>
                 )}
               </div>
               <button
@@ -500,9 +422,7 @@ const Dashboard = () => {
             </>
           ) : (
             <div className="text-center py-1 flex-1 flex flex-col justify-center">
-              <p className="text-sm text-gray-400 dark:text-gray-500">
-                No orders to track
-              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">No orders to track</p>
               <button
                 onClick={() => navigate("/order/fuel")}
                 className="mt-2 text-[#13ec5b] hover:underline text-sm font-medium self-center"
@@ -538,17 +458,11 @@ const Dashboard = () => {
       onClick={() => navigate(`/order/${order._id}`)}
     >
       <div className="w-9 h-9 rounded-xl bg-[#13ec5b]/10 flex items-center justify-center flex-shrink-0">
-        {order.orderType === "fuel" ? (
-          <Flame className="h-4 w-4 text-[#13ec5b]" />
-        ) : (
-          <Package className="h-4 w-4 text-[#13ec5b]" />
-        )}
+        {order.orderType === "fuel" ? <Flame className="h-4 w-4 text-[#13ec5b]" /> : <Package className="h-4 w-4 text-[#13ec5b]" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-            #{order.orderId}
-          </p>
+          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">#{order.orderId}</p>
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
               order.deliveryStatus || order.status
@@ -564,9 +478,7 @@ const Dashboard = () => {
           <span>·</span>
           <span>{new Date(order.createdAt).toLocaleDateString()}</span>
           {!order.paid && (
-            <span className="text-orange-500 bg-orange-100 dark:bg-orange-900/20 px-1.5 py-0.5 rounded-full text-[10px] font-medium">
-              Unpaid
-            </span>
+            <span className="text-orange-500 bg-orange-100 dark:bg-orange-900/20 px-1.5 py-0.5 rounded-full text-[10px] font-medium">Unpaid</span>
           )}
         </div>
       </div>
@@ -579,9 +491,7 @@ const Dashboard = () => {
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
-            Dashboard
-          </h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Dashboard</h1>
           <div className="flex items-center gap-3">
             {!isLoading && user && (
               <div className="flex items-center gap-2">
@@ -590,11 +500,7 @@ const Dashboard = () => {
                 </span>
                 <div className="h-8 w-8 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden">
                   {user.profilePhoto ? (
-                    <img
-                      src={user.profilePhoto}
-                      alt={user.name}
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={user.profilePhoto} alt={user.name} className="h-full w-full object-cover" />
                   ) : (
                     <User className="h-4 w-4 text-[#13ec5b]" />
                   )}
@@ -604,7 +510,6 @@ const Dashboard = () => {
           </div>
         </header>
 
-        {/* ─── MAIN CONTAINER – minimal padding on mobile ── */}
         <div className="w-full px-1 sm:px-4 lg:px-6 py-4">
           <HeroCard />
 
@@ -613,51 +518,28 @@ const Dashboard = () => {
             <div className="flex items-center gap-3 mb-6">
               <div className="h-12 w-12 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden">
                 {!isLoading && user?.profilePhoto ? (
-                  <img
-                    src={user.profilePhoto}
-                    alt={user.name}
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={user.profilePhoto} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-6 w-6 text-[#13ec5b]" />
                 )}
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Welcome back, {isLoading ? "..." : user?.name || "User"}!
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400">
-                  {isLoading ? "Loading..." : user?.email}
-                </p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome back, {isLoading ? "..." : user?.name || "User"}!</h2>
+                <p className="text-gray-500 dark:text-gray-400">{isLoading ? "Loading..." : user?.email}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4 mb-6">
               {isLoading ? (
                 [...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 animate-pulse h-24"
-                  />
+                  <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 animate-pulse h-24" />
                 ))
               ) : (
                 <>
                   <StatCard icon={Package} label="Total Orders" value={totalOrders} />
-                  <StatCard
-                    icon={TrendingUp}
-                    label="This Month"
-                    value={`₦${monthlySpent.toFixed(2)}`}
-                  />
-                  <StatCard
-                    icon={Flame}
-                    label="Total Fuel"
-                    value={`${totalLiters.toFixed(1)} L`}
-                  />
-                  <StatCard
-                    icon={Package}
-                    label="Total Gas"
-                    value={`${totalKg.toFixed(1)} kg`}
-                  />
+                  <StatCard icon={TrendingUp} label="This Month" value={`₦${monthlySpent.toFixed(2)}`} />
+                  <StatCard icon={Flame} label="Total Fuel" value={`${totalLiters.toFixed(1)} L`} />
+                  <StatCard icon={Package} label="Total Gas" value={`${totalKg.toFixed(1)} kg`} />
                 </>
               )}
             </div>
@@ -667,12 +549,8 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Weekly Spending
-                </h3>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  Last 7 days
-                </span>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Weekly Spending</h3>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Last 7 days</span>
               </div>
               {isLoading ? (
                 <div className="h-48 animate-pulse bg-gray-200 dark:bg-gray-700 rounded" />
@@ -687,12 +565,7 @@ const Dashboard = () => {
                         </linearGradient>
                       </defs>
                       <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" tickMargin={5} />
-                      <YAxis
-                        tick={{ fontSize: 12 }}
-                        stroke="#9ca3af"
-                        tickFormatter={(v) => `₦${v}`}
-                        width={40}
-                      />
+                      <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `₦${v}`} width={40} />
                       <Tooltip
                         formatter={(value) => [`₦${value}`, "Spent"]}
                         contentStyle={{
@@ -702,14 +575,7 @@ const Dashboard = () => {
                           boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
                         }}
                       />
-                      <Area
-                        type="monotone"
-                        dataKey="amount"
-                        stroke="#13ec5b"
-                        strokeWidth={2}
-                        fill="url(#spendingGradient)"
-                        dot={{ r: 2, fill: "#13ec5b" }}
-                      />
+                      <Area type="monotone" dataKey="amount" stroke="#13ec5b" strokeWidth={2} fill="url(#spendingGradient)" dot={{ r: 2, fill: "#13ec5b" }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -741,55 +607,47 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* 2‑column layout: Live Tracking + Gas Subscription (desktop) */}
+          {/* 2‑column layout: Live Tracking + Gas Subscription */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
             <div className="hidden lg:block lg:col-span-2 h-full">
               <LiveTracking />
             </div>
             <div className="hidden lg:block h-full">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm h-full flex flex-col">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Gas Subscription
-                </h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Gas Subscription</h3>
                 {isLoading ? (
                   <div className="space-y-3 animate-pulse flex-1">
                     <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
                     <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
                     <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
                   </div>
-                ) : hasGasSubscription ? (
+                ) : isActive ? (
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          Cylinder: {latestGasOrder?.gasDetails?.cylinderSize}
-                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Cylinder: {cylinderSize}</span>
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            isExpired || subscriptionStatus === "expired"
+                            isExpired
                               ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                              : subscriptionStatus === "active"
-                              ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                              : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                              : isActive && isNearExpiry
+                              ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                              : "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
                           }`}
                         >
-                          {isExpired || subscriptionStatus === "expired"
-                            ? "Expired"
-                            : subscriptionStatus === "active"
-                            ? "Active"
-                            : "Inactive"}
+                          {isExpired ? "Expired" : isActive && isNearExpiry ? "Expiring Soon" : "Active"}
                         </span>
                       </div>
                       {dueDate && (
                         <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                          {isExpired
-                            ? `Expired on ${dueDate.toLocaleDateString()}`
-                            : `Renews on ${dueDate.toLocaleDateString()}`}
+                          {isExpired ? `Expired on ${dueDate.toLocaleDateString()}` : `Renews on ${dueDate.toLocaleDateString()}`}
                         </p>
                       )}
                       <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {isExpired
                           ? "Your cylinder subscription has expired. Please renew."
+                          : isNearExpiry
+                          ? `Expires in ${daysRemaining} days. Renew soon.`
                           : "Swap your empty cylinder anytime."}
                       </p>
                     </div>
@@ -803,9 +661,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="text-center py-4 flex-1 flex flex-col justify-center">
                     <Package className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500 dark:text-gray-400">
-                      No gas subscription yet
-                    </p>
+                    <p className="text-gray-500 dark:text-gray-400">No gas subscription yet</p>
                     <button
                       onClick={() => navigate("/order/gas")}
                       className="mt-2 text-[#13ec5b] hover:underline text-sm font-medium"
@@ -822,47 +678,39 @@ const Dashboard = () => {
           <div className="lg:hidden space-y-6 mb-6">
             <LiveTracking />
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Gas Subscription
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Gas Subscription</h3>
               {isLoading ? (
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
                   <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
                   <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
                 </div>
-              ) : hasGasSubscription ? (
+              ) : isActive ? (
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Cylinder: {latestGasOrder?.gasDetails?.cylinderSize}
-                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Cylinder: {cylinderSize}</span>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        isExpired || subscriptionStatus === "expired"
+                        isExpired
                           ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                          : subscriptionStatus === "active"
-                          ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                          : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                          : isActive && isNearExpiry
+                          ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                          : "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
                       }`}
                     >
-                      {isExpired || subscriptionStatus === "expired"
-                        ? "Expired"
-                        : subscriptionStatus === "active"
-                        ? "Active"
-                        : "Inactive"}
+                      {isExpired ? "Expired" : isActive && isNearExpiry ? "Expiring Soon" : "Active"}
                     </span>
                   </div>
                   {dueDate && (
                     <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                      {isExpired
-                        ? `Expired on ${dueDate.toLocaleDateString()}`
-                        : `Renews on ${dueDate.toLocaleDateString()}`}
+                      {isExpired ? `Expired on ${dueDate.toLocaleDateString()}` : `Renews on ${dueDate.toLocaleDateString()}`}
                     </p>
                   )}
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {isExpired
                       ? "Your cylinder subscription has expired. Please renew."
+                      : isNearExpiry
+                      ? `Expires in ${daysRemaining} days. Renew soon.`
                       : "Swap your empty cylinder anytime."}
                   </p>
                   <button
@@ -875,9 +723,7 @@ const Dashboard = () => {
               ) : (
                 <div className="text-center py-4">
                   <Package className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500 dark:text-gray-400">
-                    No gas subscription yet
-                  </p>
+                  <p className="text-gray-500 dark:text-gray-400">No gas subscription yet</p>
                   <button
                     onClick={() => navigate("/order/gas")}
                     className="mt-2 text-[#13ec5b] hover:underline text-sm font-medium"
@@ -889,26 +735,16 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Recent Orders – full width, matches admin style */}
+          {/* Recent Orders */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Recent Orders
-              </h3>
-              <button
-                onClick={() => navigate("/orders")}
-                className="text-sm text-[#13ec5b] hover:underline"
-              >
-                View all
-              </button>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Orders</h3>
+              <button onClick={() => navigate("/orders")} className="text-sm text-[#13ec5b] hover:underline">View all</button>
             </div>
             <div>
               {isLoading ? (
                 [...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 px-4 py-3 animate-pulse"
-                  >
+                  <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
                     <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-gray-700" />
                     <div className="flex-1">
                       <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -917,13 +753,9 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : orders.length === 0 ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-6">
-                  No orders yet
-                </p>
+                <p className="text-center text-gray-500 dark:text-gray-400 py-6">No orders yet</p>
               ) : (
-                orders.slice(0, 5).map((order) => (
-                  <RecentOrderItem key={order._id} order={order} />
-                ))
+                orders.slice(0, 5).map((order) => <RecentOrderItem key={order._id} order={order} />)
               )}
             </div>
           </div>
@@ -961,7 +793,6 @@ const Dashboard = () => {
       </div>
 
       {showSubModal && <SubscriptionModal />}
-
       <Bottombar />
     </div>
   );
