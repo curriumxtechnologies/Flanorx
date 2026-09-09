@@ -101,6 +101,11 @@ const createOrder = asyncHandler(async (req, res) => {
     scheduledTime,
     notes,
     estimatedDeliveryMinutes,
+    subtotal,
+    deliveryFee,
+    serviceTax,
+    totalAmount,
+    fuelPricePerLiter,
   } = req.body;
 
   if (!req.user?._id) {
@@ -159,14 +164,14 @@ const createOrder = asyncHandler(async (req, res) => {
       throw new Error("Quantity must be a positive number");
     }
 
-    const priceCalculation = Order.calculatePrice(fuelType, parsedQuantity);
+    // ✅ Use frontend-sent price values directly
     orderData.fuelType = fuelType;
     orderData.quantity = parsedQuantity;
-    orderData.fuelPricePerLiter = priceCalculation.pricePerLiter;
-    orderData.subtotal = priceCalculation.subtotal;
-    orderData.deliveryFee = priceCalculation.deliveryFee;
-    orderData.serviceTax = priceCalculation.serviceTax;
-    orderData.totalAmount = priceCalculation.total;
+    orderData.fuelPricePerLiter = fuelPricePerLiter || 0;
+    orderData.subtotal = subtotal || 0;
+    orderData.deliveryFee = deliveryFee || 0;
+    orderData.serviceTax = serviceTax || 0;
+    orderData.totalAmount = totalAmount || 0;
     orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 30;
   }
 
@@ -196,16 +201,13 @@ const createOrder = asyncHandler(async (req, res) => {
     let previousSize = null;
 
     if (isFirstTimeActual) {
-      // First time: if no active subscription, charge full cylinder cost
       if (!isSubActive) {
         cylinderCost = CYLINDER_COST[cylinderSize] || 0;
       } else {
-        // Already has active subscription – treat as swap with existing cylinder
         cylinderCost = 0;
-        isFirstTimeActual = false; // not really first time
+        isFirstTimeActual = false;
       }
     } else {
-      // Swap case
       if (isSubActive && subscription.cylinderSize) {
         previousSize = subscription.cylinderSize;
         const currentCost = CYLINDER_COST[previousSize] || 0;
@@ -214,20 +216,19 @@ const createOrder = asyncHandler(async (req, res) => {
           isUpgrade = true;
           cylinderCost = newCost - currentCost;
         } else {
-          cylinderCost = 0; // downgrade or same size free
+          cylinderCost = 0;
         }
       } else {
-        // No subscription: treat as first time (must pay full cylinder)
         cylinderCost = CYLINDER_COST[cylinderSize] || 0;
         isFirstTimeActual = true;
       }
     }
 
     const gasContentCost = kg * GAS_PRICE_PER_KG;
-    const subtotal = gasContentCost + cylinderCost;
-    const deliveryFee = 5.99;
-    const serviceTax = subtotal * 0.075;
-    const total = subtotal + deliveryFee + serviceTax;
+    const computedSubtotal = gasContentCost + cylinderCost;
+    const computedDeliveryFee = 5.99;
+    const computedServiceTax = computedSubtotal * 0.075;
+    const computedTotal = computedSubtotal + computedDeliveryFee + computedServiceTax;
 
     orderData.gasDetails = {
       cylinderSize,
@@ -238,10 +239,11 @@ const createOrder = asyncHandler(async (req, res) => {
       previousCylinderSize: previousSize,
       upgradeCost: isUpgrade ? cylinderCost : 0,
     };
-    orderData.subtotal = subtotal;
-    orderData.deliveryFee = deliveryFee;
-    orderData.serviceTax = serviceTax;
-    orderData.totalAmount = total;
+    // Use frontend values if provided, else fallback to computed
+    orderData.subtotal = subtotal || computedSubtotal;
+    orderData.deliveryFee = deliveryFee || computedDeliveryFee;
+    orderData.serviceTax = serviceTax || computedServiceTax;
+    orderData.totalAmount = totalAmount || computedTotal;
     orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 45;
   }
 

@@ -14,11 +14,14 @@ import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Orders from "./pages/Orders.jsx";
+import OrderDetail from "./pages/OrderDetail.jsx";
 import Fuel from "./pages/Fuel.jsx"; 
 import Gas from "./pages/Gas.jsx";
 import Tracking from "./pages/Tracking.jsx";
+import TrackingId from "./pages/TrackingId.jsx";
 import Profile from "./pages/Profile.jsx";
 import RiderApplication from "./pages/RiderApplication.jsx";
+import PaymentSuccess from "./pages/PaymentSuccess.jsx";
 
 import NotFound from "./pages/NotFound.jsx";
 
@@ -34,6 +37,10 @@ import AdminSettings from "./pages/admin/AdminSettings.jsx";
 
 //rider
 import RiderDashboard from "./pages/rider/RiderDashboard.jsx";
+import RiderDeliveries from "./pages/rider/RiderDeliveries.jsx";
+import RiderEarnings from "./pages/rider/RiderEarnings.jsx";
+import RiderTracking from "./pages/rider/RiderTracking.jsx";
+import RiderTrackingId from "./pages/rider/RiderTrackingId.jsx";
 
 
 const router = createBrowserRouter([
@@ -46,12 +53,15 @@ const router = createBrowserRouter([
       { path: "register", element: <Signup /> },
       { path: "dashboard", element: <Dashboard /> },
       {path: "orders", element: <Orders />},
+      {path: "order/:orderId", element: <OrderDetail />},
       {path: "order/fuel", element: <Fuel />},
       {path: "order/gas", element: <Gas />},
       {path: "profile", element: <Profile />},
       {path: "*", element: <NotFound />},
       {path: "tracking", element: <Tracking />},
+      {path: "tracking/:orderId", element: <TrackingId />},
       {path: "rider/apply", element: <RiderApplication />},
+      {path: "payment/success", element: <PaymentSuccess />},
 
       //Admin
       {path: "superuser/dashboard", element: <AdminDashboard />},
@@ -63,6 +73,10 @@ const router = createBrowserRouter([
 
 
       {path: "rider/dashboard", element: <RiderDashboard />},
+      {path: "rider/deliveries", element: <RiderDeliveries />},
+      {path: "rider/earnings", element: <RiderEarnings />},
+      {path: "rider/tracking", element: <RiderTracking />},
+      {path: "rider/tracking/:orderId", element: <RiderTrackingId /> },
     ],
   },
 ]);

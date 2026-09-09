@@ -22,13 +22,13 @@ const joinWaitlist = asyncHandler(async (req, res) => {
     throw new Error("This email is already on the waitlist. We'll notify you when we launch!");
   }
 
-  // Create waitlist entry - ADD otherCity here
+  // Create waitlist entry
   const waitlistEntry = await Waitlist.create({
     fullName: fullName.trim(),
     phone: phone.trim(),
     email: email.toLowerCase().trim(),
     city,
-    otherCity: otherCity || undefined, // ADD THIS LINE
+    otherCity: otherCity || undefined,
     userType,
     needs: needs || [],
   });
@@ -56,6 +56,12 @@ const joinWaitlist = asyncHandler(async (req, res) => {
 // @route   GET /api/waitlist
 // @access  Private/Admin
 const getWaitlistEntries = asyncHandler(async (req, res) => {
+  // ✅ Role check – only admins can access
+  if (!req.user || req.user.role !== "admin") {
+    res.status(403);
+    throw new Error("Admin access required");
+  }
+
   const entries = await Waitlist.find({}).sort({ createdAt: -1 });
   res.status(200).json(entries);
 });
@@ -64,6 +70,12 @@ const getWaitlistEntries = asyncHandler(async (req, res) => {
 // @route   GET /api/waitlist/stats
 // @access  Private/Admin
 const getWaitlistStats = asyncHandler(async (req, res) => {
+  // ✅ Role check – only admins can access
+  if (!req.user || req.user.role !== "admin") {
+    res.status(403);
+    throw new Error("Admin access required");
+  }
+
   const totalEntries = await Waitlist.countDocuments();
   
   const cityBreakdown = await Waitlist.aggregate([

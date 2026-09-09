@@ -1,5 +1,7 @@
+// src/pages/Orders.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
+import toast from "react-hot-toast";
 import {
   Package,
   Flame,
@@ -17,6 +19,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useGetMyOrdersQuery, useInitializePaymentMutation } from "../features/orderApiSlice";
+import { useConfirmDeliveryMutation } from "../features/deliveryApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
 
@@ -31,7 +34,6 @@ const Orders = () => {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // For custom dropdowns (desktop)
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRefs = {
     orderType: useRef(null),
@@ -54,61 +56,38 @@ const Orders = () => {
     year: filters.year || currentYear,
     orderType: filters.orderType || undefined,
     status: filters.status || undefined,
-    // Do not filter by paid – we want all orders including pending
     paid: undefined,
   });
 
   const [initializePayment, { isLoading: paymentLoading }] = useInitializePaymentMutation();
+  const [confirmDelivery, { isLoading: confirming }] = useConfirmDeliveryMutation();
 
   // ─── Status colors ─────────────────────────────────────────
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending":
-        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
-      case "accepted":
-      case "picked_up":
-      case "in_transit":
-        return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
-      case "delivered":
-        return "text-green-600 bg-green-50 dark:bg-green-900/20";
-      case "confirmed":
-        return "text-green-700 bg-green-100 dark:bg-green-900/30";
-      default:
-        return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "accepted": case "picked_up": case "in_transit": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "delivered": return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "confirmed": return "text-green-700 bg-green-100 dark:bg-green-900/30";
+      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
     }
   };
 
   const getOrderStatusColor = (status) => {
     switch (status) {
-      case "pending":
-        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
-      case "processing":
-        return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
-      case "completed":
-        return "text-green-600 bg-green-50 dark:bg-green-900/20";
-      case "cancelled":
-        return "text-red-600 bg-red-50 dark:bg-red-900/20";
-      case "failed":
-        return "text-red-700 bg-red-100 dark:bg-red-900/30";
-      default:
-        return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "processing": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "completed": return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "cancelled": return "text-red-600 bg-red-50 dark:bg-red-900/20";
+      case "failed": return "text-red-700 bg-red-100 dark:bg-red-900/30";
+      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
     }
   };
 
   // ─── Month / Year helpers ──────────────────────────────────
   const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
   ];
   const years = [];
   for (let y = currentYear; y >= currentYear - 4; y--) years.push(y);
@@ -129,23 +108,17 @@ const Orders = () => {
     { value: "completed", label: "Completed" },
   ];
 
-  // ─── Handle filter changes ────────────────────────────────
+  // ─── Handlers ──────────────────────────────────────────────
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setOpenDropdown(null);
   };
 
   const clearFilters = () => {
-    setFilters({
-      orderType: "",
-      status: "",
-      month: "",
-      year: "",
-    });
+    setFilters({ orderType: "", status: "", month: "", year: "" });
     setOpenDropdown(null);
   };
 
-  // ─── Close dropdown on outside click ──────────────────────
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (openDropdown) {
@@ -173,11 +146,7 @@ const Orders = () => {
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition min-w-[140px] justify-between"
         >
           <span>{displayLabel}</span>
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
+          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
         {isOpen && (
           <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-60 overflow-auto py-1">
@@ -200,7 +169,7 @@ const Orders = () => {
     );
   };
 
-  // ─── Filter bottom sheet (mobile) – full width, no corners ─
+  // ─── Filter bottom sheet (mobile) ──────────────────────────
   const FilterSheet = () => (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
@@ -211,23 +180,15 @@ const Orders = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-            Filter Orders
-          </h3>
-          <button
-            onClick={() => setShowFilterSheet(false)}
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-          >
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filter Orders</h3>
+          <button onClick={() => setShowFilterSheet(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
             <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
-
         <div className="space-y-4">
           {/* Order Type */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              Order Type
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Order Type</label>
             <div className="flex flex-wrap gap-2">
               {orderTypes.map((opt) => (
                 <button
@@ -244,12 +205,9 @@ const Orders = () => {
               ))}
             </div>
           </div>
-
           {/* Status */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              Status
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
             <div className="flex flex-wrap gap-2">
               {statusOptions.map((opt) => (
                 <button
@@ -266,12 +224,9 @@ const Orders = () => {
               ))}
             </div>
           </div>
-
           {/* Month */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              Month
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Month</label>
             <div className="flex flex-wrap gap-2">
               {months.map((m, idx) => (
                 <button
@@ -288,12 +243,9 @@ const Orders = () => {
               ))}
             </div>
           </div>
-
           {/* Year */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              Year
-            </label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Year</label>
             <div className="flex flex-wrap gap-2">
               {years.map((y) => (
                 <button
@@ -310,21 +262,14 @@ const Orders = () => {
               ))}
             </div>
           </div>
-
           <div className="flex gap-3 pt-2">
             <button
-              onClick={() => {
-                clearFilters();
-                setShowFilterSheet(false);
-              }}
+              onClick={() => { clearFilters(); setShowFilterSheet(false); }}
               className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium"
             >
               Clear All
             </button>
-            <button
-              onClick={() => setShowFilterSheet(false)}
-              className="flex-1 py-2.5 bg-[#13ec5b] text-white rounded-lg font-medium"
-            >
+            <button onClick={() => setShowFilterSheet(false)} className="flex-1 py-2.5 bg-[#13ec5b] text-white rounded-lg font-medium">
               Apply
             </button>
           </div>
@@ -333,13 +278,14 @@ const Orders = () => {
     </div>
   );
 
-  // ─── Detail Modal (bottom sheet) ──────────────────────────
+  // ─── Detail Modal (Right slide on desktop, bottom sheet on mobile) ──
   const DetailModal = () => {
     if (!selectedOrder) return null;
 
     const order = selectedOrder;
     const isPaid = order.paid;
     const isPendingPayment = !isPaid && order.status !== "cancelled";
+    const canConfirm = order.deliveryStatus === "delivered" && order.status !== "completed";
 
     const handlePayNow = async () => {
       try {
@@ -347,72 +293,75 @@ const Orders = () => {
         if (result?.authorization_url) {
           window.location.href = result.authorization_url;
         } else {
-          alert("Payment initialization failed. Please try again.");
+          toast.error("Payment initialization failed. Please try again.");
         }
       } catch (err) {
-        alert(err.data?.message || "Failed to initialize payment");
+        toast.error(err.data?.message || "Failed to initialize payment");
+      }
+    };
+
+    const handleConfirmDelivery = async () => {
+      try {
+        await confirmDelivery(order._id).unwrap();
+        refetch();
+        setSelectedOrder(null);
+        toast.success("Delivery confirmed successfully!");
+      } catch (err) {
+        toast.error(err.data?.message || "Failed to confirm delivery");
       }
     };
 
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
-        onClick={() => setSelectedOrder(null)}
-      >
+      <>
+        {/* Backdrop */}
         <div
-          className="bg-white dark:bg-gray-900 w-full max-w-full p-6 max-h-[85vh] overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSelectedOrder(null)}
+        />
+
+        {/* Panel */}
+        <div
+          className="fixed z-50 bg-white dark:bg-gray-900 shadow-2xl overflow-y-auto transition-transform duration-300 ease-in-out
+            bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl
+            lg:bottom-auto lg:top-0 lg:right-0 lg:left-auto lg:w-full lg:max-w-lg lg:rounded-none lg:h-full lg:max-h-full"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
               Order #{order.orderId || order._id.slice(-6)}
             </h3>
             <button
               onClick={() => setSelectedOrder(null)}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
             >
               <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
 
-          <div className="space-y-4 text-sm">
+          <div className="p-4 space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-gray-500 dark:text-gray-400 text-xs">Type</p>
                 <span className="flex items-center gap-1 capitalize">
-                  {order.orderType === "fuel" ? (
-                    <Flame className="h-4 w-4 text-[#13ec5b]" />
-                  ) : (
-                    <Package className="h-4 w-4 text-[#13ec5b]" />
-                  )}
+                  {order.orderType === "fuel" ? <Flame className="h-4 w-4 text-[#13ec5b]" /> : <Package className="h-4 w-4 text-[#13ec5b]" />}
                   {order.orderType}
                 </span>
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-400 text-xs">Status</p>
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(
-                    order.status
-                  )}`}
-                >
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}>
                   {order.status || "pending"}
                 </span>
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-400 text-xs">Delivery</p>
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                    order.deliveryStatus || "pending"
-                  )}`}
-                >
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.deliveryStatus || "pending")}`}>
                   {order.deliveryStatus || "pending"}
                 </span>
               </div>
               <div>
                 <p className="text-gray-500 dark:text-gray-400 text-xs">Total</p>
-                <p className="font-bold text-gray-900 dark:text-white">
-                  ₦{order.totalAmount?.toFixed(2) || "0.00"}
-                </p>
+                <p className="font-bold text-gray-900 dark:text-white">₦{order.totalAmount?.toFixed(2) || "0.00"}</p>
               </div>
             </div>
 
@@ -426,9 +375,7 @@ const Orders = () => {
             {order.fuelType && order.quantity && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                 <p className="text-gray-500 dark:text-gray-400 text-xs">Fuel Details</p>
-                <p className="text-gray-900 dark:text-white text-sm">
-                  {order.fuelType} – {order.quantity} L
-                </p>
+                <p className="text-gray-900 dark:text-white text-sm">{order.fuelType} – {order.quantity} L</p>
               </div>
             )}
 
@@ -442,34 +389,40 @@ const Orders = () => {
               </div>
             )}
 
-            {isPendingPayment && (
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            {/* Actions */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+              {isPendingPayment && (
                 <button
                   onClick={handlePayNow}
                   disabled={paymentLoading}
-                  className="w-full py-3 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {paymentLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-5 w-5" />
-                  )}
+                  {paymentLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
                   Pay Now
                 </button>
-              </div>
-            )}
+              )}
 
-            {isPaid && (
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+              {canConfirm && (
+                <button
+                  onClick={handleConfirmDelivery}
+                  disabled={confirming}
+                  className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {confirming ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
+                  Confirm Delivery
+                </button>
+              )}
+
+              {isPaid && order.status === "completed" && (
+                <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg">
                   <CheckCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">Payment confirmed</span>
+                  <span className="text-sm font-medium">Completed</span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </>
     );
   };
 
@@ -488,11 +441,7 @@ const Orders = () => {
             <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
               #{order.orderId || order._id.slice(-6)}
             </span>
-            <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getOrderStatusColor(
-                order.status
-              )}`}
-            >
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getOrderStatusColor(order.status)}`}>
               {order.status || "pending"}
             </span>
             {isPendingPayment && (
@@ -522,65 +471,30 @@ const Orders = () => {
       <Sidebar />
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        {/* Header */}
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
-            Orders
-          </h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Orders</h1>
           <button
             onClick={() => setShowFilterSheet(true)}
             className="lg:hidden flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300"
           >
-            <Filter className="h-4 w-4" />
-            Filters
+            <Filter className="h-4 w-4" /> Filters
           </button>
         </header>
 
         <div className="w-full px-0 sm:px-4 lg:px-8 py-4">
           {/* Desktop filters */}
           <div className="hidden lg:flex flex-wrap items-center gap-3 mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-            <FilterDropdown
-              label="Order Type"
-              name="orderType"
-              value={filters.orderType}
-              options={orderTypes}
-              onSelect={(v) => handleFilterChange("orderType", v)}
-            />
-            <FilterDropdown
-              label="Status"
-              name="status"
-              value={filters.status}
-              options={statusOptions}
-              onSelect={(v) => handleFilterChange("status", v)}
-            />
-            <FilterDropdown
-              label="Month"
-              name="month"
-              value={filters.month}
-              options={months.map((m, idx) => ({ value: idx + 1, label: m }))}
-              onSelect={(v) => handleFilterChange("month", v)}
-            />
-            <FilterDropdown
-              label="Year"
-              name="year"
-              value={filters.year}
-              options={years.map((y) => ({ value: y, label: y }))}
-              onSelect={(v) => handleFilterChange("year", v)}
-            />
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm font-medium"
-            >
-              Clear
-            </button>
+            <FilterDropdown label="Order Type" name="orderType" value={filters.orderType} options={orderTypes} onSelect={(v) => handleFilterChange("orderType", v)} />
+            <FilterDropdown label="Status" name="status" value={filters.status} options={statusOptions} onSelect={(v) => handleFilterChange("status", v)} />
+            <FilterDropdown label="Month" name="month" value={filters.month} options={months.map((m, idx) => ({ value: idx + 1, label: m }))} onSelect={(v) => handleFilterChange("month", v)} />
+            <FilterDropdown label="Year" name="year" value={filters.year} options={years.map((y) => ({ value: y, label: y }))} onSelect={(v) => handleFilterChange("year", v)} />
+            <button onClick={clearFilters} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm font-medium">Clear</button>
           </div>
 
           {/* Orders list */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                {orders.length} {orders.length === 1 ? "Order" : "Orders"} found
-              </h2>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{orders.length} {orders.length === 1 ? "Order" : "Orders"} found</h2>
             </div>
 
             {isLoading ? (
@@ -605,12 +519,7 @@ const Orders = () => {
               <div className="text-center py-12">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-500 dark:text-gray-400">No orders found</p>
-                <button
-                  onClick={() => navigate("/order/fuel")}
-                  className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium"
-                >
-                  Place your first order
-                </button>
+                <button onClick={() => navigate("/order/fuel")} className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium">Place your first order</button>
               </div>
             ) : (
               <>
@@ -619,50 +528,31 @@ const Orders = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
-                          Order
-                        </th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
-                          Type
-                        </th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
-                          Amount
-                        </th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
-                          Status
-                        </th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
-                          Delivery
-                        </th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
-                          Date
-                        </th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
-                          Action
-                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Order</th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Type</th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Amount</th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Delivery</th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Date</th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {orders.map((order) => {
                         const isPaid = order.paid;
                         const isPendingPayment = !isPaid && order.status !== "cancelled";
+                        const canConfirm = order.deliveryStatus === "delivered" && order.status !== "completed";
                         return (
                           <tr
                             key={order._id}
                             className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
                             onClick={() => setSelectedOrder(order)}
                           >
-                            <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
-                              #{order.orderId || order._id.slice(-6)}
-                            </td>
+                            <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">#{order.orderId || order._id.slice(-6)}</td>
                             <td className="py-2.5 px-3 capitalize">{order.orderType}</td>
                             <td className="py-2.5 px-3">₦{order.totalAmount?.toFixed(2) || "0.00"}</td>
                             <td className="py-2.5 px-3">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(
-                                  order.status
-                                )}`}
-                              >
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}>
                                 {order.status || "pending"}
                               </span>
                               {isPendingPayment && (
@@ -672,31 +562,30 @@ const Orders = () => {
                               )}
                             </td>
                             <td className="py-2.5 px-3">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                                  order.deliveryStatus || "pending"
-                                )}`}
-                              >
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.deliveryStatus || "pending")}`}>
                                 {order.deliveryStatus || "pending"}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">
-                              {new Date(order.createdAt).toLocaleDateString()}
-                            </td>
+                            <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</td>
                             <td className="py-2.5 px-3">
                               {isPendingPayment && (
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedOrder(order);
-                                  }}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
                                   className="text-xs bg-[#13ec5b] hover:bg-[#10d04e] text-white px-3 py-1 rounded-lg transition"
                                 >
                                   Pay
                                 </button>
                               )}
-                              {isPaid && (
-                                <span className="text-xs text-green-600 dark:text-green-400">Paid</span>
+                              {isPaid && order.status === "completed" && (
+                                <span className="text-xs text-green-600 dark:text-green-400">Completed</span>
+                              )}
+                              {canConfirm && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                                  className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg transition"
+                                >
+                                  Confirm
+                                </button>
                               )}
                             </td>
                           </tr>
@@ -718,10 +607,8 @@ const Orders = () => {
         </div>
       </div>
 
-      {/* Bottom bar - hidden when modal open */}
       {!isModalOpen && <Bottombar />}
 
-      {/* Modals */}
       {showFilterSheet && <FilterSheet />}
       {selectedOrder && <DetailModal />}
     </div>

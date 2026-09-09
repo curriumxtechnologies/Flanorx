@@ -2,6 +2,7 @@
 import asyncHandler from "express-async-handler";
 import Order from "../models/orderModel.js";
 import User from "../models/userModel.js";
+import Track from "../models/trackModel.js";
 
 const COMMISSION_PERCENT = 0.6; // 60% of serviceTax
 
@@ -26,22 +27,17 @@ const getRiderFromUser = async (userId) => {
 // @route   GET /api/delivery/available
 // @access  Private (Rider)
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Rider: Get available deliveries
+// @route   GET /api/delivery/available
+// @access  Private (Rider)
+// ─────────────────────────────────────────────────────────────────────────────
 const getAvailableDeliveries = asyncHandler(async (req, res) => {
   const user = req.user;
   if (!isRider(user)) {
     res.status(403);
     throw new Error("Only riders can view available deliveries");
   }
-
-  const rider = await getRiderFromUser(user._id);
-  if (!rider) {
-    res.status(404);
-    throw new Error("Rider not found");
-  }
-
-  // Check if rider is approved (we'll use a `verificationStatus` field on User if needed)
-  // For now, we assume if role is "rider", they are active.
-  // You can add a `riderStatus` field later.
 
   const orders = await Order.find({
     paid: true,
@@ -78,6 +74,16 @@ const getMyAssignedDeliveries = asyncHandler(async (req, res) => {
   res.status(200).json(orders);
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Rider: Accept delivery
+// @route   PUT /api/delivery/:id/accept
+// @access  Private (Rider)
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// @desc    Rider: Accept delivery
+// @route   PUT /api/delivery/:id/accept
+// @access  Private (Rider)
+// ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
 // @desc    Rider: Accept delivery
 // @route   PUT /api/delivery/:id/accept
@@ -120,11 +126,25 @@ const acceptDelivery = asyncHandler(async (req, res) => {
 
   await order.save();
 
-  // Update rider's active delivery (optional – you can store in User model)
-  // We'll add a field to User model: `activeOrder` if needed.
-  // For now, we'll skip to keep it simple.
+  // ─── Auto-start tracking ────────────────────────────────
+  let tracking = await Track.findOne({ order: order._id });
+  if (!tracking) {
+    tracking = await Track.create({
+      order: order._id,
+      user: order.user,
+      rider: user._id,
+      status: "active",
+    });
+  } else {
+    tracking.status = "active";
+    tracking.rider = user._id;
+    tracking.user = order.user;
+    await tracking.save();
+  }
 
-  const populatedOrder = await Order.findById(order._id).populate("user", "name email");
+  const populatedOrder = await Order.findById(order._id)
+    .populate("user", "name email")
+    .populate("rider", "name email profilePicture phone");
 
   res.status(200).json({
     message: "Delivery accepted successfully",

@@ -1,7 +1,7 @@
 // features/trackingApiSlice.js
 import { apiSlice } from "./apiSlice.js";
 
-const TRACK_URL = "/track";
+const TRACK_URL = "/tracking";
 
 export const trackingApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({

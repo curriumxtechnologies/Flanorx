@@ -187,15 +187,21 @@ const updateRiderLocation = asyncHandler(async (req, res) => {
 
 // ─── Get tracking (user, rider, or admin) ────────────────────
 // @desc    Get tracking details for an order
-// @route   GET /api/track/:orderId
+// @route   GET /api/tracking/:orderId
 // @access  Private (user, rider, admin)
 const getTracking = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
 
   const tracking = await Track.findOne({ order: orderId })
-    .populate("order")
+    .populate({
+      path: "order",
+      populate: [
+        { path: "user", select: "name email" },
+        { path: "rider", select: "name email profilePicture phone" },
+      ],
+    })
     .populate("user", "name email")
-    .populate("rider", "name email profilePhoto phone");
+    .populate("rider", "name email profilePicture phone");
 
   if (!tracking) {
     res.status(404);
@@ -209,11 +215,11 @@ const getTracking = asyncHandler(async (req, res) => {
   const trackingUserId = tracking.user?._id ? String(tracking.user._id) : String(tracking.user);
   const trackingRiderId = tracking.rider?._id ? String(tracking.rider._id) : String(tracking.rider);
 
-  const isUser = userRole === "user" && trackingUserId === String(userId);
-  const isRider = userRole === "rider" && trackingRiderId === String(userId);
+  const isTrackingUser = userRole === "user" && trackingUserId === String(userId);
+  const isTrackingRider = userRole === "rider" && trackingRiderId === String(userId);
   const isAdmin = userRole === "admin";
 
-  if (!isUser && !isRider && !isAdmin) {
+  if (!isTrackingUser && !isTrackingRider && !isAdmin) {
     res.status(403);
     throw new Error("Not allowed to view this tracking");
   }

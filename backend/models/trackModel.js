@@ -41,7 +41,7 @@ const trackSchema = new mongoose.Schema(
     // Assigned/confirmed rider
     rider: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Rider",
+      ref: "User",
       required: true,
     },
 

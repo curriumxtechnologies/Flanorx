@@ -68,9 +68,8 @@ const RiderDashboard = () => {
   const isLoading = userLoading || availableLoading || deliveriesLoading || earningsLoading;
   const error = availableError || deliveriesError || earningsError;
 
-  // ─── Chart data (from earnings history or simulated) ──────
+  // ─── Chart data (real earnings history, aggregated by day) ──
   const chartData = useMemo(() => {
-    // If we have history, aggregate by day for last 7 days
     if (earningsHistory.length > 0) {
       const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       const today = new Date();
@@ -82,7 +81,7 @@ const RiderDashboard = () => {
         const dayName = days[d.getDay()];
         dayMap[dayName] = 0;
       }
-      // Fill with actual earnings from history (only completed orders)
+      // Fill with actual earnings from history
       earningsHistory.forEach((item) => {
         if (item.completedAt) {
           const date = new Date(item.completedAt);
@@ -94,14 +93,12 @@ const RiderDashboard = () => {
       });
       return Object.entries(dayMap).map(([date, amount]) => ({ date, amount }));
     } else {
-      // Fallback simulated data
+      // Fallback: generate random data if no history
       const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      const data = [];
-      for (let i = 0; i < 7; i++) {
-        const amount = Math.floor(Math.random() * 800) + 200;
-        data.push({ date: days[i], amount });
-      }
-      return data;
+      return days.map((date) => ({
+        date,
+        amount: Math.floor(Math.random() * 800) + 200,
+      }));
     }
   }, [earningsHistory]);
 
@@ -230,7 +227,7 @@ const RiderDashboard = () => {
           <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Dashboard</h1>
           </header>
-          <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
+          <div className="w-full px-0.5 sm:px-4 lg:px-6 py-4">
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-[#13ec5b]" />
             </div>
@@ -249,7 +246,7 @@ const RiderDashboard = () => {
           <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Dashboard</h1>
           </header>
-          <div className="w-full px-2 sm:px-4 lg:px-6 py-4">
+          <div className="w-full px-0.5 sm:px-4 lg:px-6 py-4">
             <div className="flex flex-col items-center justify-center h-64">
               <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
               <p className="text-red-600 dark:text-red-400">Failed to load dashboard data</p>
@@ -289,8 +286,8 @@ const RiderDashboard = () => {
           </div>
         </header>
 
-        {/* Main Container – full width on mobile */}
-        <div className="w-full px-0 sm:px-4 lg:px-6 py-4">
+        {/* Main Container – tiny padding on mobile (px-0.5) */}
+        <div className="w-full px-0.5 sm:px-4 lg:px-6 py-4">
           <HeroCard />
 
           {/* Desktop welcome */}

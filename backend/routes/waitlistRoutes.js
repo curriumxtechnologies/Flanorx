@@ -1,15 +1,21 @@
 // routes/waitlistRoutes.js
 import express from "express";
-import { joinWaitlist, getWaitlistEntries, getWaitlistStats } from "../controllers/waitlistController.js";
-import { authenticateAdmin } from "../middleware/authMiddleware.js";
+import {
+  joinWaitlist,
+  getWaitlistEntries,
+  getWaitlistStats,
+} from "../controllers/waitlistController.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Public route - anyone can join
+// ─── Public route ──────────────────────────────────────────
+// Anyone can join the waitlist
 router.post("/", joinWaitlist);
 
-// Admin routes
-router.get("/", authenticateAdmin, getWaitlistEntries);
-router.get("/stats", authenticateAdmin, getWaitlistStats);
+// ─── Admin routes ──────────────────────────────────────────
+// Protected by `protect` – role check is done inside the controller
+router.get("/", protect, getWaitlistEntries);
+router.get("/stats", protect, getWaitlistStats);
 
 export default router;

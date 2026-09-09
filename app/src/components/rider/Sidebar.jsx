@@ -33,8 +33,8 @@ const RiderSidebar = () => {
     { to: "/rider/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/rider/deliveries", icon: Truck, label: "Deliveries" },
     { to: "/rider/earnings", icon: Wallet, label: "Earnings" },
-    { to: "/tracking", icon: MapPin, label: "Tracking" },
-    { to: "/profile", icon: User, label: "Profile" },
+    { to: "/rider/tracking", icon: MapPin, label: "Tracking" },
+    { to: "/rider/profile", icon: User, label: "Profile" },
   ];
 
   return (
