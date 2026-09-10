@@ -77,12 +77,12 @@ const OrderDetail = () => {
       case "confirmed":
       case "completed":
       case "delivered":
-        return <CheckCircle className="h-4 w-4" />;
+        return <CheckCircle className="h-3.5 w-3.5" />;
       case "cancelled":
       case "failed":
-        return <XCircle className="h-4 w-4" />;
+        return <XCircle className="h-3.5 w-3.5" />;
       default:
-        return <Clock className="h-4 w-4" />;
+        return <Clock className="h-3.5 w-3.5" />;
     }
   };
 
@@ -261,21 +261,24 @@ const OrderDetail = () => {
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => navigate(-1)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition flex-shrink-0"
             >
               <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
+            <h1
+              className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl truncate"
+              title={`Order #${order.orderId}`}
+            >
               Order #{order.orderId}
             </h1>
           </div>
           <button
             onClick={() => refetch()}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition flex-shrink-0"
           >
             <Loader2 className={`h-5 w-5 text-gray-500 dark:text-gray-400 ${isLoading ? "animate-spin" : ""}`} />
           </button>
@@ -284,36 +287,35 @@ const OrderDetail = () => {
         <div className="w-full px-0.5 sm:px-4 lg:px-6 py-4">
           <div className="max-w-4xl mx-auto space-y-5">
 
-            {/* ─── Status Banner ────────────────────────────── */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Status:</span>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}
-                  >
-                    {getStatusIcon(order.status)}
-                    {order.status || "pending"}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${getDeliveryStatusColor(order.deliveryStatus)}`}
-                  >
-                    {getStatusIcon(order.deliveryStatus)}
-                    Delivery: {order.deliveryStatus || "pending"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Paid:</span>
+            {/* ─── Status Banner (cleaner on mobile) ─────────── */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl p-3 sm:p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}
+                >
+                  {getStatusIcon(order.status)}
+                  <span className="capitalize">{order.status || "pending"}</span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getDeliveryStatusColor(order.deliveryStatus)}`}
+                >
+                  {getStatusIcon(order.deliveryStatus)}
+                  <span className="capitalize">{order.deliveryStatus || "pending"}</span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium sm:ml-auto ${
+                    order.paid
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                  }`}
+                >
                   {order.paid ? (
-                    <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                      <CheckCircle className="h-4 w-4" /> Yes
-                    </span>
+                    <CheckCircle className="h-3.5 w-3.5" />
                   ) : (
-                    <span className="text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
-                      <XCircle className="h-4 w-4" /> No
-                    </span>
+                    <XCircle className="h-3.5 w-3.5" />
                   )}
-                </div>
+                  {order.paid ? "Paid" : "Unpaid"}
+                </span>
               </div>
             </div>
 
@@ -336,46 +338,46 @@ const OrderDetail = () => {
                   <div className="p-4 space-y-3 text-sm">
                     {order.orderType === "fuel" ? (
                       <>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Fuel Type</span>
-                          <span className="text-gray-900 dark:text-white">{order.fuelType || "—"}</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Fuel Type</span>
+                          <span className="text-gray-900 dark:text-white truncate text-right">{order.fuelType || "—"}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Quantity</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Quantity</span>
                           <span className="text-gray-900 dark:text-white">{order.quantity || 0} L</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Price per Liter</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Price per Liter</span>
                           <span className="text-gray-900 dark:text-white">₦{order.fuelPricePerLiter?.toFixed(2) || "0.00"}</span>
                         </div>
                       </>
                     ) : (
                       <>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Cylinder Size</span>
-                          <span className="text-gray-900 dark:text-white">{order.gasDetails?.cylinderSize || "—"}</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Cylinder Size</span>
+                          <span className="text-gray-900 dark:text-white truncate text-right">{order.gasDetails?.cylinderSize || "—"}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Quantity</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Quantity</span>
                           <span className="text-gray-900 dark:text-white">{order.gasDetails?.quantityKg || 0} kg</span>
                         </div>
                         {order.gasDetails?.isFirstTime && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500 dark:text-gray-400">New Cylinder</span>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">New Cylinder</span>
                             <span className="text-green-600 dark:text-green-400">Yes</span>
                           </div>
                         )}
                         {order.subscriptionDueDate && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500 dark:text-gray-400">Subscription Due</span>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Subscription Due</span>
                             <span className="text-gray-900 dark:text-white">{formatDate(order.subscriptionDueDate)}</span>
                           </div>
                         )}
                       </>
                     )}
-                    <div className="flex justify-between border-t border-gray-100 dark:border-gray-700 pt-2">
-                      <span className="text-gray-500 dark:text-gray-400">Order Date</span>
-                      <span className="text-gray-900 dark:text-white">{formatFullDate(order.createdAt)}</span>
+                    <div className="flex justify-between gap-3 border-t border-gray-100 dark:border-gray-700 pt-2">
+                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Order Date</span>
+                      <span className="text-gray-900 dark:text-white truncate text-right">{formatFullDate(order.createdAt)}</span>
                     </div>
                   </div>
                 </div>
@@ -391,34 +393,34 @@ const OrderDetail = () => {
                   <div className="p-4 space-y-3 text-sm">
                     <div>
                       <span className="text-gray-500 dark:text-gray-400 text-xs">Address</span>
-                      <p className="text-gray-900 dark:text-white">{order.deliveryAddress || "—"}</p>
+                      <p className="text-gray-900 dark:text-white break-words">{order.deliveryAddress || "—"}</p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Schedule</span>
+                    <div className="flex justify-between gap-3">
+                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Schedule</span>
                       <span className="text-gray-900 dark:text-white capitalize">{order.scheduleType || "now"}</span>
                     </div>
                     {order.scheduleType === "scheduled" && (
                       <>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Scheduled Date</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Scheduled Date</span>
                           <span className="text-gray-900 dark:text-white">{formatDate(order.scheduledDate)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Scheduled Time</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Scheduled Time</span>
                           <span className="text-gray-900 dark:text-white">{order.scheduledTime || "—"}</span>
                         </div>
                       </>
                     )}
                     {order.estimatedDeliveryMinutes && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Est. Delivery</span>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Est. Delivery</span>
                         <span className="text-gray-900 dark:text-white">{order.estimatedDeliveryMinutes} minutes</span>
                       </div>
                     )}
                     {order.notes && (
                       <div>
                         <span className="text-gray-500 dark:text-gray-400 text-xs">Notes</span>
-                        <p className="text-gray-900 dark:text-white">{order.notes}</p>
+                        <p className="text-gray-900 dark:text-white break-words">{order.notes}</p>
                       </div>
                     )}
                   </div>
@@ -444,9 +446,9 @@ const OrderDetail = () => {
                               <div className="absolute left-0 top-0.5 w-8 h-8 rounded-full bg-[#13ec5b]/10 flex items-center justify-center text-[#13ec5b]">
                                 {event.icon}
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">{event.label}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{formatFullDate(event.date)}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 break-words">{formatFullDate(event.date)}</p>
                               </div>
                             </div>
                           ))}
@@ -468,27 +470,29 @@ const OrderDetail = () => {
                     </h3>
                   </div>
                   <div className="p-4 space-y-3 text-sm">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-3">
                       <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
                       <span className="text-gray-900 dark:text-white">₦{order.subtotal?.toFixed(2) || "0.00"}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-3">
                       <span className="text-gray-500 dark:text-gray-400">Delivery Fee</span>
                       <span className="text-gray-900 dark:text-white">₦{order.deliveryFee?.toFixed(2) || "0.00"}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-3">
                       <span className="text-gray-500 dark:text-gray-400">Service Tax</span>
                       <span className="text-gray-900 dark:text-white">₦{order.serviceTax?.toFixed(2) || "0.00"}</span>
                     </div>
                     {order.riderCommission > 0 && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between gap-3">
                         <span className="text-gray-500 dark:text-gray-400">Rider Commission</span>
                         <span className="text-gray-900 dark:text-white">₦{order.riderCommission?.toFixed(2) || "0.00"}</span>
                       </div>
                     )}
-                    <div className="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-3">
+                    <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-3 gap-3">
                       <span className="font-semibold text-gray-900 dark:text-white">Total</span>
-                      <span className="text-xl font-bold text-[#13ec5b]">₦{order.totalAmount?.toFixed(2) || "0.00"}</span>
+                      <span className="text-xl font-bold text-[#13ec5b] truncate">
+                        ₦{order.totalAmount?.toFixed(2) || "0.00"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -543,12 +547,14 @@ const OrderDetail = () => {
                     </h3>
                   </div>
                   <div className="p-4 space-y-2 text-sm">
-                    <p className="font-medium text-gray-900 dark:text-white">{order.user?.name || "Unknown"}</p>
-                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                      <Mail className="h-3.5 w-3.5" /> {order.user?.email || "—"}
+                    <p className="font-medium text-gray-900 dark:text-white truncate">{order.user?.name || "Unknown"}</p>
+                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
+                      <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate" title={order.user?.email || "—"}>{order.user?.email || "—"}</span>
                     </p>
-                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5" /> {order.user?.phone || "—"}
+                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
+                      <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate">{order.user?.phone || "—"}</span>
                     </p>
                   </div>
                 </div>
@@ -564,12 +570,14 @@ const OrderDetail = () => {
                   <div className="p-4">
                     {order.rider ? (
                       <div className="space-y-2 text-sm">
-                        <p className="font-medium text-gray-900 dark:text-white">{order.rider.name || "Rider"}</p>
-                        <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                          <Mail className="h-3.5 w-3.5" /> {order.rider.email || "—"}
+                        <p className="font-medium text-gray-900 dark:text-white truncate">{order.rider.name || "Rider"}</p>
+                        <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
+                          <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate" title={order.rider.email || "—"}>{order.rider.email || "—"}</span>
                         </p>
-                        <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5" /> {order.rider.phone || "—"}
+                        <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
+                          <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">{order.rider.phone || "—"}</span>
                         </p>
                       </div>
                     ) : (
@@ -587,7 +595,7 @@ const OrderDetail = () => {
                     </h3>
                   </div>
                   <div className="p-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-3">
                       <span className="text-gray-500 dark:text-gray-400">Status</span>
                       {order.paid ? (
                         <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
@@ -600,15 +608,15 @@ const OrderDetail = () => {
                       )}
                     </div>
                     {order.paymentMethod && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between gap-3">
                         <span className="text-gray-500 dark:text-gray-400">Method</span>
                         <span className="text-gray-900 dark:text-white capitalize">{order.paymentMethod}</span>
                       </div>
                     )}
                     {order.paymentDate && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between gap-3">
                         <span className="text-gray-500 dark:text-gray-400">Date</span>
-                        <span className="text-gray-900 dark:text-white">{formatFullDate(order.paymentDate)}</span>
+                        <span className="text-gray-900 dark:text-white truncate text-right">{formatFullDate(order.paymentDate)}</span>
                       </div>
                     )}
                     {order.paymentReference && (

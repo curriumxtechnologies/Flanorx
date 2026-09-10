@@ -57,6 +57,8 @@ const greenIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+const RECENT_ORDERS_LIMIT = 6;
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.auth);
@@ -80,7 +82,6 @@ const Dashboard = () => {
   } = useGetMyOrdersQuery({
     month: currentMonth,
     year: currentYear,
-    // get all orders (including unpaid)
   });
 
   const {
@@ -116,6 +117,13 @@ const Dashboard = () => {
   const monthlySpent = totalSpentData?.totalSpent || 0;
   const totalLiters = totalSpentData?.totalLiters || 0;
   const totalKg = totalSpentData?.totalKg || 0;
+
+  // 6 most recent orders (API already returns newest first, but sort defensively)
+  const recentOrders = useMemo(() => {
+    return [...orders]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, RECENT_ORDERS_LIMIT);
+  }, [orders]);
 
   // Subscription status from dedicated query
   const hasGasSubscription = subscriptionData?.isActive || false;
@@ -166,13 +174,24 @@ const Dashboard = () => {
     );
   }
 
-  // ─── Helper: status color ──────────────────────────────────
+  // ─── Helper: status colors (shared with Orders page) ──────
   const getStatusColor = (status) => {
     switch (status) {
       case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
       case "accepted": case "picked_up": case "in_transit": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
       case "delivered": return "text-green-600 bg-green-50 dark:bg-green-900/20";
       case "confirmed": return "text-green-700 bg-green-100 dark:bg-green-900/30";
+      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+    }
+  };
+
+  const getOrderStatusColor = (status) => {
+    switch (status) {
+      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "processing": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "completed": return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "cancelled": return "text-red-600 bg-red-50 dark:bg-red-900/20";
+      case "failed": return "text-red-700 bg-red-100 dark:bg-red-900/30";
       default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
     }
   };
@@ -208,14 +227,19 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Cylinder</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{cylinderSize}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">Cylinder</span>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[60%] text-right"
+                title={cylinderSize || ""}
+              >
+                {cylinderSize}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">Status</span>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
                   isExpired
                     ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
                     : isActive
@@ -227,9 +251,11 @@ const Dashboard = () => {
               </span>
             </div>
             {dueDate && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Renewal Date</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{dueDate.toLocaleDateString()}</span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">Renewal Date</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[60%] text-right">
+                  {dueDate.toLocaleDateString()}
+                </span>
               </div>
             )}
             <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -256,10 +282,13 @@ const Dashboard = () => {
   // ─── Mobile Hero Card ──────────────────────────────────────
   const HeroCard = () => (
     <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <div>
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="min-w-0 flex-1">
           <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">Welcome back</span>
-          <h1 className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white">
+          <h1
+            className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white"
+            title={user?.name || "User"}
+          >
             {user?.name ? user.name.split(" ")[0] : "User"}!
           </h1>
         </div>
@@ -271,31 +300,42 @@ const Dashboard = () => {
         </button>
       </div>
 
-      <div className="flex items-end justify-between mb-3">
-        <div>
+      <div className="flex items-end justify-between mb-3 gap-2">
+        <div className="min-w-0">
           <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Orders</span>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{hideStats ? "••" : totalOrders}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white truncate">
+            {hideStats ? "••" : totalOrders}
+          </p>
         </div>
-        <div className="text-right">
+        <div className="text-right min-w-0">
           <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">This Month</span>
-          <p className="text-xl font-bold text-gray-900 dark:text-white">{hideStats ? "••••" : `₦${monthlySpent.toFixed(0)}`}</p>
+          <p
+            className="text-xl font-bold text-gray-900 dark:text-white truncate"
+            title={hideStats ? "" : `₦${monthlySpent.toFixed(2)}`}
+          >
+            {hideStats ? "••••" : `₦${monthlySpent.toFixed(0)}`}
+          </p>
         </div>
       </div>
 
-      <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-5">
-          <div>
+      <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
+        <div className="flex items-center gap-5 min-w-0">
+          <div className="min-w-0">
             <span className="text-[10px] text-gray-500 dark:text-gray-400">Fuel</span>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">{hideStats ? "••" : `${totalLiters.toFixed(1)}L`}</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+              {hideStats ? "••" : `${totalLiters.toFixed(1)}L`}
+            </p>
           </div>
-          <div>
+          <div className="min-w-0">
             <span className="text-[10px] text-gray-500 dark:text-gray-400">Gas</span>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">{hideStats ? "••" : `${totalKg.toFixed(1)}kg`}</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+              {hideStats ? "••" : `${totalKg.toFixed(1)}kg`}
+            </p>
           </div>
         </div>
         <button
           onClick={() => navigate("/orders")}
-          className="flex items-center gap-1 text-xs font-medium text-white bg-[#13ec5b] hover:bg-[#10d04e] px-3 py-1.5 rounded-lg border border-[#13ec5b] transition shadow-sm"
+          className="flex items-center gap-1 text-xs font-medium text-white bg-[#13ec5b] hover:bg-[#10d04e] px-3 py-1.5 rounded-lg border border-[#13ec5b] transition shadow-sm flex-shrink-0"
         >
           View all <ChevronRight className="h-3 w-3" />
         </button>
@@ -318,13 +358,13 @@ const Dashboard = () => {
 
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm h-full flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-[#13ec5b]" />
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Live Tracking</h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <MapPin className="h-4 w-4 text-[#13ec5b] flex-shrink-0" />
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Live Tracking</h3>
           </div>
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
               hasTracking
                 ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
                 : hasActiveOrder
@@ -377,7 +417,7 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-between">
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex-1 flex flex-col justify-between min-w-0">
           {isLoadingState ? (
             <div className="space-y-2 animate-pulse">
               <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -385,11 +425,16 @@ const Dashboard = () => {
             </div>
           ) : hasActiveOrder ? (
             <>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Order #{activeOrder.orderId}</span>
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2 min-w-0">
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    className="text-sm text-gray-500 dark:text-gray-400 truncate"
+                    title={`Order #${activeOrder.orderId}`}
+                  >
+                    Order #{activeOrder.orderId}
+                  </span>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
                       hasTracking
                         ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
                         : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
@@ -398,19 +443,25 @@ const Dashboard = () => {
                     {hasTracking ? "Active" : "Processing"}
                   </span>
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 truncate">
                   {activeOrder.orderType === "fuel"
                     ? `${activeOrder.quantity} L of ${activeOrder.fuelType}`
                     : `${activeOrder.gasDetails?.quantityKg} kg gas (${activeOrder.gasDetails?.cylinderSize})`}
                 </p>
                 {hasTracking && trackingData?.rider && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Rider: {trackingData.rider.name}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 truncate">
+                    Rider: {trackingData.rider.name}
+                  </p>
                 )}
                 {hasTracking && trackingData?.route?.distanceText && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Distance: {trackingData.route.distanceText} · ETA: {trackingData.route.durationText}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
+                    Distance: {trackingData.route.distanceText} · ETA: {trackingData.route.durationText}
+                  </p>
                 )}
                 {!hasTracking && (
-                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">Waiting for rider to accept and start tracking...</p>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1 truncate">
+                    Waiting for rider to accept and start tracking...
+                  </p>
                 )}
               </div>
               <button
@@ -438,50 +489,220 @@ const Dashboard = () => {
 
   // ─── Desktop Stat Card ─────────────────────────────────────
   const StatCard = ({ icon: Icon, label, value }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm min-w-0">
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">{label}</p>
+          <p
+            className="text-2xl font-bold text-gray-900 dark:text-white mt-1 truncate"
+            title={typeof value === "string" ? value : String(value)}
+          >
+            {value}
+          </p>
         </div>
-        <div className="p-2 rounded-lg bg-[#13ec5b]/10 text-[#13ec5b]">
+        <div className="p-2 rounded-lg bg-[#13ec5b]/10 text-[#13ec5b] flex-shrink-0">
           <Icon className="h-5 w-5" />
         </div>
       </div>
     </div>
   );
 
-  // ─── Recent Order Item ─────────────────────────────────────
-  const RecentOrderItem = ({ order }) => (
-    <div
-      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer border-b border-gray-100 dark:border-gray-800 last:border-0 transition"
-      onClick={() => navigate(`/order/${order._id}`)}
-    >
-      <div className="w-9 h-9 rounded-xl bg-[#13ec5b]/10 flex items-center justify-center flex-shrink-0">
-        {order.orderType === "fuel" ? <Flame className="h-4 w-4 text-[#13ec5b]" /> : <Package className="h-4 w-4 text-[#13ec5b]" />}
+  // ─── Mobile Slim Order Item (same UI as Orders page) ──────
+  const SlimOrderItem = ({ order }) => {
+    const isPaid = order.paid;
+    const isPendingPayment = !isPaid && order.status !== "cancelled";
+    const orderLabel = `#${order.orderId || order._id.slice(-6)}`;
+
+    return (
+      <div
+        onClick={() => navigate(`/order/${order._id}`)}
+        className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-600 cursor-pointer transition last:border-b-0"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="font-medium text-gray-900 dark:text-white text-sm truncate"
+              title={orderLabel}
+            >
+              {orderLabel}
+            </span>
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${getOrderStatusColor(order.status)}`}>
+              {order.status || "pending"}
+            </span>
+            {isPendingPayment && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 flex-shrink-0">
+                Unpaid
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
+            <span className="flex-shrink-0">{order.orderType === "fuel" ? "Fuel" : "Gas"}</span>
+            <span className="flex-shrink-0">·</span>
+            <span className="truncate">₦{order.totalAmount?.toFixed(2) || "0.00"}</span>
+            <span className="flex-shrink-0">·</span>
+            <span className="flex-shrink-0">{new Date(order.createdAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0 ml-2" />
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">#{order.orderId}</p>
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-              order.deliveryStatus || order.status
-            )}`}
+    );
+  };
+
+  // ─── Recent Orders (mirrors Orders page UI, 6 max) ─────────
+  const RecentOrders = () => (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl rounded-2xl">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Recent Orders</h2>
+        <button onClick={() => navigate("/orders")} className="text-sm text-[#13ec5b] hover:underline flex-shrink-0">
+          View all
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+              <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-gray-700" />
+              <div className="flex-1">
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded mt-1" />
+              </div>
+              <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ) : recentOrders.length === 0 ? (
+        <div className="text-center py-12">
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">No orders found</p>
+          <button
+            onClick={() => navigate("/order/fuel")}
+            className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium"
           >
-            {order.deliveryStatus || order.status || "pending"}
-          </span>
+            Place your first order
+          </button>
         </div>
-        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          <span>{order.orderType === "fuel" ? "Fuel" : "Gas"}</span>
-          <span>·</span>
-          <span>₦{order.totalAmount.toFixed(2)}</span>
-          <span>·</span>
-          <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-          {!order.paid && (
-            <span className="text-orange-500 bg-orange-100 dark:bg-orange-900/20 px-1.5 py-0.5 rounded-full text-[10px] font-medium">Unpaid</span>
-          )}
-        </div>
-      </div>
+      ) : (
+        <>
+          {/* Desktop table — same as Orders page, with truncation */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full text-sm table-fixed">
+              <colgroup>
+                <col className="w-[15%]" />
+                <col className="w-[9%]" />
+                <col className="w-[13%]" />
+                <col className="w-[15%]" />
+                <col className="w-[13%]" />
+                <col className="w-[12%]" />
+                <col className="w-[23%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Order</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Type</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Amount</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Delivery</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Date</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((order) => {
+                  const isPaid = order.paid;
+                  const isPendingPayment = !isPaid && order.status !== "cancelled";
+                  const canConfirm = order.deliveryStatus === "delivered" && order.status !== "completed";
+                  const orderLabel = `#${order.orderId || order._id.slice(-6)}`;
+                  const amountLabel = `₦${order.totalAmount?.toFixed(2) || "0.00"}`;
+                  const dateLabel = new Date(order.createdAt).toLocaleDateString();
+
+                  return (
+                    <tr
+                      key={order._id}
+                      className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer last:border-b-0"
+                      onClick={() => navigate(`/order/${order._id}`)}
+                    >
+                      <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
+                        <div className="truncate" title={orderLabel}>{orderLabel}</div>
+                      </td>
+                      <td className="py-2.5 px-3 capitalize">
+                        <div className="truncate" title={order.orderType}>{order.orderType}</div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="truncate" title={amountLabel}>{amountLabel}</div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium truncate max-w-full ${getOrderStatusColor(order.status)}`}>
+                            <span className="truncate">{order.status || "pending"}</span>
+                          </span>
+                          {isPendingPayment && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 flex-shrink-0">
+                              Unpaid
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium max-w-full ${getStatusColor(order.deliveryStatus || "pending")}`}>
+                          <span className="truncate">{order.deliveryStatus || "pending"}</span>
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">
+                        <div className="truncate" title={dateLabel}>{dateLabel}</div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+                          {isPendingPayment && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/order/${order._id}`); }}
+                              className="text-xs bg-[#13ec5b] hover:bg-[#10d04e] text-white px-3 py-1 rounded-lg transition flex-shrink-0"
+                            >
+                              Pay
+                            </button>
+                          )}
+                          {isPaid && order.status === "completed" && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/order/${order._id}`); }}
+                              className="text-xs text-green-600 dark:text-green-400 hover:underline truncate"
+                              title="Completed · Receipt"
+                            >
+                              Completed · Receipt
+                            </button>
+                          )}
+                          {isPaid && order.status !== "completed" && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/order/${order._id}`); }}
+                              className="text-xs text-[#0f9c46] dark:text-[#13ec5b] hover:underline flex-shrink-0"
+                            >
+                              Receipt
+                            </button>
+                          )}
+                          {canConfirm && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/order/${order._id}`); }}
+                              className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg transition flex-shrink-0"
+                            >
+                              Confirm
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile slim list — same as Orders page */}
+          <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
+            {recentOrders.map((order) => (
+              <SlimOrderItem key={order._id} order={order} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 
@@ -490,15 +711,15 @@ const Dashboard = () => {
       <Sidebar />
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Dashboard</h1>
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between gap-2">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl truncate">Dashboard</h1>
+          <div className="flex items-center gap-3 flex-shrink-0">
             {!isLoading && user && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline truncate max-w-[120px]">
                   {user.name?.split(" ")[0]}
                 </span>
-                <div className="h-8 w-8 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden">
+                <div className="h-8 w-8 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {user.profilePhoto ? (
                     <img src={user.profilePhoto} alt={user.name} className="h-full w-full object-cover" />
                   ) : (
@@ -515,17 +736,27 @@ const Dashboard = () => {
 
           {/* Desktop stats */}
           <div className="hidden lg:block">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-12 w-12 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden">
+            <div className="flex items-center gap-3 mb-6 min-w-0">
+              <div className="h-12 w-12 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {!isLoading && user?.profilePhoto ? (
                   <img src={user.profilePhoto} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-6 w-6 text-[#13ec5b]" />
                 )}
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Welcome back, {isLoading ? "..." : user?.name || "User"}!</h2>
-                <p className="text-gray-500 dark:text-gray-400">{isLoading ? "Loading..." : user?.email}</p>
+              <div className="min-w-0 flex-1">
+                <h2
+                  className="text-2xl font-bold text-gray-900 dark:text-white truncate"
+                  title={`Welcome back, ${isLoading ? "..." : user?.name || "User"}!`}
+                >
+                  Welcome back, {isLoading ? "..." : user?.name || "User"}!
+                </h2>
+                <p
+                  className="text-gray-500 dark:text-gray-400 truncate"
+                  title={isLoading ? "Loading..." : user?.email}
+                >
+                  {isLoading ? "Loading..." : user?.email}
+                </p>
               </div>
             </div>
 
@@ -547,10 +778,10 @@ const Dashboard = () => {
 
           {/* Chart + quick actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Weekly Spending</h3>
-                <span className="text-xs text-gray-400 dark:text-gray-500">Last 7 days</span>
+            <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm min-w-0">
+              <div className="flex items-center justify-between mb-4 gap-2">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Weekly Spending</h3>
+                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">Last 7 days</span>
               </div>
               {isLoading ? (
                 <div className="h-48 animate-pulse bg-gray-200 dark:bg-gray-700 rounded" />
@@ -609,12 +840,12 @@ const Dashboard = () => {
 
           {/* 2‑column layout: Live Tracking + Gas Subscription */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
-            <div className="hidden lg:block lg:col-span-2 h-full">
+            <div className="hidden lg:block lg:col-span-2 h-full min-w-0">
               <LiveTracking />
             </div>
-            <div className="hidden lg:block h-full">
+            <div className="hidden lg:block h-full min-w-0">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm h-full flex flex-col">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Gas Subscription</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 truncate">Gas Subscription</h3>
                 {isLoading ? (
                   <div className="space-y-3 animate-pulse flex-1">
                     <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -622,12 +853,17 @@ const Dashboard = () => {
                     <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
                   </div>
                 ) : isActive ? (
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Cylinder: {cylinderSize}</span>
+                  <div className="flex-1 flex flex-col justify-between min-w-0">
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          className="text-sm text-gray-500 dark:text-gray-400 truncate"
+                          title={`Cylinder: ${cylinderSize}`}
+                        >
+                          Cylinder: {cylinderSize}
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
                             isExpired
                               ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
                               : isActive && isNearExpiry
@@ -639,11 +875,11 @@ const Dashboard = () => {
                         </span>
                       </div>
                       {dueDate && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 truncate">
                           {isExpired ? `Expired on ${dueDate.toLocaleDateString()}` : `Renews on ${dueDate.toLocaleDateString()}`}
                         </p>
                       )}
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
                         {isExpired
                           ? "Your cylinder subscription has expired. Please renew."
                           : isNearExpiry
@@ -677,8 +913,8 @@ const Dashboard = () => {
           {/* Mobile: Live Tracking + Gas Subscription (stacked) */}
           <div className="lg:hidden space-y-6 mb-6">
             <LiveTracking />
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Gas Subscription</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm min-w-0">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 truncate">Gas Subscription</h3>
               {isLoading ? (
                 <div className="space-y-3 animate-pulse">
                   <div className="h-4 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -686,11 +922,16 @@ const Dashboard = () => {
                   <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
                 </div>
               ) : isActive ? (
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Cylinder: {cylinderSize}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      className="text-sm text-gray-500 dark:text-gray-400 truncate"
+                      title={`Cylinder: ${cylinderSize}`}
+                    >
+                      Cylinder: {cylinderSize}
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
                         isExpired
                           ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
                           : isActive && isNearExpiry
@@ -702,11 +943,11 @@ const Dashboard = () => {
                     </span>
                   </div>
                   {dueDate && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 truncate">
                       {isExpired ? `Expired on ${dueDate.toLocaleDateString()}` : `Renews on ${dueDate.toLocaleDateString()}`}
                     </p>
                   )}
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">
                     {isExpired
                       ? "Your cylinder subscription has expired. Please renew."
                       : isNearExpiry
@@ -735,30 +976,8 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Recent Orders */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Orders</h3>
-              <button onClick={() => navigate("/orders")} className="text-sm text-[#13ec5b] hover:underline">View all</button>
-            </div>
-            <div>
-              {isLoading ? (
-                [...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
-                    <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-gray-700" />
-                    <div className="flex-1">
-                      <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                      <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded mt-1" />
-                    </div>
-                  </div>
-                ))
-              ) : orders.length === 0 ? (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-6">No orders yet</p>
-              ) : (
-                orders.slice(0, 5).map((order) => <RecentOrderItem key={order._id} order={order} />)
-              )}
-            </div>
-          </div>
+          {/* Recent Orders — same UI as Orders page, max 6 */}
+          <RecentOrders />
         </div>
       </div>
 
