@@ -83,7 +83,6 @@ const RiderDashboard = () => {
     const today = new Date();
     const buckets = [];
 
-    // Build the last 7 days in chronological order
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
@@ -94,7 +93,6 @@ const RiderDashboard = () => {
       });
     }
 
-    // Fill from real history
     earningsHistory.forEach((item) => {
       if (!item.completedAt) return;
       const key = new Date(item.completedAt).toISOString().split("T")[0];
@@ -155,7 +153,7 @@ const RiderDashboard = () => {
   const HeroCard = () => {
     if (isLoading) {
       return (
-        <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 mb-4 shadow-sm">
+        <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
           <div className="flex items-center justify-between mb-3 gap-2">
             <div className="min-w-0 flex-1 space-y-2">
               <div className="h-2.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -184,7 +182,7 @@ const RiderDashboard = () => {
     }
 
     return (
-      <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 mb-4 shadow-sm">
+      <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
         <div className="flex items-center justify-between mb-3 gap-2">
           <div className="min-w-0 flex-1">
             <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">
@@ -263,7 +261,7 @@ const RiderDashboard = () => {
     </div>
   );
 
-  // ─── Mobile Slim Delivery Item (mirrors Deliveries page) ──
+  // ─── Mobile Slim Delivery Item ────────────────────────────
   const SlimDeliveryItem = ({ delivery }) => {
     const deliveryLabel = `#${delivery.orderId || delivery._id.slice(-6)}`;
     const customerLabel = delivery.user?.name || "Unknown";
@@ -306,7 +304,7 @@ const RiderDashboard = () => {
     );
   };
 
-  // ─── Recent Deliveries (mirrors Deliveries page, 6 max) ────
+  // ─── Recent Deliveries (6 max) ────────────────────────────
   const RecentDeliveries = () => (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl rounded-2xl">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
@@ -323,7 +321,6 @@ const RiderDashboard = () => {
 
       {isLoading ? (
         <>
-          {/* Desktop skeleton table */}
           <div className="hidden lg:block">
             <table className="w-full text-sm table-fixed">
               <colgroup>
@@ -371,7 +368,6 @@ const RiderDashboard = () => {
             </table>
           </div>
 
-          {/* Mobile skeleton list */}
           <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="flex items-center justify-between px-4 py-3">
@@ -400,7 +396,6 @@ const RiderDashboard = () => {
         </div>
       ) : (
         <>
-          {/* Desktop table */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm table-fixed">
               <colgroup>
@@ -483,7 +478,6 @@ const RiderDashboard = () => {
             </table>
           </div>
 
-          {/* Mobile slim list */}
           <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
             {recentDeliveries.map((delivery) => (
               <SlimDeliveryItem key={delivery._id} delivery={delivery} />
@@ -494,7 +488,7 @@ const RiderDashboard = () => {
     </div>
   );
 
-  // ─── Loading & Errors ──────────────────────────────────────
+  // ─── Error state ──────────────────────────────────────────
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -699,7 +693,7 @@ const RiderDashboard = () => {
             </div>
           </div>
 
-          {/* Recent Deliveries — mirrors Deliveries page, 6 max */}
+          {/* Recent Deliveries */}
           <RecentDeliveries />
         </div>
       </div>

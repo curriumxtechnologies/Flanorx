@@ -61,9 +61,6 @@ const RiderSidebar = () => {
       {/* Logo */}
       <div className="flex items-center gap-2 px-6 h-16 flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
         <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-          Rider
-        </span>
       </div>
 
       {/* Navigation (scrollable) */}

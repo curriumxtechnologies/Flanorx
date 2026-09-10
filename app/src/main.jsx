@@ -37,6 +37,7 @@ import AdminUsers from "./pages/admin/AdminUsers.jsx";
 import AdminRiders from "./pages/admin/AdminRiders.jsx";
 import AdminAnalytics from "./pages/admin/AdminAnalytics.jsx";
 import AdminSettings from "./pages/admin/AdminSettings.jsx";
+import Waitlist from "./pages/admin/Waitlist.jsx";
 
 // Rider pages
 import RiderDashboard from "./pages/rider/RiderDashboard.jsx";
@@ -78,6 +79,7 @@ const router = createBrowserRouter([
           { path: "superuser/riders", element: <AdminRiders /> },
           { path: "superuser/analytics", element: <AdminAnalytics /> },
           { path: "superuser/settings", element: <AdminSettings /> },
+          {path: "superuser/waitlist", element: <Waitlist /> },
 
           // Rider
           { path: "rider/dashboard", element: <RiderDashboard /> },

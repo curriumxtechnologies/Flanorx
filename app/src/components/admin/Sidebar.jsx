@@ -13,6 +13,7 @@ import {
   Sun,
   Moon,
   ArrowLeft,
+  ClipboardList,
 } from "lucide-react";
 import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
@@ -66,6 +67,7 @@ const Sidebar = () => {
       label: "Riders",
       badge: pendingAppsCount,
     },
+    { to: "/superuser/waitlist", icon: ClipboardList, label: "Waitlist" },
     { to: "/superuser/analytics", icon: BarChart3, label: "Analytics" },
     { to: "/superuser/settings", icon: Settings, label: "Settings" },
   ];
