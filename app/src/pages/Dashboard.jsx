@@ -279,75 +279,116 @@ const Dashboard = () => {
     </div>
   );
 
-  // ─── Mobile Hero Card ──────────────────────────────────────
-  const HeroCard = () => (
-    <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3 gap-2">
-        <div className="min-w-0 flex-1">
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">Welcome back</span>
-          <h1
-            className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white"
-            title={user?.name || "User"}
-          >
-            {user?.name ? user.name.split(" ")[0] : "User"}!
-          </h1>
-        </div>
-        <button
-          onClick={() => setHideStats((v) => !v)}
-          className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition flex-shrink-0"
-        >
-          {hideStats ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-
-      <div className="flex items-end justify-between mb-3 gap-2">
-        <div className="min-w-0">
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Orders</span>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white truncate">
-            {hideStats ? "••" : totalOrders}
-          </p>
-        </div>
-        <div className="text-right min-w-0">
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">This Month</span>
-          <p
-            className="text-xl font-bold text-gray-900 dark:text-white truncate"
-            title={hideStats ? "" : `₦${monthlySpent.toFixed(2)}`}
-          >
-            {hideStats ? "••••" : `₦${monthlySpent.toFixed(0)}`}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
-        <div className="flex items-center gap-5 min-w-0">
-          <div className="min-w-0">
-            <span className="text-[10px] text-gray-500 dark:text-gray-400">Fuel</span>
-            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-              {hideStats ? "••" : `${totalLiters.toFixed(1)}L`}
-            </p>
+  // ─── Mobile Hero Card (with skeleton) ──────────────────────
+  const HeroCard = () => {
+    if (isLoading) {
+      return (
+        <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
           </div>
-          <div className="min-w-0">
-            <span className="text-[10px] text-gray-500 dark:text-gray-400">Gas</span>
-            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-              {hideStats ? "••" : `${totalKg.toFixed(1)}kg`}
-            </p>
+
+          <div className="flex items-end justify-between mb-3 gap-2">
+            <div className="min-w-0 space-y-2">
+              <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="text-right min-w-0 space-y-2">
+              <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+              <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
+            <div className="flex items-center gap-5 min-w-0">
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-3.5 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-3.5 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            </div>
+            <div className="h-7 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0" />
           </div>
         </div>
-        <button
-          onClick={() => navigate("/orders")}
-          className="flex items-center gap-1 text-xs font-medium text-white bg-[#13ec5b] hover:bg-[#10d04e] px-3 py-1.5 rounded-lg border border-[#13ec5b] transition shadow-sm flex-shrink-0"
-        >
-          View all <ChevronRight className="h-3 w-3" />
-        </button>
+      );
+    }
+
+    return (
+      <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">Welcome back</span>
+            <h1
+              className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white"
+              title={user?.name || "User"}
+            >
+              {user?.name ? user.name.split(" ")[0] : "User"}!
+            </h1>
+          </div>
+          <button
+            onClick={() => setHideStats((v) => !v)}
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition flex-shrink-0"
+          >
+            {hideStats ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <div className="flex items-end justify-between mb-3 gap-2">
+          <div className="min-w-0">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Orders</span>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white truncate">
+              {hideStats ? "••" : totalOrders}
+            </p>
+          </div>
+          <div className="text-right min-w-0">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">This Month</span>
+            <p
+              className="text-xl font-bold text-gray-900 dark:text-white truncate"
+              title={hideStats ? "" : `₦${monthlySpent.toFixed(2)}`}
+            >
+              {hideStats ? "••••" : `₦${monthlySpent.toFixed(0)}`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
+          <div className="flex items-center gap-5 min-w-0">
+            <div className="min-w-0">
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">Fuel</span>
+              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                {hideStats ? "••" : `${totalLiters.toFixed(1)}L`}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">Gas</span>
+              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                {hideStats ? "••" : `${totalKg.toFixed(1)}kg`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/orders")}
+            className="flex items-center gap-1 text-xs font-medium text-white bg-[#13ec5b] hover:bg-[#10d04e] px-3 py-1.5 rounded-lg border border-[#13ec5b] transition shadow-sm flex-shrink-0"
+          >
+            View all <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // ─── Live Tracking Card ──────────────────────────────────
   const LiveTracking = () => {
     const hasActiveOrder = !!activeOrder;
     const hasTracking = !!trackingData && trackingData.status === "active";
-    const isLoadingState = trackingLoading;
+    const isLoadingState = trackingLoading || activeLoading;
 
     const defaultCenter = [6.5244, 3.3792];
     const mapCenter = trackingData?.riderLocation
@@ -363,21 +404,27 @@ const Dashboard = () => {
             <MapPin className="h-4 w-4 text-[#13ec5b] flex-shrink-0" />
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Live Tracking</h3>
           </div>
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-              hasTracking
-                ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                : hasActiveOrder
-                ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
-                : "bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full mr-1.5 inline-block bg-current" />
-            {hasTracking ? "Live" : hasActiveOrder ? "Waiting" : "Inactive"}
-          </span>
+          {isLoadingState ? (
+            <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse flex-shrink-0" />
+          ) : (
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                hasTracking
+                  ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                  : hasActiveOrder
+                  ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                  : "bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full mr-1.5 inline-block bg-current" />
+              {hasTracking ? "Live" : hasActiveOrder ? "Waiting" : "Inactive"}
+            </span>
+          )}
         </div>
         <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 flex-shrink-0">
-          {hasActiveOrder ? (
+          {isLoadingState ? (
+            <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />
+          ) : hasActiveOrder ? (
             <MapContainer center={mapCenter} zoom={13} style={{ height: "100%", width: "100%" }} zoomControl={false} attributionControl={false}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
               {trackingData?.riderLocation && (
@@ -507,7 +554,7 @@ const Dashboard = () => {
     </div>
   );
 
-  // ─── Mobile Slim Order Item (same UI as Orders page) ──────
+  // ─── Mobile Slim Order Item ───────────────────────────────
   const SlimOrderItem = ({ order }) => {
     const isPaid = order.paid;
     const isPendingPayment = !isPaid && order.status !== "cancelled";
@@ -559,18 +606,76 @@ const Dashboard = () => {
       </div>
 
       {isLoading ? (
-        <div className="divide-y divide-gray-100 dark:divide-gray-800">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
-              <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-gray-700" />
-              <div className="flex-1">
-                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
-                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded mt-1" />
+        <>
+          {/* Desktop skeleton table */}
+          <div className="hidden lg:block">
+            <table className="w-full text-sm table-fixed">
+              <colgroup>
+                <col className="w-[15%]" />
+                <col className="w-[9%]" />
+                <col className="w-[13%]" />
+                <col className="w-[15%]" />
+                <col className="w-[13%]" />
+                <col className="w-[12%]" />
+                <col className="w-[23%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Order</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Type</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Amount</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Delivery</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Date</th>
+                  <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, i) => (
+                  <tr key={i} className="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                    <td className="py-2.5 px-3">
+                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="h-4 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile skeleton list */}
+          <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    <div className="h-4 w-14 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                  </div>
+                  <div className="h-3 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+                <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-2" />
               </div>
-              <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       ) : recentOrders.length === 0 ? (
         <div className="text-center py-12">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -584,7 +689,7 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {/* Desktop table — same as Orders page, with truncation */}
+          {/* Desktop table — same as Orders page */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm table-fixed">
               <colgroup>
@@ -695,7 +800,7 @@ const Dashboard = () => {
             </table>
           </div>
 
-          {/* Mobile slim list — same as Orders page */}
+          {/* Mobile slim list */}
           <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
             {recentOrders.map((order) => (
               <SlimOrderItem key={order._id} order={order} />
@@ -714,7 +819,12 @@ const Dashboard = () => {
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between gap-2">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl truncate">Dashboard</h1>
           <div className="flex items-center gap-3 flex-shrink-0">
-            {!isLoading && user && (
+            {userLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-3.5 w-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse hidden sm:block" />
+                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+              </div>
+            ) : user ? (
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline truncate max-w-[120px]">
                   {user.name?.split(" ")[0]}
@@ -727,7 +837,7 @@ const Dashboard = () => {
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </header>
 
@@ -738,32 +848,51 @@ const Dashboard = () => {
           <div className="hidden lg:block">
             <div className="flex items-center gap-3 mb-6 min-w-0">
               <div className="h-12 w-12 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {!isLoading && user?.profilePhoto ? (
+                {userLoading ? (
+                  <div className="h-full w-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                ) : user?.profilePhoto ? (
                   <img src={user.profilePhoto} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-6 w-6 text-[#13ec5b]" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <h2
-                  className="text-2xl font-bold text-gray-900 dark:text-white truncate"
-                  title={`Welcome back, ${isLoading ? "..." : user?.name || "User"}!`}
-                >
-                  Welcome back, {isLoading ? "..." : user?.name || "User"}!
-                </h2>
-                <p
-                  className="text-gray-500 dark:text-gray-400 truncate"
-                  title={isLoading ? "Loading..." : user?.email}
-                >
-                  {isLoading ? "Loading..." : user?.email}
-                </p>
+                {userLoading ? (
+                  <>
+                    <div className="h-7 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    <h2
+                      className="text-2xl font-bold text-gray-900 dark:text-white truncate"
+                      title={`Welcome back, ${user?.name || "User"}!`}
+                    >
+                      Welcome back, {user?.name || "User"}!
+                    </h2>
+                    <p
+                      className="text-gray-500 dark:text-gray-400 truncate"
+                      title={user?.email}
+                    >
+                      {user?.email}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4 mb-6">
               {isLoading ? (
                 [...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 animate-pulse h-24" />
+                  <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 space-y-2">
+                        <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                        <div className="h-7 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                      </div>
+                      <div className="h-9 w-9 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                    </div>
+                  </div>
                 ))
               ) : (
                 <>
@@ -982,34 +1111,36 @@ const Dashboard = () => {
       </div>
 
       {/* Floating Subscription Button (mobile only) */}
-      <div className="lg:hidden fixed bottom-24 right-4 z-40">
-        <button onClick={() => setShowSubModal(true)} className="relative group">
-          <div
-            className={`absolute inset-0 rounded-full animate-ping ${
-              subStatus === "active"
-                ? "bg-green-500/40"
-                : subStatus === "near"
-                ? "bg-orange-500/40"
-                : "bg-red-500/40"
-            }`}
-            style={{ animationDuration: "1.5s" }}
-          />
-          <div
-            className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-2 transition-all ${
-              subStatus === "active"
-                ? "bg-green-500 border-green-400"
-                : subStatus === "near"
-                ? "bg-orange-500 border-orange-400"
-                : "bg-red-500 border-red-400"
-            }`}
-          >
-            <Package className="h-6 w-6 text-white" />
-          </div>
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-700 dark:text-gray-300">
-            {subStatus === "active" ? "✓" : subStatus === "near" ? "!" : "×"}
-          </span>
-        </button>
-      </div>
+      {!isLoading && (
+        <div className="lg:hidden fixed bottom-24 right-4 z-40">
+          <button onClick={() => setShowSubModal(true)} className="relative group">
+            <div
+              className={`absolute inset-0 rounded-full animate-ping ${
+                subStatus === "active"
+                  ? "bg-green-500/40"
+                  : subStatus === "near"
+                  ? "bg-orange-500/40"
+                  : "bg-red-500/40"
+              }`}
+              style={{ animationDuration: "1.5s" }}
+            />
+            <div
+              className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-2 transition-all ${
+                subStatus === "active"
+                  ? "bg-green-500 border-green-400"
+                  : subStatus === "near"
+                  ? "bg-orange-500 border-orange-400"
+                  : "bg-red-500 border-red-400"
+              }`}
+            >
+              <Package className="h-6 w-6 text-white" />
+            </div>
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-700 dark:text-gray-300">
+              {subStatus === "active" ? "✓" : subStatus === "near" ? "!" : "×"}
+            </span>
+          </button>
+        </div>
+      )}
 
       {showSubModal && <SubscriptionModal />}
       <Bottombar />
