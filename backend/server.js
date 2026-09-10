@@ -42,7 +42,8 @@ const allowedOrigins = [
   'https://flanorx.com',
   'https://flanorx-api-6920.onrender.com',
   'https://staging.flanorx.com',
-  'https://flanorx-kduo.onrender.com'
+  'https://flanorx-kduo.onrender.com',
+  'https://web.flanorx.com',
 ];
 
 app.use(cors({
