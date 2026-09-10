@@ -14,19 +14,50 @@ import {
   Wallet,
   MapPin,
   Repeat,
+  Shield,
 } from "lucide-react";
 import { logout } from "../features/auth/authSlice";
 import { useTheme } from "../context/ThemeContext";
+import { useGetProfileQuery } from "../features/userApiSlice";
+import { useGetAvailableDeliveriesQuery } from "../features/deliveryApiSlice";
+import { useGetRiderApplicationsQuery } from "../features/adminApiSlice";
+import { apiSlice } from "../features/apiSlice";
 
 const MoreDrawer = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { theme, toggleTheme, setSystemTheme } = useTheme();
   const { userInfo } = useSelector((state) => state.auth);
-  const isRider = userInfo?.role === "rider";
+
+  // Freshest role from API, fallback to Redux
+  const { data: profile } = useGetProfileQuery();
+  const role = profile?.role || userInfo?.role;
+  const isRider = role === "rider";
+  const isAdmin = role === "admin";
+
+  // ─── Attention badges (skip when drawer is closed) ────────
+  const { data: availableDeliveries = [] } = useGetAvailableDeliveriesQuery(
+    undefined,
+    {
+      skip: !isOpen || !isRider,
+      pollingInterval: 15000,
+      refetchOnFocus: true,
+    }
+  );
+  const availableDeliveriesCount = availableDeliveries.length;
+
+  const { data: pendingApplications = [] } = useGetRiderApplicationsQuery(
+    { status: "pending" },
+    {
+      skip: !isOpen || !isAdmin,
+      pollingInterval: 30000,
+      refetchOnFocus: true,
+    }
+  );
+  const pendingAppsCount = pendingApplications.length;
+
   const drawerRef = useRef(null);
 
-  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target)) {
@@ -46,46 +77,64 @@ const MoreDrawer = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   const handleLogout = () => {
-    dispatch(logout());
-    localStorage.removeItem("flanorx_auth");
-    navigate("/login");
     onClose();
+    dispatch(logout());
+    dispatch(apiSlice.util.resetApiState());
+    navigate("/login", { replace: true });
   };
 
   const menuItems = [
     {
       label: "Tracking",
       icon: MapPin,
-      onClick: () => { navigate("/tracking"); onClose(); },
+      onClick: () => {
+        navigate("/tracking");
+        onClose();
+      },
     },
     {
       label: "Gas Subscription",
       icon: Repeat,
-      onClick: () => { navigate("/gas/subscription"); onClose(); },
+      onClick: () => {
+        navigate("/gas/subscription");
+        onClose();
+      },
     },
     {
       label: "Profile",
       icon: User,
-      onClick: () => { navigate("/profile"); onClose(); },
+      onClick: () => {
+        navigate("/profile");
+        onClose();
+      },
     },
     {
       label: "Settings",
       icon: Settings,
-      onClick: () => { navigate("/settings"); onClose(); },
+      onClick: () => {
+        navigate("/settings");
+        onClose();
+      },
     },
   ];
 
-  // Rider-specific items
   const riderItems = [
     {
       label: "Deliveries",
       icon: Truck,
-      onClick: () => { navigate("/rider/deliveries"); onClose(); },
+      badge: availableDeliveriesCount,
+      onClick: () => {
+        navigate("/rider/deliveries");
+        onClose();
+      },
     },
     {
       label: "Earnings",
       icon: Wallet,
-      onClick: () => { navigate("/rider/earnings"); onClose(); },
+      onClick: () => {
+        navigate("/rider/earnings");
+        onClose();
+      },
     },
   ];
 
@@ -105,7 +154,9 @@ const MoreDrawer = ({ isOpen, onClose }) => {
         }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-          <span className="text-lg font-bold text-gray-900 dark:text-white">More</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            More
+          </span>
           <button
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
@@ -114,13 +165,15 @@ const MoreDrawer = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="p-4 space-y-2">
-          {/* Theme options */}
+        <div className="p-4 space-y-2 overflow-y-auto h-[calc(100%-65px)]">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
             Theme
           </p>
           <button
-            onClick={() => { toggleTheme(); onClose(); }}
+            onClick={() => {
+              toggleTheme();
+              onClose();
+            }}
             className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
               theme === "light"
                 ? "bg-[#13ec5b]/10 text-[#13ec5b]"
@@ -131,7 +184,10 @@ const MoreDrawer = ({ isOpen, onClose }) => {
             <span>Light</span>
           </button>
           <button
-            onClick={() => { toggleTheme(); onClose(); }}
+            onClick={() => {
+              toggleTheme();
+              onClose();
+            }}
             className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
               theme === "dark"
                 ? "bg-[#13ec5b]/10 text-[#13ec5b]"
@@ -142,7 +198,10 @@ const MoreDrawer = ({ isOpen, onClose }) => {
             <span>Dark</span>
           </button>
           <button
-            onClick={() => { setSystemTheme(); onClose(); }}
+            onClick={() => {
+              setSystemTheme();
+              onClose();
+            }}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <Monitor className="h-5 w-5" />
@@ -151,19 +210,24 @@ const MoreDrawer = ({ isOpen, onClose }) => {
 
           <hr className="my-3 border-gray-200 dark:border-gray-800" />
 
-          {/* Main menu items */}
           {menuItems.map((item) => (
             <button
               key={item.label}
               onClick={item.onClick}
-              className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <span className="flex items-center gap-3">
+                <item.icon className="h-5 w-5" />
+                <span>{item.label}</span>
+              </span>
+              {item.badge > 0 && (
+                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              )}
             </button>
           ))}
 
-          {/* Rider-specific items */}
           {isRider && (
             <>
               <hr className="my-3 border-gray-200 dark:border-gray-800" />
@@ -174,16 +238,58 @@ const MoreDrawer = ({ isOpen, onClose }) => {
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
+                  <span className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </span>
+                  {item.badge > 0 && (
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
                 </button>
               ))}
+              <button
+                onClick={() => {
+                  navigate("/rider/dashboard");
+                  onClose();
+                }}
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-[#13ec5b] bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 transition-colors"
+              >
+                <Truck className="h-5 w-5" />
+                <span>Rider Dashboard</span>
+              </button>
             </>
           )}
 
-          {/* Logout */}
+          {isAdmin && (
+            <>
+              <hr className="my-3 border-gray-200 dark:border-gray-800" />
+              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1">
+                Admin
+              </p>
+              <button
+                onClick={() => {
+                  navigate("/superuser/dashboard");
+                  onClose();
+                }}
+                className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+              >
+                <span className="flex items-center gap-3">
+                  <Shield className="h-5 w-5" />
+                  <span>Admin Dashboard</span>
+                </span>
+                {pendingAppsCount > 0 && (
+                  <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                    {pendingAppsCount > 99 ? "99+" : pendingAppsCount}
+                  </span>
+                )}
+              </button>
+            </>
+          )}
+
           <hr className="my-3 border-gray-200 dark:border-gray-800" />
           <button
             onClick={handleLogout}

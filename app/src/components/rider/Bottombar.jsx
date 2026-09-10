@@ -10,12 +10,24 @@ import {
   Menu,
 } from "lucide-react";
 import { logout } from "../../features/auth/authSlice";
+import { useGetAvailableDeliveriesQuery } from "../../features/deliveryApiSlice";
 import RiderMoreDrawer from "./MoreDrawer";
 
 const RiderBottombar = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Poll every 15s for the available deliveries count
+  const { data: availableDeliveries = [] } = useGetAvailableDeliveriesQuery(
+    undefined,
+    {
+      pollingInterval: 15000,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    }
+  );
+  const availableCount = availableDeliveries.length;
 
   const handleLogout = () => {
     dispatch(logout());
@@ -25,9 +37,14 @@ const RiderBottombar = () => {
 
   const navItems = [
     { to: "/rider/dashboard", icon: LayoutDashboard, label: "Home" },
-    { to: "/rider/deliveries", icon: Truck, label: "Deliveries" },
+    {
+      to: "/rider/deliveries",
+      icon: Truck,
+      label: "Deliveries",
+      badge: availableCount,
+    },
     { to: "/rider/earnings", icon: Wallet, label: "Earnings" },
-    { to: "/tracking", icon: MapPin, label: "Tracking" },
+    { to: "/rider/tracking", icon: MapPin, label: "Tracking" },
     {
       icon: Menu,
       label: "More",
@@ -64,7 +81,14 @@ const RiderBottombar = () => {
                   }`
                 }
               >
-                <item.icon className="h-5 w-5" />
+                <span className="relative">
+                  <item.icon className="h-5 w-5" />
+                  {item.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2 flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
+                </span>
                 <span className="text-[10px] mt-0.5">{item.label}</span>
               </NavLink>
             );

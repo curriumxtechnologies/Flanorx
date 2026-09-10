@@ -31,6 +31,13 @@ const FacebookIcon = ({ className }) => (
   </svg>
 );
 
+// ─── Role-based redirect helper ────────────────────────────
+const getRedirectPath = (role) => {
+  if (role === "admin") return "/superuser/dashboard";
+  if (role === "rider") return "/rider/dashboard";
+  return "/dashboard";
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -49,17 +56,19 @@ const Login = () => {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotMessage, setForgotMessage] = useState({ text: "", type: "" });
 
-  // Redirect if already logged in
+  // ─── Redirect if already logged in (based on role) ───────
   useEffect(() => {
-    const authData = localStorage.getItem("flanorx_auth");
+    const authData =
+      localStorage.getItem("userInfo") || localStorage.getItem("flanorx_auth");
     if (authData) {
       try {
         const parsed = JSON.parse(authData);
         if (parsed?.token) {
-          navigate("/dashboard", { replace: true });
+          navigate(getRedirectPath(parsed.role), { replace: true });
         }
       } catch {
         localStorage.removeItem("flanorx_auth");
+        localStorage.removeItem("userInfo");
       }
     }
   }, [navigate]);
@@ -90,6 +99,7 @@ const Login = () => {
           _id: result._id,
           name: result.name,
           email: result.email,
+          role: result.role,
           profile: result.profile,
           authMethod: result.authMethod,
           userType: "customer",
@@ -97,7 +107,9 @@ const Login = () => {
         })
       );
       setSuccess("Login successful! Redirecting...");
-      setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
+      setTimeout(() => {
+        navigate(getRedirectPath(result.role), { replace: true });
+      }, 1000);
     } catch (err) {
       setError(err.data?.message || err.message || "Login failed");
     }
@@ -121,6 +133,7 @@ const Login = () => {
               _id: result._id,
               name: result.name,
               email: result.email,
+              role: result.role,
               profile: result.profile,
               authMethod: result.authMethod,
               userType: "customer",
@@ -128,7 +141,9 @@ const Login = () => {
             })
           );
           setSuccess("Google login successful!");
-          setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
+          setTimeout(() => {
+            navigate(getRedirectPath(result.role), { replace: true });
+          }, 1000);
         } catch (err) {
           setError(err.data?.message || err.message || "Google login failed");
         }
@@ -187,10 +202,9 @@ const Login = () => {
         </div>
       </div>
 
-      {/* RIGHT – form panel (scrollable) */}
+      {/* RIGHT – form panel */}
       <div className="w-full lg:w-1/2 min-h-screen overflow-y-auto flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-20 bg-white dark:bg-gray-950">
         <div className="max-w-md w-full mx-auto">
-          {/* Logo */}
           <div className="flex items-center justify-center lg:justify-start mb-8">
             <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
           </div>
