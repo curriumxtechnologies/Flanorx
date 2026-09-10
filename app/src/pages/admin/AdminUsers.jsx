@@ -19,6 +19,7 @@ import {
   Circle,
   CheckCheck,
   FileText,
+  AlertTriangle,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import {
@@ -27,8 +28,393 @@ import {
   useDeleteUserMutation,
 } from "../../features/adminApiSlice";
 import { useSendMessageMutation } from "../../features/messageApiSlice";
+import { buildEmailHtml } from "../../utils/buildEmailHtml";
 import AdminSidebar from "../../components/admin/Sidebar";
 import AdminBottombar from "../../components/admin/Bottombar";
+
+// ═══════════════════════════════════════════════════════════
+//  Top-level components (stable references — inputs keep focus)
+// ═══════════════════════════════════════════════════════════
+
+const CustomDropdown = ({
+  value,
+  options,
+  onChange,
+  placeholder,
+  className = "",
+  disabled = false,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = options.find((opt) => opt.value === value);
+  const display = selected ? selected.label : placeholder;
+
+  return (
+    <div className={`relative ${className}`} ref={ref}>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#13ec5b]/50 disabled:opacity-60"
+      >
+        <span className="truncate">{display}</span>
+        <ChevronDown
+          className={`h-4 w-4 flex-shrink-0 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-60 overflow-auto py-1">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition truncate ${
+                opt.value === value
+                  ? "bg-[#13ec5b]/10 text-[#13ec5b]"
+                  : "text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const FilterDropdown = ({ label, value, options, onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = options.find((opt) => opt.value === value);
+  const display = selected ? selected.label : label;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition min-w-[140px] justify-between"
+      >
+        <span className="truncate">{display}</span>
+        <ChevronDown
+          className={`h-4 w-4 flex-shrink-0 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-60 overflow-auto py-1">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onSelect(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition truncate ${
+                opt.value === value
+                  ? "bg-[#13ec5b]/10 text-[#13ec5b]"
+                  : "text-gray-700 dark:text-gray-300"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+//  Message templates (prefilled — edit or just send)
+// ═══════════════════════════════════════════════════════════
+const CONTACT_EMAIL = "flanorx1@gmail.com";
+const BASE_URL = "https://web.flanorx.com";
+
+const USER_TEMPLATES = {
+  // Regular customers — welcome + share-the-link nudge
+  user: {
+    subject: "Welcome to Flanorx — fuel & gas, delivered",
+    body: `Hi there,
+
+Thanks for being part of Flanorx. We're building a simpler, faster way to get fuel and gas delivered straight to your door — no queues, no stress, no wasted time.
+
+Your account is all set. You can order fuel or gas anytime from the app, track your delivery in real time, and manage everything from one place.
+
+Know someone who'd love Flanorx too? Feel free to share the link below — it means a lot to us.
+
+${BASE_URL}
+
+If you ever need help, just reply to this email or reach us at ${CONTACT_EMAIL}.
+
+Warm regards,
+The Flanorx Team`,
+    ctaLabel: "Open Flanorx",
+    ctaUrl: `${BASE_URL}/dashboard`,
+  },
+
+  // Riders — quick check-in, point them to their dashboard
+  rider: {
+    subject: "A quick update for our riders",
+    body: `Hi there,
+
+Thanks for riding with Flanorx. We wanted to check in and share a quick update.
+
+You can view your deliveries, track your earnings, and manage your rider profile anytime from your rider dashboard.
+
+If anything's unclear or you need help, just reply to this email or reach us at ${CONTACT_EMAIL}.
+
+Ride safe,
+The Flanorx Team`,
+    ctaLabel: "Rider Dashboard",
+    ctaUrl: `${BASE_URL}/rider/dashboard`,
+  },
+
+  // Admins — internal, restrained
+  admin: {
+    subject: "Flanorx admin update",
+    body: `Hi there,
+
+A quick update from the Flanorx team.
+
+Everything you need to manage the platform is available from your admin dashboard.
+
+If you need anything, just reply to this email or reach us at ${CONTACT_EMAIL}.
+
+Best,
+The Flanorx Team`,
+    ctaLabel: "Admin Dashboard",
+    ctaUrl: `${BASE_URL}/superuser/dashboard`,
+  },
+};
+
+// Fallback for mixed-role selections
+const GENERIC_TEMPLATE = {
+  subject: "An update from Flanorx",
+  body: `Hi there,
+
+A quick update from all of us at Flanorx. Thanks for being part of the journey.
+
+If you have any questions or feedback, just reply to this email or reach us at ${CONTACT_EMAIL}.
+
+Warm regards,
+The Flanorx Team`,
+  ctaLabel: "Visit Flanorx",
+  ctaUrl: BASE_URL,
+};
+
+// ═══════════════════════════════════════════════════════════
+//  User Detail Modal
+// ═══════════════════════════════════════════════════════════
+const UserDetailModal = ({
+  user,
+  onClose,
+  roleOptions,
+  updateLoading,
+  deleteLoading,
+  onRoleUpdate,
+  onSendMessage,
+  onDeleteRequest,
+  getRoleBadgeColor,
+  getVerificationBadgeColor,
+}) => {
+  const [localRole, setLocalRole] = useState(user.role || "user");
+
+  useEffect(() => {
+    setLocalRole(user.role || "user");
+  }, [user._id, user.role]);
+
+  const handleRoleChange = (val) => {
+    setLocalRole(val);
+    onRoleUpdate(user._id, val);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 w-full max-w-full p-6 rounded-t-2xl max-h-[85vh] overflow-y-auto lg:max-w-md lg:rounded-2xl lg:mb-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <h3
+            className="text-lg font-bold text-gray-900 dark:text-white truncate"
+            title={user.name}
+          >
+            {user.name || "User"}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+          >
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+
+        <div className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Email</p>
+              <p
+                className="text-gray-900 dark:text-white truncate"
+                title={user.email}
+              >
+                {user.email || "—"}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Phone</p>
+              <p className="text-gray-900 dark:text-white truncate">
+                {user.phone || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Role</p>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
+                  user.role
+                )}`}
+              >
+                {user.role || "user"}
+              </span>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">Verified</p>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getVerificationBadgeColor(
+                  user.isVerified
+                )}`}
+              >
+                {user.isVerified ? "Verified" : "Unverified"}
+              </span>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+            <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">
+              Update Role
+            </p>
+            <CustomDropdown
+              value={localRole}
+              options={roleOptions.filter((opt) => opt.value !== "")}
+              onChange={handleRoleChange}
+              placeholder="Select role"
+              disabled={updateLoading}
+            />
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
+            <button
+              onClick={onSendMessage}
+              className="w-full py-2.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Send Message
+            </button>
+            <button
+              onClick={onDeleteRequest}
+              disabled={deleteLoading}
+              className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleteLoading ? "Deleting..." : "Delete User"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ConfirmDeleteModal = ({ user, onCancel, onConfirm, isDeleting }) => {
+  if (!user) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={() => !isDeleting && onCancel()}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 w-full max-w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">
+              Delete this user?
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 break-words">
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                {user.name || "This user"}
+              </span>{" "}
+              will be permanently removed. This action cannot be undone.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            disabled={isDeleting}
+            className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {isDeleting ? (
+              <>
+                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+//  Main component
+// ═══════════════════════════════════════════════════════════
 
 const AdminUsers = () => {
   const navigate = useNavigate();
@@ -43,20 +429,25 @@ const AdminUsers = () => {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // ─── Selection state (for bulk messaging) ─────────────────
+  // ─── Delete confirmation state ────────────────────────────
+  const [pendingDeleteUser, setPendingDeleteUser] = useState(null);
+
+  // ─── Selection state ──────────────────────────────────────
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [showMessageModal, setShowMessageModal] = useState(false);
 
-  // ─── Long‑press refs ──────────────────────────────────────
+  // ─── Long-press refs ──────────────────────────────────────
   const longPressTimer = useRef(null);
   const suppressClick = useRef(false);
 
-  // ─── Message form state ───────────────────────────────────
+  // ─── Message form state (includes CTA) ────────────────────
   const [messageForm, setMessageForm] = useState({
     subject: "",
     body: "",
     attachments: [],
+    ctaLabel: "",
+    ctaUrl: "",
   });
 
   // ─── Queries & Mutations ──────────────────────────────────
@@ -197,30 +588,83 @@ const AdminUsers = () => {
     try {
       await updateUserRole({ id: userId, role: newRole }).unwrap();
       refetch();
-      if (selectedUser && selectedUser._id === userId) {
-        const updated = users.find((u) => u._id === userId);
-        if (updated) setSelectedUser(updated);
-      }
+      toast.success("Role updated");
     } catch (err) {
-      alert(err.data?.message || "Failed to update user role");
+      toast.error(err?.data?.message || "Failed to update user role");
     }
   };
 
-  // ─── Delete handler ──────────────────────────────────────
-  const handleDeleteUser = async (userId) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this user? This action cannot be undone."
-      )
-    )
-      return;
+  // ─── Delete request / confirm ─────────────────────────────
+  const requestDeleteUser = (user) => {
+    setPendingDeleteUser(user);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!pendingDeleteUser) return;
     try {
-      await deleteUser(userId).unwrap();
+      await deleteUser(pendingDeleteUser._id).unwrap();
+      toast.success("User deleted");
       refetch();
+      setPendingDeleteUser(null);
       setSelectedUser(null);
     } catch (err) {
-      alert(err.data?.message || "Failed to delete user");
+      toast.error(err?.data?.message || "Failed to delete user");
     }
+  };
+
+  // ─── Template picker ──────────────────────────────────────
+  const pickTemplateForSelection = () => {
+    const selected = users.filter((u) => selectedIds.has(u._id));
+    const roles = new Set(selected.map((u) => u.role || "user"));
+    if (roles.size === 1) {
+      const role = Array.from(roles)[0];
+      return USER_TEMPLATES[role] || GENERIC_TEMPLATE;
+    }
+    return GENERIC_TEMPLATE;
+  };
+
+  const prefillFromTemplate = (template) => {
+    setMessageForm({
+      subject: template.subject,
+      body: template.body,
+      attachments: [],
+      ctaLabel: template.ctaLabel || "",
+      ctaUrl: template.ctaUrl || "",
+    });
+  };
+
+  // Open the modal from the selection bar (bulk)
+  const openMessageForSelection = () => {
+    if (selectedIds.size === 0) {
+      toast.error("Select at least one recipient");
+      return;
+    }
+    prefillFromTemplate(pickTemplateForSelection());
+    setShowMessageModal(true);
+  };
+
+  // Open from a single user's detail modal
+  const openMessageForUser = (user) => {
+    setSelectedIds(new Set([user._id]));
+    setSelectionMode(true);
+    const template = USER_TEMPLATES[user.role || "user"] || GENERIC_TEMPLATE;
+    prefillFromTemplate(template);
+    setShowMessageModal(true);
+    setSelectedUser(null);
+  };
+
+  // ─── Bulk message: all users of a given role ─────────────
+  const handleBulkRoleMessage = (role) => {
+    const matching = users.filter((u) => (u.role || "user") === role);
+    if (matching.length === 0) {
+      toast.error("No users with this role");
+      return;
+    }
+    setSelectedIds(new Set(matching.map((u) => u._id)));
+    setSelectionMode(true);
+    const template = USER_TEMPLATES[role] || GENERIC_TEMPLATE;
+    prefillFromTemplate(template);
+    setShowMessageModal(true);
   };
 
   // ─── Message send handler ─────────────────────────────────
@@ -244,11 +688,13 @@ const AdminUsers = () => {
       fd.append("subject", messageForm.subject.trim());
 
       const plainText = messageForm.body.trim();
-      const htmlBody = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #111;">${plainText
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\n/g, "<br/>")}</div>`;
+      const htmlBody = buildEmailHtml({
+        body: plainText,
+        subject: messageForm.subject.trim(),
+        preheader: messageForm.subject.trim(),
+        ctaLabel: messageForm.ctaLabel?.trim() || undefined,
+        ctaUrl: messageForm.ctaUrl?.trim() || undefined,
+      });
 
       fd.append("text", plainText);
       fd.append("html", htmlBody);
@@ -260,7 +706,13 @@ const AdminUsers = () => {
       const result = await sendMessage(fd).unwrap();
       toast.success(result?.message || "Message sent successfully");
       setShowMessageModal(false);
-      setMessageForm({ subject: "", body: "", attachments: [] });
+      setMessageForm({
+        subject: "",
+        body: "",
+        attachments: [],
+        ctaLabel: "",
+        ctaUrl: "",
+      });
       exitSelectionMode();
     } catch (err) {
       toast.error(err?.data?.message || "Failed to send message");
@@ -312,122 +764,56 @@ const AdminUsers = () => {
       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
       : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
 
-  // ─── Custom Dropdown ─────────────────────────────────────
-  const CustomDropdown = ({
-    value,
-    options,
-    onChange,
-    placeholder,
-    className = "",
-  }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const ref = useRef(null);
+  // ═══════════════════════════════════════════════════════════
+  //  Render functions
+  // ═══════════════════════════════════════════════════════════
 
-    useEffect(() => {
-      const handler = (e) => {
-        if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
-      };
-      document.addEventListener("mousedown", handler);
-      return () => document.removeEventListener("mousedown", handler);
-    }, []);
+  // ─── Quick message chips (bulk by role) ──────────────────
+  const renderQuickMessageChips = () => {
+    const chips = [
+      { role: "user", label: "Users" },
+      { role: "rider", label: "Riders" },
+      { role: "admin", label: "Admins" },
+    ]
+      .map((c) => ({
+        ...c,
+        count: users.filter((u) => (u.role || "user") === c.role).length,
+      }))
+      .filter((c) => c.count > 0);
 
-    const selected = options.find((opt) => opt.value === value);
-    const display = selected ? selected.label : placeholder;
+    if (chips.length === 0) return null;
 
     return (
-      <div className={`relative ${className}`} ref={ref}>
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-[#13ec5b]/50"
-        >
-          <span className="truncate">{display}</span>
-          <ChevronDown
-            className={`h-4 w-4 flex-shrink-0 transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-        {isOpen && (
-          <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-60 overflow-auto py-1">
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition truncate ${
-                  opt.value === value
-                    ? "bg-[#13ec5b]/10 text-[#13ec5b]"
-                    : "text-gray-700 dark:text-gray-300"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Mail className="h-4 w-4 text-[#13ec5b] flex-shrink-0" />
+          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+            Quick message
+          </span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500 hidden sm:inline">
+            — send to all users by role
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <button
+              key={chip.role}
+              onClick={() => handleBulkRoleMessage(chip.role)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300 hover:border-[#13ec5b] hover:text-[#0f9c46] dark:hover:text-[#13ec5b] transition"
+            >
+              <Mail className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{chip.label}</span>
+              <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold">
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     );
   };
 
-  // ─── Desktop FilterDropdown ──────────────────────────────
-  const FilterDropdown = ({ label, value, options, onSelect }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const ref = useRef(null);
-
-    useEffect(() => {
-      const handler = (e) => {
-        if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
-      };
-      document.addEventListener("mousedown", handler);
-      return () => document.removeEventListener("mousedown", handler);
-    }, []);
-
-    const selected = options.find((opt) => opt.value === value);
-    const display = selected ? selected.label : label;
-
-    return (
-      <div className="relative" ref={ref}>
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition min-w-[140px] justify-between"
-        >
-          <span className="truncate">{display}</span>
-          <ChevronDown
-            className={`h-4 w-4 flex-shrink-0 transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-        {isOpen && (
-          <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-60 overflow-auto py-1">
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => {
-                  onSelect(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition truncate ${
-                  opt.value === value
-                    ? "bg-[#13ec5b]/10 text-[#13ec5b]"
-                    : "text-gray-700 dark:text-gray-300"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ─── Filter Sheet (mobile) ──────────────────────────────
-  const FilterSheet = () => (
+  const renderFilterSheet = () => (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
       onClick={() => setShowFilterSheet(false)}
@@ -500,7 +886,8 @@ const AdminUsers = () => {
               value={filters.search}
               onChange={(e) => handleFilterChange("search", e.target.value)}
               placeholder="Name or email..."
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 text-sm"
+              autoComplete="off"
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 text-sm outline-none"
             />
           </div>
 
@@ -526,132 +913,7 @@ const AdminUsers = () => {
     </div>
   );
 
-  // ─── Detail Modal ────────────────────────────────────────
-  const DetailModal = () => {
-    if (!selectedUser) return null;
-
-    const user = selectedUser;
-    const [localRole, setLocalRole] = useState(user.role || "user");
-
-    const handleRoleChange = (val) => {
-      setLocalRole(val);
-      handleRoleUpdate(user._id, val);
-    };
-
-    const openSingleMessage = () => {
-      setSelectedIds(new Set([user._id]));
-      setSelectionMode(true);
-      setShowMessageModal(true);
-      setSelectedUser(null);
-    };
-
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
-        onClick={() => setSelectedUser(null)}
-      >
-        <div
-          className="bg-white dark:bg-gray-900 w-full max-w-full p-6 max-h-[85vh] overflow-y-auto lg:max-w-md lg:rounded-2xl lg:mb-6"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-4 gap-2">
-            <h3
-              className="text-lg font-bold text-gray-900 dark:text-white truncate"
-              title={user.name}
-            >
-              {user.name || "User"}
-            </h3>
-            <button
-              onClick={() => setSelectedUser(null)}
-              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
-            >
-              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            </button>
-          </div>
-
-          <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="min-w-0">
-                <p className="text-gray-500 dark:text-gray-400 text-xs">
-                  Email
-                </p>
-                <p
-                  className="text-gray-900 dark:text-white truncate"
-                  title={user.email}
-                >
-                  {user.email || "—"}
-                </p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-gray-500 dark:text-gray-400 text-xs">
-                  Phone
-                </p>
-                <p className="text-gray-900 dark:text-white truncate">
-                  {user.phone || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Role</p>
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
-                    user.role
-                  )}`}
-                >
-                  {user.role || "user"}
-                </span>
-              </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">
-                  Verified
-                </p>
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getVerificationBadgeColor(
-                    user.isVerified
-                  )}`}
-                >
-                  {user.isVerified ? "Verified" : "Unverified"}
-                </span>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-              <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">
-                Update Role
-              </p>
-              <CustomDropdown
-                value={localRole}
-                options={roleOptions.filter((opt) => opt.value !== "")}
-                onChange={handleRoleChange}
-                placeholder="Select role"
-                disabled={updateLoading}
-              />
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
-              <button
-                onClick={openSingleMessage}
-                className="w-full py-2.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
-              >
-                <Mail className="h-4 w-4" />
-                Send Message
-              </button>
-              <button
-                onClick={() => handleDeleteUser(user._id)}
-                disabled={deleteLoading}
-                className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                <Trash2 className="h-4 w-4" />
-                {deleteLoading ? "Deleting..." : "Delete User"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ─── Message Modal ────────────────────────────────────────
-  const MessageModal = () => (
+  const renderMessageModal = () => (
     <div
       className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={() => !sendingMessage && setShowMessageModal(false)}
@@ -680,9 +942,8 @@ const AdminUsers = () => {
           </button>
         </div>
 
-        {/* Body - scrollable */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-          {/* Subject */}
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
               Subject
@@ -693,13 +954,13 @@ const AdminUsers = () => {
               onChange={(e) =>
                 setMessageForm((f) => ({ ...f, subject: e.target.value }))
               }
-              placeholder="e.g. Flanorx is launching soon!"
+              placeholder="e.g. Welcome to Flanorx"
               disabled={sendingMessage}
+              autoComplete="off"
               className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
             />
           </div>
 
-          {/* Body */}
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
               Message
@@ -710,13 +971,48 @@ const AdminUsers = () => {
                 setMessageForm((f) => ({ ...f, body: e.target.value }))
               }
               placeholder="Write your message..."
-              rows={6}
+              rows={11}
               disabled={sendingMessage}
               className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none resize-none disabled:opacity-60"
             />
           </div>
 
-          {/* Attachments */}
+          {/* CTA (prefilled, editable) */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Button label
+              </label>
+              <input
+                type="text"
+                value={messageForm.ctaLabel}
+                onChange={(e) =>
+                  setMessageForm((f) => ({ ...f, ctaLabel: e.target.value }))
+                }
+                placeholder="Optional"
+                disabled={sendingMessage}
+                autoComplete="off"
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Button URL
+              </label>
+              <input
+                type="url"
+                value={messageForm.ctaUrl}
+                onChange={(e) =>
+                  setMessageForm((f) => ({ ...f, ctaUrl: e.target.value }))
+                }
+                placeholder="https://..."
+                disabled={sendingMessage}
+                autoComplete="off"
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
+              />
+            </div>
+          </div>
+
           <div>
             <div className="flex items-center justify-between mb-1.5 gap-2">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
@@ -811,14 +1107,12 @@ const AdminUsers = () => {
     </div>
   );
 
-  // ─── Selection Bar (floating, mobile & desktop) ──────────
-  const SelectionBar = () => {
+  const renderSelectionBar = () => {
     if (!selectionMode || showMessageModal) return null;
 
     return (
       <div className="fixed left-0 right-0 bottom-0 z-40 px-3 pb-3 pt-2 pointer-events-none">
         <div className="max-w-lg mx-auto pointer-events-auto bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 rounded-2xl shadow-2xl px-3 py-2.5 flex items-center gap-2">
-          {/* Cancel */}
           <button
             onClick={exitSelectionMode}
             className="w-8 h-8 rounded-full flex items-center justify-center text-white hover:bg-white/10 transition flex-shrink-0"
@@ -827,12 +1121,10 @@ const AdminUsers = () => {
             <X className="h-4 w-4" />
           </button>
 
-          {/* Count */}
           <span className="text-sm font-medium text-white truncate min-w-0 flex-1">
             {selectedIds.size} selected
           </span>
 
-          {/* Select All / Deselect All */}
           <button
             onClick={toggleSelectAll}
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white hover:bg-white/10 transition flex-shrink-0"
@@ -851,9 +1143,8 @@ const AdminUsers = () => {
             )}
           </button>
 
-          {/* Send */}
           <button
-            onClick={() => setShowMessageModal(true)}
+            onClick={openMessageForSelection}
             disabled={selectedIds.size === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#13ec5b] hover:bg-[#10d04e] text-gray-900 rounded-lg text-xs font-semibold transition flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -865,24 +1156,23 @@ const AdminUsers = () => {
     );
   };
 
-  // ─── Mobile Slim List Item ──────────────────────────────
-  const SlimUserItem = ({ user }) => {
+  const renderSlimUserItem = (user) => {
     const isSelected = selectedIds.has(user._id);
 
     return (
       <div
+        key={user._id}
         onClick={() => handleRowClick(user)}
         onContextMenu={(e) => handleContextMenu(e, user)}
         onTouchStart={() => handleTouchStart(user._id)}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}
-        className={`flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer transition select-none ${
+        className={`flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer transition select-none last:border-b-0 ${
           isSelected
             ? "bg-[#13ec5b]/10 dark:bg-[#13ec5b]/10"
             : "hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-600"
         }`}
       >
-        {/* Selection indicator (mobile) */}
         {selectionMode && (
           <div className="flex-shrink-0 mr-3">
             {isSelected ? (
@@ -933,9 +1223,7 @@ const AdminUsers = () => {
     );
   };
 
-  // ─── Main render ──────────────────────────────────────────
-  const anyModalOpen =
-    !!selectedUser || showFilterSheet || showMessageModal;
+  const anyModalOpen = !!selectedUser || showFilterSheet || showMessageModal;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -1006,7 +1294,8 @@ const AdminUsers = () => {
                     handleFilterChange("search", e.target.value)
                   }
                   placeholder="Search users..."
-                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50"
+                  autoComplete="off"
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 outline-none"
                 />
               </div>
             </div>
@@ -1018,10 +1307,13 @@ const AdminUsers = () => {
             </button>
           </div>
 
-          {/* Selection hint (desktop) */}
+          {/* Quick message chips */}
+          {!isLoading && !selectionMode && renderQuickMessageChips()}
+
+          {/* Selection hint */}
           {!selectionMode && users.length > 0 && (
             <p className="hidden lg:block text-xs text-gray-400 dark:text-gray-500 mb-2 px-1">
-              Tip: right‑click a user to start selecting multiple.
+              Tip: right-click a user to start selecting multiple.
             </p>
           )}
 
@@ -1124,7 +1416,7 @@ const AdminUsers = () => {
                             key={user._id}
                             onClick={() => handleRowClick(user)}
                             onContextMenu={(e) => handleContextMenu(e, user)}
-                            className={`border-b border-gray-100 dark:border-gray-700 cursor-pointer transition ${
+                            className={`border-b border-gray-100 dark:border-gray-700 cursor-pointer transition last:border-b-0 ${
                               isSelected
                                 ? "bg-[#13ec5b]/10 dark:bg-[#13ec5b]/10"
                                 : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
@@ -1216,7 +1508,7 @@ const AdminUsers = () => {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleDeleteUser(user._id);
+                                      requestDeleteUser(user);
                                     }}
                                     disabled={deleteLoading}
                                     className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition text-red-500"
@@ -1236,9 +1528,7 @@ const AdminUsers = () => {
 
                 {/* Mobile Slim List */}
                 <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
-                  {users.map((user) => (
-                    <SlimUserItem key={user._id} user={user} />
-                  ))}
+                  {users.map((user) => renderSlimUserItem(user))}
                 </div>
               </>
             )}
@@ -1246,16 +1536,39 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* Selection bar (floating) */}
-      <SelectionBar />
+      {/* Selection bar */}
+      {renderSelectionBar()}
 
-      {/* Bottom bar - hidden when modal or selection mode active */}
+      {/* Bottom bar */}
       {!anyModalOpen && !selectionMode && <AdminBottombar />}
 
       {/* Modals */}
-      {showFilterSheet && <FilterSheet />}
-      {selectedUser && <DetailModal />}
-      {showMessageModal && <MessageModal />}
+      {showFilterSheet && renderFilterSheet()}
+      {selectedUser && (
+        <UserDetailModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+          roleOptions={roleOptions}
+          updateLoading={updateLoading}
+          deleteLoading={deleteLoading}
+          onRoleUpdate={handleRoleUpdate}
+          onSendMessage={() => openMessageForUser(selectedUser)}
+          onDeleteRequest={() => {
+            requestDeleteUser(selectedUser);
+          }}
+          getRoleBadgeColor={getRoleBadgeColor}
+          getVerificationBadgeColor={getVerificationBadgeColor}
+        />
+      )}
+      {showMessageModal && renderMessageModal()}
+      {pendingDeleteUser && (
+        <ConfirmDeleteModal
+          user={pendingDeleteUser}
+          onCancel={() => setPendingDeleteUser(null)}
+          onConfirm={confirmDeleteUser}
+          isDeleting={deleteLoading}
+        />
+      )}
     </div>
   );
 };

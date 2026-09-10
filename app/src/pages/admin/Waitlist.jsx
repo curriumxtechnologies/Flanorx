@@ -26,6 +26,7 @@ import {
   Circle,
   CheckCheck,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import AdminSidebar from "../../components/admin/Sidebar";
 import AdminBottombar from "../../components/admin/Bottombar";
@@ -34,6 +35,182 @@ import {
   useGetWaitlistStatsQuery,
 } from "../../features/waitlistApiSlice";
 import { useSendMessageMutation } from "../../features/messageApiSlice";
+import { buildEmailHtml } from "../../utils/buildEmailHtml";
+
+// ═══════════════════════════════════════════════════════════
+//  Campaign templates (professional, ready to send)
+// ═══════════════════════════════════════════════════════════
+const CONTACT_EMAIL = "flanorx1@gmail.com";
+const SITE_URL = "https://flanorx.com";
+
+// ─── The default, prefilled "coming soon" message ─────────
+// Admins can edit this or just hit Send.
+const createDefaultMessage = () => ({
+  subject: "Flanorx is coming soon — join the waitlist",
+  body: `Hi there,
+
+We're building Flanorx — a simpler, faster way to get fuel and gas delivered straight to your door. No queues, no stress, no wasted time.
+
+We're launching very soon, and you're on the list to be among the first to know.
+
+Do you know someone who'd love this too? Please share the link below and invite them to join the waitlist — the more the merrier!
+
+${SITE_URL}
+
+Thanks for being part of the journey.
+
+Warm regards,
+The Flanorx Team`,
+  attachments: [],
+  ctaLabel: "Join the Waitlist",
+  ctaUrl: SITE_URL,
+});
+
+const CAMPAIGNS = [
+  {
+    key: "comingSoon",
+    label: "Coming Soon",
+    icon: Sparkles,
+    audienceFilter: null, // everyone
+    subject: "Flanorx is coming soon — join the waitlist",
+    body: `Hi there,
+
+We're building Flanorx — a simpler, faster way to get fuel and gas delivered straight to your door. No queues, no stress, no wasted time.
+
+We're launching very soon, and you're on the list to be among the first to know.
+
+Do you know someone who'd love this too? Please share the link below and invite them to join the waitlist — the more the merrier!
+
+${SITE_URL}
+
+Thanks for being part of the journey.
+
+Warm regards,
+The Flanorx Team`,
+    ctaLabel: "Join the Waitlist",
+    ctaUrl: SITE_URL,
+  },
+  {
+    key: "welcome",
+    label: "Welcome",
+    icon: Sparkles,
+    audienceFilter: null, // everyone
+    subject: "Welcome to the Flanorx waitlist",
+    body: `Hi there,
+
+Thank you for joining the Flanorx waitlist — we're thrilled to have you on board.
+
+Flanorx is building a simpler, faster way to get fuel and gas delivered right to your door. No queues, no stress, no wasted time. You'll be among the first to know the moment we launch in your city.
+
+Know someone who could use this? Feel free to share the link below and invite them to join the waitlist.
+
+${SITE_URL}
+
+In the meantime, if you have any questions or feedback, just reply to this email or reach us at ${CONTACT_EMAIL}. We'd love to hear from you.
+
+Warm regards,
+The Flanorx Team`,
+    ctaLabel: "Join the Waitlist",
+    ctaUrl: SITE_URL,
+  },
+  {
+    key: "launchingSoon",
+    label: "Launching Soon",
+    icon: Clock,
+    audienceFilter: null,
+    subject: "Flanorx is launching soon in your city",
+    body: `Hi there,
+
+Great news — Flanorx is almost here! We're putting the final touches on our platform and will be launching very soon.
+
+You joined our waitlist because you wanted an easier way to get fuel and gas delivered. That day is nearly here.
+
+Do you know someone who'd love this too? Please share the link below and invite them to join the waitlist — the more the merrier!
+
+${SITE_URL}
+
+We'll send you another email the moment we go live in your area — along with a special welcome offer for early users.
+
+Talk soon,
+The Flanorx Team`,
+    ctaLabel: "Join the Waitlist",
+    ctaUrl: SITE_URL,
+  },
+  {
+    key: "nowLive",
+    label: "Now Live",
+    icon: CheckCircle2,
+    audienceFilter: null,
+    subject: "Flanorx is now live — order your first delivery",
+    body: `Hi there,
+
+Exciting news — Flanorx is officially live in your city!
+
+You can now order fuel and gas directly from your phone and get it delivered to your doorstep in minutes. No more queues, no more stress.
+
+As one of our earliest waitlist members, we've added a special welcome offer to your account. Sign in to see what's waiting for you.
+
+Thank you for believing in us from the very beginning.
+
+Welcome to Flanorx,
+The Flanorx Team`,
+    ctaLabel: "Start Ordering",
+    ctaUrl: SITE_URL,
+  },
+  {
+    key: "riderOpportunity",
+    label: "Rider Opportunity",
+    icon: Truck,
+    audienceFilter: (entry) => entry.userType === "rider",
+    subject: "Earn with Flanorx — become a delivery rider",
+    body: `Hi there,
+
+Thank you for your interest in riding with Flanorx.
+
+We're looking for reliable riders to join our growing delivery network. As a Flanorx rider you'll enjoy flexible hours, competitive earnings, and weekly payouts.
+
+If you'd like to be among the first riders on the platform, simply reply to this email or reach us at ${CONTACT_EMAIL} and we'll walk you through the next steps.
+
+We can't wait to have you on the team.
+
+Best regards,
+The Flanorx Team`,
+    ctaLabel: "Get Started",
+    ctaUrl: SITE_URL,
+  },
+  {
+    key: "businessPartnership",
+    label: "Business Partnership",
+    icon: Building2,
+    audienceFilter: (entry) =>
+      entry.userType === "business" || entry.userType === "vendor",
+    subject: "Partner with Flanorx for reliable fuel & gas delivery",
+    body: `Hi there,
+
+Thank you for your interest in partnering with Flanorx.
+
+We provide reliable bulk fuel and gas delivery for businesses — restaurants, hotels, factories, and more. Our platform makes it easy to schedule deliveries, track orders, and manage your energy needs without the usual hassle.
+
+If you'd like to discuss a partnership or bulk pricing, simply reply to this email or reach us at ${CONTACT_EMAIL} and our team will get back to you shortly.
+
+Looking forward to working with you,
+The Flanorx Team`,
+    ctaLabel: "Contact Us",
+    ctaUrl: `mailto:${CONTACT_EMAIL}`,
+  },
+  {
+    key: "generalUpdate",
+    label: "General Update",
+    icon: Mail,
+    audienceFilter: null,
+    subject: "An update from Flanorx",
+    body: `Hi there,
+
+`,
+    ctaLabel: "Join the Waitlist",
+    ctaUrl: SITE_URL,
+  },
+];
 
 const Waitlist = () => {
   const [search, setSearch] = useState("");
@@ -51,12 +228,8 @@ const Waitlist = () => {
   const longPressTimer = useRef(null);
   const suppressClick = useRef(false);
 
-  // ─── Message form state ───────────────────────────────────
-  const [messageForm, setMessageForm] = useState({
-    subject: "",
-    body: "",
-    attachments: [],
-  });
+  // ─── Message form state (prefilled coming-soon message) ───
+  const [messageForm, setMessageForm] = useState(() => createDefaultMessage());
 
   // ─── Queries ──────────────────────────────────────────────
   const {
@@ -213,6 +386,37 @@ const Waitlist = () => {
     longPressTimer.current = null;
   };
 
+  // ─── Campaign / manual message openers ────────────────────
+  const openCampaignMessage = (campaign) => {
+    const pool = entries.filter(
+      (e) => !campaign.audienceFilter || campaign.audienceFilter(e)
+    );
+    if (pool.length === 0) {
+      toast.error(`No waitlist entries match "${campaign.label}"`);
+      return;
+    }
+    setSelectedIds(new Set(pool.map((e) => e._id)));
+    setSelectionMode(true);
+    setMessageForm({
+      subject: campaign.subject,
+      body: campaign.body,
+      attachments: [],
+      ctaLabel: campaign.ctaLabel || "",
+      ctaUrl: campaign.ctaUrl || "",
+    });
+    setShowMessageModal(true);
+  };
+
+  // Manual compose — opens prefilled with the coming-soon message
+  const openManualMessage = () => {
+    if (selectedIds.size === 0) {
+      toast.error("Select at least one recipient");
+      return;
+    }
+    setMessageForm(createDefaultMessage());
+    setShowMessageModal(true);
+  };
+
   // ─── CSV Export ───────────────────────────────────────────
   const handleExportCsv = () => {
     const rows = [
@@ -324,11 +528,13 @@ const Waitlist = () => {
       fd.append("subject", messageForm.subject.trim());
 
       const plainText = messageForm.body.trim();
-      const htmlBody = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #111;">${plainText
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\n/g, "<br/>")}</div>`;
+      const htmlBody = buildEmailHtml({
+        body: plainText,
+        subject: messageForm.subject.trim(),
+        preheader: messageForm.subject.trim(),
+        ctaLabel: messageForm.ctaLabel?.trim() || undefined,
+        ctaUrl: messageForm.ctaUrl?.trim() || undefined,
+      });
 
       fd.append("text", plainText);
       fd.append("html", htmlBody);
@@ -340,7 +546,8 @@ const Waitlist = () => {
       const result = await sendMessage(fd).unwrap();
       toast.success(result?.message || "Message sent successfully");
       setShowMessageModal(false);
-      setMessageForm({ subject: "", body: "", attachments: [] });
+      // Reset back to the prefilled coming-soon message
+      setMessageForm(createDefaultMessage());
       exitSelectionMode();
     } catch (err) {
       toast.error(err?.data?.message || "Failed to send message");
@@ -525,7 +732,7 @@ const Waitlist = () => {
 
   // ─── Mobile Search Bar ───────────────────────────────────
   const renderMobileSearchBar = () => (
-    <div className="lg:hidden relative mb-4">
+    <div className="lg:hidden relative mb-3">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 flex-shrink-0" />
       <input
         type="text"
@@ -544,6 +751,45 @@ const Waitlist = () => {
           <X className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
         </button>
       )}
+    </div>
+  );
+
+  // ─── Campaign Chips (Quick message) ──────────────────────
+  const renderCampaignChips = () => (
+    <div className="mb-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="h-4 w-4 text-[#13ec5b] flex-shrink-0" />
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+          Quick campaigns
+        </span>
+        <span className="text-[10px] text-gray-400 dark:text-gray-500 hidden sm:inline">
+          — pre-written, ready to send
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {CAMPAIGNS.map((c) => {
+          const Icon = c.icon;
+          const count = c.audienceFilter
+            ? entries.filter(c.audienceFilter).length
+            : entries.length;
+          return (
+            <button
+              key={c.key}
+              onClick={() => openCampaignMessage(c)}
+              disabled={count === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300 hover:border-[#13ec5b] hover:text-[#0f9c46] dark:hover:text-[#13ec5b] transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Icon className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{c.label}</span>
+              {count > 0 && (
+                <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold">
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -737,6 +983,8 @@ const Waitlist = () => {
     const openSingleMessage = () => {
       setSelectedIds(new Set([entry._id]));
       setSelectionMode(true);
+      // Prefilled with the coming-soon message — edit or just send
+      setMessageForm(createDefaultMessage());
       setShowMessageModal(true);
       setSelectedEntry(null);
     };
@@ -747,7 +995,7 @@ const Waitlist = () => {
         onClick={() => setSelectedEntry(null)}
       >
         <div
-          className="bg-white dark:bg-gray-900 w-full max-w-full p-6 max-h-[85vh] overflow-y-auto lg:max-w-lg lg:rounded-2xl lg:mb-6"
+          className="bg-white dark:bg-gray-900 w-full max-w-full p-6 rounded-t-2xl max-h-[85vh] overflow-y-auto lg:max-w-lg lg:rounded-2xl lg:mb-6"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-4 gap-2">
@@ -898,7 +1146,7 @@ const Waitlist = () => {
               onChange={(e) =>
                 setMessageForm((f) => ({ ...f, subject: e.target.value }))
               }
-              placeholder="e.g. Flanorx is launching soon!"
+              placeholder="e.g. Flanorx is coming soon"
               disabled={sendingMessage}
               autoComplete="off"
               className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
@@ -915,10 +1163,46 @@ const Waitlist = () => {
                 setMessageForm((f) => ({ ...f, body: e.target.value }))
               }
               placeholder="Write your message..."
-              rows={6}
+              rows={11}
               disabled={sendingMessage}
               className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none resize-none disabled:opacity-60"
             />
+          </div>
+
+          {/* CTA (optional) */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Button label
+              </label>
+              <input
+                type="text"
+                value={messageForm.ctaLabel}
+                onChange={(e) =>
+                  setMessageForm((f) => ({ ...f, ctaLabel: e.target.value }))
+                }
+                placeholder="Optional"
+                disabled={sendingMessage}
+                autoComplete="off"
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Button URL
+              </label>
+              <input
+                type="url"
+                value={messageForm.ctaUrl}
+                onChange={(e) =>
+                  setMessageForm((f) => ({ ...f, ctaUrl: e.target.value }))
+                }
+                placeholder="https://..."
+                disabled={sendingMessage}
+                autoComplete="off"
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
+              />
+            </div>
           </div>
 
           <div>
@@ -1053,7 +1337,7 @@ const Waitlist = () => {
           </button>
 
           <button
-            onClick={() => setShowMessageModal(true)}
+            onClick={openManualMessage}
             disabled={selectedIds.size === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#13ec5b] hover:bg-[#10d04e] text-gray-900 rounded-lg text-xs font-semibold transition flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -1124,6 +1408,11 @@ const Waitlist = () => {
 
           {/* Mobile Search Bar */}
           {renderMobileSearchBar()}
+
+          {/* Campaign chips (mobile + desktop) */}
+          {!isLoading && !selectionMode && entries.length > 0 && (
+            renderCampaignChips()
+          )}
 
           {/* Desktop Stats Cards */}
           <div className="hidden lg:grid grid-cols-4 gap-4 mb-6">
@@ -1369,10 +1658,10 @@ const Waitlist = () => {
             </div>
           </div>
 
-          {/* Selection hint (desktop) */}
+          {/* Selection hint */}
           {!selectionMode && !isLoading && filteredEntries.length > 0 && (
             <p className="hidden lg:block text-xs text-gray-400 dark:text-gray-500 mb-2 px-1">
-              Tip: right‑click an entry to start selecting multiple.
+              Tip: right-click an entry to start selecting multiple.
             </p>
           )}
 
@@ -1636,7 +1925,7 @@ const Waitlist = () => {
       {/* Selection bar (floating) */}
       {renderSelectionBar()}
 
-      {/* Floating Filter Button (mobile only, hidden in selection mode) */}
+      {/* Floating Filter Button (mobile only) */}
       {!selectionMode && (
         <div className="lg:hidden fixed bottom-24 right-4 z-40">
           <button
