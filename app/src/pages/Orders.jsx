@@ -21,6 +21,7 @@ import {
   Calendar,
   Download,
   FileImage,
+  ArrowRight,
 } from "lucide-react";
 import { useGetMyOrdersQuery, useInitializePaymentMutation } from "../features/orderApiSlice";
 import { useConfirmDeliveryMutation } from "../features/deliveryApiSlice";
@@ -142,7 +143,7 @@ const Orders = () => {
   }, [openDropdown]);
 
   // ─── Receipt download handler ───────────────────────────────
-  // Only meaningful for a completed + paid order, gated in the UI below.
+  // Available as soon as the order is paid — does not require completion.
   const handleDownloadReceipt = async (format) => {
     if (!selectedOrder || !receiptRef.current) return;
 
@@ -336,7 +337,7 @@ const Orders = () => {
     const isPaid = order.paid;
     const isPendingPayment = !isPaid && order.status !== "cancelled";
     const canConfirm = order.deliveryStatus === "delivered" && order.status !== "completed";
-    const canDownloadReceipt = isPaid && order.status === "completed";
+    const canDownloadReceipt = isPaid;
 
     const handlePayNow = async () => {
       try {
@@ -440,7 +441,17 @@ const Orders = () => {
               </div>
             )}
 
-            {/* Receipt Download — completed + paid orders only */}
+            {/* View Full Details */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <button
+                onClick={() => navigate(`/order/${order._id}`)}
+                className="w-full py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                View Full Details <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Receipt Download — available for any paid order */}
             {canDownloadReceipt && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                 <p className="text-gray-500 dark:text-gray-400 text-xs">Receipt</p>
@@ -669,6 +680,14 @@ const Orders = () => {
                                   Completed · Receipt
                                 </button>
                               )}
+                              {isPaid && order.status !== "completed" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                                  className="text-xs text-[#0f9c46] dark:text-[#13ec5b] hover:underline"
+                                >
+                                  Receipt
+                                </button>
+                              )}
                               {canConfirm && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
@@ -703,7 +722,7 @@ const Orders = () => {
       {selectedOrder && <DetailModal />}
 
       {/* ── Off-screen receipt used as the html2canvas source ──── */}
-      {selectedOrder && selectedOrder.paid && selectedOrder.status === "completed" && (
+      {selectedOrder && selectedOrder.paid && (
         <div style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }} aria-hidden="true">
           <ReceiptTemplate
             ref={receiptRef}

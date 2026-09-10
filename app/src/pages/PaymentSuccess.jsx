@@ -1,10 +1,25 @@
 // src/pages/PaymentSuccess.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { CheckCircle, XCircle, Loader2, Package, ArrowRight, Download, FileImage } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Package,
+  ArrowRight,
+  Download,
+  FileImage,
+  Flame,
+} from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { useVerifyPaymentQuery } from "../features/orderApiSlice";
+import {
+  useVerifySubscriptionPaymentQuery,
+  useVerifyRenewalPaymentQuery,
+  useVerifyUpgradePaymentQuery,
+  useVerifyCylinderOnlyPaymentQuery,
+} from "../features/gasApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
 import ReceiptTemplate from "../components/ReceiptTemplate";
@@ -12,31 +27,46 @@ import ReceiptTemplate from "../components/ReceiptTemplate";
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // Paystack sometimes uses "trxref" – fallback to it
   const reference = searchParams.get("reference") || searchParams.get("trxref");
 
   const receiptRef = useRef(null);
-  const [generating, setGenerating] = useState(null); // "pdf" | "jpg" | null
+  const [generating, setGenerating] = useState(null);
   const [downloadError, setDownloadError] = useState("");
 
-  // ─── Redirect if no reference ──────────────────────────────
   useEffect(() => {
-    if (!reference) {
-      navigate("/dashboard");
-    }
+    if (!reference) navigate("/dashboard");
   }, [reference, navigate]);
 
-  // ─── Verify payment ─────────────────────────────────────────
-  const {
-    data: paymentData,
-    isLoading,
-    error,
-  } = useVerifyPaymentQuery(reference, {
-    skip: !reference,
-  });
+  // ─── Detect reference prefix ────────────────────────────────
+  const isSub = reference?.startsWith("SUB_");
+  const isCylinder = reference?.startsWith("CYL_");
+  const isRenew = reference?.startsWith("RENEW_");
+  const isUpgrade = reference?.startsWith("UPGRADE_");
+  const isOrder = reference?.startsWith("FLX_");
+
+  // ─── Verification queries (only the matching one runs) ──────
+  const subResult = useVerifySubscriptionPaymentQuery(reference, { skip: !isSub });
+  const cylinderResult = useVerifyCylinderOnlyPaymentQuery(reference, { skip: !isCylinder });
+  const renewResult = useVerifyRenewalPaymentQuery(reference, { skip: !isRenew });
+  const upgradeResult = useVerifyUpgradePaymentQuery(reference, { skip: !isUpgrade });
+  const orderResult = useVerifyPaymentQuery(reference, { skip: !isOrder });
+
+  const activeResult = isSub
+    ? subResult
+    : isCylinder
+    ? cylinderResult
+    : isRenew
+    ? renewResult
+    : isUpgrade
+    ? upgradeResult
+    : orderResult;
+
+  const { data: paymentData, isLoading, error } = activeResult;
 
   const order = paymentData?.order || null;
-  const isSubscription = paymentData?.isSubscription || false;
+  const subscription = paymentData?.subscription || null;
+  const isSubscription = isSub || isCylinder || isRenew || isUpgrade;
+  const isCylinderOnly = isCylinder;
   const isSuccess = paymentData && !error;
 
   // ─── Receipt download handler ───────────────────────────────
@@ -79,7 +109,7 @@ const PaymentSuccess = () => {
     }
   };
 
-  // ─── Loading state ──────────────────────────────────────────
+  // ─── Loading ────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -91,7 +121,7 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ─── Error state ────────────────────────────────────────────
+  // ─── Error ──────────────────────────────────────────────────
   if (error || !isSuccess) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
@@ -99,7 +129,8 @@ const PaymentSuccess = () => {
           <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Payment Failed</h1>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {error?.data?.message || "We couldn't verify your payment. Please contact support if you were charged."}
+            {error?.data?.message ||
+              "We couldn't verify your payment. Please contact support if you were charged."}
           </p>
           <button
             onClick={() => navigate("/orders")}
@@ -112,7 +143,7 @@ const PaymentSuccess = () => {
     );
   }
 
-  // ─── Success state ──────────────────────────────────────────
+  // ─── Success ────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
@@ -128,14 +159,56 @@ const PaymentSuccess = () => {
                   {isSubscription ? "Subscription Activated!" : "Payment Successful!"}
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  {isSubscription
-                    ? "Your gas subscription has been activated successfully."
+                  {isCylinderOnly
+                    ? "Your cylinder subscription is now active."
+                    : isRenew
+                    ? "Your gas subscription has been renewed."
+                    : isUpgrade
+                    ? "Your cylinder size has been updated."
+                    : isSub
+                    ? "Your gas subscription has been activated."
                     : "Your order has been confirmed and is being processed."}
                 </p>
               </div>
 
               <div className="p-6 space-y-4">
-                {/* Order Details */}
+                {/* Subscription details (for gas subscription flows) */}
+                {isSubscription && subscription && (
+                  <>
+                    <div className="flex items-center gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
+                      <div className="w-12 h-12 rounded-xl bg-[#13ec5b]/10 flex items-center justify-center">
+                        <Flame className="h-6 w-6 text-[#13ec5b]" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Cylinder Subscription
+                        </p>
+                        <p className="text-lg font-bold text-gray-900 dark:text-white">
+                          {subscription.cylinderSize} Cylinder
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">Status</span>
+                        <p className="font-medium text-green-600 dark:text-green-400 mt-0.5 capitalize">
+                          {subscription.status}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">Next Renewal</span>
+                        <p className="font-medium text-gray-900 dark:text-white mt-0.5">
+                          {subscription.nextBillingDate
+                            ? new Date(subscription.nextBillingDate).toLocaleDateString()
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Order details (for orders + subscribe+gas) */}
                 {order ? (
                   <>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -149,7 +222,9 @@ const PaymentSuccess = () => {
                       </div>
                       <div>
                         <span className="text-gray-500 dark:text-gray-400">Type</span>
-                        <p className="font-medium text-gray-900 dark:text-white capitalize">{order.orderType}</p>
+                        <p className="font-medium text-gray-900 dark:text-white capitalize">
+                          {order.orderType}
+                        </p>
                       </div>
                       <div>
                         <span className="text-gray-500 dark:text-gray-400">Status</span>
@@ -234,6 +309,21 @@ const PaymentSuccess = () => {
                       </button>
                     </div>
                   </>
+                ) : isSubscription ? (
+                  <div className="pt-4 flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => navigate("/gas/subscription")}
+                      className="flex-1 py-2.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <Flame className="h-4 w-4" /> View Subscription
+                    </button>
+                    <button
+                      onClick={() => navigate("/dashboard")}
+                      className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                    >
+                      Go to Dashboard
+                    </button>
+                  </div>
                 ) : (
                   <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                     <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
@@ -253,7 +343,25 @@ const PaymentSuccess = () => {
             <div className="mt-5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-sm text-gray-600 dark:text-gray-300">
               <p className="font-medium text-gray-800 dark:text-gray-200">What happens next?</p>
               <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
-                {isSubscription ? (
+                {isCylinderOnly ? (
+                  <>
+                    <li>Your cylinder subscription is active for 30 days.</li>
+                    <li>Order a gas swap anytime you need a refill.</li>
+                    <li>You'll get a 6-day grace period at renewal time.</li>
+                  </>
+                ) : isRenew ? (
+                  <>
+                    <li>Your subscription has been extended by 30 days.</li>
+                    <li>You can continue swapping cylinders as usual.</li>
+                    <li>You'll receive a reminder before your next renewal.</li>
+                  </>
+                ) : isUpgrade ? (
+                  <>
+                    <li>Your cylinder plan has been updated.</li>
+                    <li>Your next delivery will use the new cylinder size.</li>
+                    <li>Your billing date remains unchanged.</li>
+                  </>
+                ) : isSubscription ? (
                   <>
                     <li>Your gas subscription is now active for 30 days.</li>
                     <li>You can swap your cylinder anytime during your subscription.</li>
@@ -274,9 +382,12 @@ const PaymentSuccess = () => {
 
       <Bottombar />
 
-      {/* ── Off-screen receipt used as the html2canvas source ──── */}
+      {/* Off-screen receipt used as the html2canvas source */}
       {order && (
-        <div style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }} aria-hidden="true">
+        <div
+          style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }}
+          aria-hidden="true"
+        >
           <ReceiptTemplate
             ref={receiptRef}
             order={order}

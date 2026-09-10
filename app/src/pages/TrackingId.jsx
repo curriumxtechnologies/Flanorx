@@ -111,6 +111,10 @@ const TrackingId = () => {
   const [mapCenter, setMapCenter] = useState([6.5244, 3.3792]);
 
   // ─── Queries ──────────────────────────────────────────────
+  // Treat "tracking not found" (404) as a normal waiting state rather than
+  // an error — it just means no rider has accepted this order yet. Poll
+  // every 15s while waiting so the page picks it up automatically once a
+  // rider does accept.
   const {
     data: trackingData,
     isLoading,
@@ -118,6 +122,7 @@ const TrackingId = () => {
     refetch,
   } = useGetTrackingQuery(orderId, {
     skip: !orderId,
+    pollingInterval: 15000,
   });
 
   const [updateUserLocation, { isLoading: updatingLocation }] = useUpdateUserLocationMutation();
@@ -214,7 +219,7 @@ const TrackingId = () => {
 
   const routePositions = getRoutePositions();
 
-  // ─── Loading & Errors ──────────────────────────────────
+  // ─── Loading ─────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -231,6 +236,50 @@ const TrackingId = () => {
     );
   }
 
+  // ─── No rider has accepted yet (404 = tracking not created yet) ───────
+  const noTrackingYet = error?.status === 404;
+
+  if (noTrackingYet) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Sidebar />
+        <div className="lg:ml-64 pb-20 lg:pb-8">
+          <div className="w-full px-0.5 sm:px-4 lg:px-6 py-4">
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl p-6 text-center">
+                <Clock className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Waiting for a rider
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  Your order hasn't been picked up by a rider yet. Tracking
+                  will appear here automatically once a rider accepts your
+                  delivery.
+                </p>
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => refetch()}
+                    className="px-6 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition inline-flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" /> Check Again
+                  </button>
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition inline-flex items-center gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Go Back
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Bottombar />
+      </div>
+    );
+  }
+
+  // ─── Any other error ─────────────────────────────────────
   if (error || !trackingData) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -240,9 +289,9 @@ const TrackingId = () => {
             <div className="max-w-2xl mx-auto">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl p-6 text-center">
                 <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tracking not found</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tracking unavailable</h2>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  {error?.data?.message || "No tracking data available for this order."}
+                  {error?.data?.message || "Something went wrong loading tracking for this order."}
                 </p>
                 <button
                   onClick={() => navigate(-1)}

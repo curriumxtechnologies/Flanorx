@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Navigation,
   X,
+  ArrowRight,
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -24,7 +25,6 @@ import { useCreateOrderMutation } from "../features/orderApiSlice";
 import {
   useGetGasSubscriptionQuery,
   useSubscribeGasMutation,
-  useUpgradeGasSubscriptionMutation,
 } from "../features/gasApiSlice";
 import { useGetProfileQuery } from "../features/userApiSlice";
 import Sidebar from "../components/Sidebar";
@@ -117,7 +117,6 @@ const Gas = () => {
   } = useGetGasSubscriptionQuery();
 
   const [subscribeGas, { isLoading: subscribeLoading }] = useSubscribeGasMutation();
-  const [upgradeGas, { isLoading: upgradeLoading }] = useUpgradeGasSubscriptionMutation();
   const [createOrder, { isLoading: orderLoading }] = useCreateOrderMutation();
 
   // ─── Derived subscription state ────────────────────────────
@@ -151,8 +150,8 @@ const Gas = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ─── Gas constants (TESTING – tiny prices) ────────────────
-  const GAS_PRICE_PER_KG = 10; // ₦10 per kg for testing
+  // ─── Gas constants (TESTING prices) ───────────────────────
+  const GAS_PRICE_PER_KG = 10;
   const CYLINDER_COST = {
     "3kg": 100,
     "6kg": 200,
@@ -164,7 +163,7 @@ const Gas = () => {
     { label: "12kg", value: "12kg" },
   ];
 
-  // ─── Update cylinder size when subscription changes ─────────
+  // ─── Update cylinder size when subscription loads ─────────
   useEffect(() => {
     if (currentCylinderSize) {
       setCylinderSize(currentCylinderSize);
@@ -172,38 +171,18 @@ const Gas = () => {
     }
   }, [currentCylinderSize]);
 
+  // Is the user trying to change size on this page?
+  const isSizeChange = isActive && cylinderSize !== currentCylinderSize;
+
   // ─── Calculate price ────────────────────────────────────────
   useEffect(() => {
-    let cylinderCost = 0;
-    let isUpgrade = false;
-    let upgradeCost = 0;
-    let previousSize = null;
-
-    if (!isActive) {
-      cylinderCost = CYLINDER_COST[cylinderSize] || 0;
-    } else {
-      const currentSize = currentCylinderSize;
-      if (currentSize && currentSize !== cylinderSize) {
-        const currentCost = CYLINDER_COST[currentSize] || 0;
-        const newCost = CYLINDER_COST[cylinderSize] || 0;
-        if (newCost > currentCost) {
-          upgradeCost = newCost - currentCost;
-          isUpgrade = true;
-          cylinderCost = upgradeCost;
-          previousSize = currentSize;
-        } else {
-          cylinderCost = 0;
-          isUpgrade = false;
-        }
-      } else {
-        cylinderCost = 0;
-        isUpgrade = false;
-      }
-    }
+    // Cylinder cost only charged for FIRST-TIME subscription
+    // For active users, gas is a swap → gas content only
+    const cylinderCost = !isActive ? CYLINDER_COST[cylinderSize] || 0 : 0;
 
     const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
     const subtotal = gasContentCost + cylinderCost;
-    const deliveryFee = 1.00;
+    const deliveryFee = 1.0;
     const serviceTax = subtotal * 0.01;
     const total = subtotal + deliveryFee + serviceTax;
 
@@ -217,8 +196,6 @@ const Gas = () => {
       cylinderSize,
       quantityKg,
       isActive,
-      isUpgrade,
-      upgradeCost,
       currentCylinderSize,
     });
   }, [cylinderSize, quantityKg, isActive, currentCylinderSize]);
@@ -297,6 +274,14 @@ const Gas = () => {
     setError("");
     setSuccess("");
 
+    // Block if trying to change size on this page
+    if (isSizeChange) {
+      setError(
+        "You can't change cylinder size from this page. Please use the Gas Subscription page."
+      );
+      return;
+    }
+
     if (!deliveryAddress.trim()) {
       setError("Please provide a delivery address");
       return;
@@ -315,6 +300,7 @@ const Gas = () => {
     try {
       let result;
 
+      // ─── FIRST-TIME SUBSCRIPTION + GAS ────────────────────
       if (!isActive) {
         const payload = {
           cylinderSize,
@@ -327,46 +313,35 @@ const Gas = () => {
           setError("Failed to initialize subscription payment");
         }
         return;
+      }
+
+      // ─── SWAP (active subscription, same cylinder size) ───
+      const orderData = {
+        orderType: "gas",
+        gasDetails: {
+          cylinderSize,
+          quantityKg: Number(quantityKg),
+          isFirstTime: false,
+          cylinderCost: 0,
+          gasContentCost: priceBreakdown.gasContentCost,
+          previousCylinderSize: currentCylinderSize,
+        },
+        deliveryAddress: deliveryAddress.trim(),
+        scheduleType,
+        scheduledDate: scheduleType === "scheduled" ? scheduledDate : undefined,
+        scheduledTime: scheduleType === "scheduled" ? scheduledTime : undefined,
+        notes: notes.trim() || undefined,
+        subtotal: priceBreakdown.subtotal,
+        deliveryFee: priceBreakdown.deliveryFee,
+        serviceTax: priceBreakdown.serviceTax,
+        totalAmount: priceBreakdown.total,
+        estimatedDeliveryMinutes: scheduleType === "now" ? 45 : undefined,
+      };
+      result = await createOrder(orderData).unwrap();
+      if (result.authorization_url) {
+        window.location.href = result.authorization_url;
       } else {
-        const isUpgrade = priceBreakdown.isUpgrade;
-        if (isUpgrade) {
-          result = await upgradeGas({ newCylinderSize: cylinderSize }).unwrap();
-          if (result.authorization_url) {
-            window.location.href = result.authorization_url;
-          } else {
-            setError("Failed to initialize upgrade payment");
-          }
-          return;
-        } else {
-          const orderData = {
-            orderType: "gas",
-            gasDetails: {
-              cylinderSize,
-              quantityKg: Number(quantityKg),
-              isFirstTime: false,
-              cylinderCost: 0,
-              gasContentCost: priceBreakdown.gasContentCost,
-              previousCylinderSize: currentCylinderSize,
-            },
-            deliveryAddress: deliveryAddress.trim(),
-            scheduleType,
-            scheduledDate: scheduleType === "scheduled" ? scheduledDate : undefined,
-            scheduledTime: scheduleType === "scheduled" ? scheduledTime : undefined,
-            notes: notes.trim() || undefined,
-            subtotal: priceBreakdown.subtotal,
-            deliveryFee: priceBreakdown.deliveryFee,
-            serviceTax: priceBreakdown.serviceTax,
-            totalAmount: priceBreakdown.total,
-            estimatedDeliveryMinutes: scheduleType === "now" ? 45 : undefined,
-          };
-          result = await createOrder(orderData).unwrap();
-          if (result.authorization_url) {
-            window.location.href = result.authorization_url;
-          } else {
-            setError("Failed to initialize payment");
-          }
-          return;
-        }
+        setError("Failed to initialize payment");
       }
     } catch (err) {
       setError(err.data?.message || err.message || "Failed to place order");
@@ -374,11 +349,7 @@ const Gas = () => {
   };
 
   const isLoading =
-    userLoading ||
-    subLoading ||
-    subscribeLoading ||
-    upgradeLoading ||
-    orderLoading;
+    userLoading || subLoading || subscribeLoading || orderLoading;
 
   const quantityPresets = [3, 6, 12, 20];
 
@@ -389,7 +360,7 @@ const Gas = () => {
       <div className="lg:ml-64 pb-20 lg:pb-8">
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
-            {isActive ? "Swap Gas" : "Get Gas Subscription"}
+            {isActive ? "Order Gas Swap" : "Get Gas Subscription"}
           </h1>
           <button
             onClick={() => navigate("/orders")}
@@ -399,7 +370,7 @@ const Gas = () => {
           </button>
         </header>
 
-        {/* ─── Full-width container – no side padding on mobile ── */}
+        {/* ─── Full-width container ── */}
         <div className="w-full px-0 sm:px-4 lg:px-6 py-4 lg:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {/* ─── Main form ─────────────────────────────────────── */}
@@ -408,7 +379,7 @@ const Gas = () => {
                 <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <Flame className="h-5 w-5 text-[#13ec5b]" />
-                    {isActive ? "Swap Your Gas Cylinder" : "Start Your Gas Subscription"}
+                    {isActive ? "Swap Your Gas" : "Start Your Gas Subscription"}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {isActive
@@ -447,13 +418,34 @@ const Gas = () => {
                     </div>
                   )}
 
+                  {/* ─── Size-change notice ─────────────────────── */}
+                  {isSizeChange && (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 text-sm text-yellow-700 dark:text-yellow-300">
+                      <p className="font-medium">
+                        Changing cylinder size?
+                      </p>
+                      <p className="mt-1 text-xs">
+                        Size changes are handled as a plan change on your
+                        subscription page. You'll pay the difference there, then
+                        come back here to order a gas swap.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/gas/subscription")}
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-xs font-medium transition"
+                      >
+                        Go to Subscription Page <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+
                   {/* ─── Cylinder Size ───────────────────────────── */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Cylinder Size
                     </label>
 
-                    {/* Mobile: grid buttons (3 columns) */}
+                    {/* Mobile: grid buttons */}
                     <div className="lg:hidden grid grid-cols-3 gap-2">
                       {CYLINDER_SIZES.map((size) => {
                         const isSelected = cylinderSize === size.value;
@@ -464,11 +456,7 @@ const Gas = () => {
                         } else if (isCurrent) {
                           costLabel = "current";
                         } else {
-                          const currentCost = CYLINDER_COST[currentCylinderSize] || 0;
-                          const newCost = CYLINDER_COST[size.value] || 0;
-                          const diff = newCost - currentCost;
-                          if (diff > 0) costLabel = `+₦${diff}`;
-                          else costLabel = "free";
+                          costLabel = "change plan";
                         }
                         return (
                           <button
@@ -504,7 +492,11 @@ const Gas = () => {
                             </span>
                           )}
                         </span>
-                        <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showCylinderDropdown ? "rotate-180" : ""}`} />
+                        <ChevronDown
+                          className={`h-5 w-5 text-gray-400 transition-transform ${
+                            showCylinderDropdown ? "rotate-180" : ""
+                          }`}
+                        />
                       </button>
 
                       {showCylinderDropdown && (
@@ -517,11 +509,7 @@ const Gas = () => {
                             } else if (isCurrent) {
                               costLabel = "current";
                             } else {
-                              const currentCost = CYLINDER_COST[currentCylinderSize] || 0;
-                              const newCost = CYLINDER_COST[size.value] || 0;
-                              const diff = newCost - currentCost;
-                              if (diff > 0) costLabel = `+₦${diff} upgrade`;
-                              else costLabel = "free swap";
+                              costLabel = "change plan";
                             }
                             return (
                               <button
@@ -642,7 +630,11 @@ const Gas = () => {
                                 "Select an address"}
                             </span>
                           </span>
-                          <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showAddressDropdown ? "rotate-180" : ""}`} />
+                          <ChevronDown
+                            className={`h-5 w-5 text-gray-400 transition-transform ${
+                              showAddressDropdown ? "rotate-180" : ""
+                            }`}
+                          />
                         </button>
 
                         {showAddressDropdown && (
@@ -835,10 +827,7 @@ const Gas = () => {
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             {quantityKg}kg gas
                             {!isActive && " · New subscription"}
-                            {isActive &&
-                              (priceBreakdown.isUpgrade
-                                ? " · Upgrade"
-                                : " · Swap")}
+                            {isActive && " · Swap"}
                           </p>
                         </div>
                       </div>
@@ -847,16 +836,7 @@ const Gas = () => {
                         {priceBreakdown.cylinderCost > 0 && (
                           <div className="flex justify-between">
                             <span className="text-gray-500 dark:text-gray-400">
-                              {!isActive
-                                ? "Cylinder cost"
-                                : priceBreakdown.isUpgrade
-                                ? "Upgrade cost"
-                                : "Cylinder cost"}
-                              {priceBreakdown.isUpgrade && (
-                                <span className="text-xs text-gray-400 ml-1">
-                                  (from {currentCylinderSize})
-                                </span>
-                              )}
+                              Cylinder cost
                             </span>
                             <span className="text-gray-900 dark:text-white">
                               ₦{priceBreakdown.cylinderCost.toFixed(2)}
@@ -881,7 +861,9 @@ const Gas = () => {
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-500 dark:text-gray-400">Service Tax (1%)</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Service Tax (1%)
+                          </span>
                           <span className="text-gray-900 dark:text-white">
                             ₦{priceBreakdown.serviceTax.toFixed(2)}
                           </span>
@@ -907,7 +889,9 @@ const Gas = () => {
                         {scheduleType === "now" ? (
                           <span>Estimated delivery: 30-45 minutes</span>
                         ) : (
-                          <span>Scheduled for {scheduledDate || "selected date"}</span>
+                          <span>
+                            Scheduled for {scheduledDate || "selected date"}
+                          </span>
                         )}
                       </div>
 
@@ -920,20 +904,23 @@ const Gas = () => {
                           </p>
                         </div>
                       )}
-                      {isActive && priceBreakdown.isUpgrade && (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 text-xs text-yellow-700 dark:text-yellow-300">
-                          <p className="font-medium">Upgrade</p>
+
+                      {isActive && !isSizeChange && (
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-xs text-green-700 dark:text-green-300">
+                          <p className="font-medium">Gas Swap</p>
                           <p className="mt-1">
-                            Your subscription will be updated to {cylinderSize}.
-                            Billing date extends by 30 days from today.
+                            You're ordering gas content only — your cylinder
+                            subscription continues on its own 30-day cycle.
                           </p>
                         </div>
                       )}
-                      {isActive && !priceBreakdown.isUpgrade && (
-                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-xs text-green-700 dark:text-green-300">
-                          <p className="font-medium">Swap order</p>
+
+                      {isSizeChange && (
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 text-xs text-yellow-700 dark:text-yellow-300">
+                          <p className="font-medium">Cylinder change required</p>
                           <p className="mt-1">
-                            Your existing subscription will be extended by 30 days from today.
+                            To swap to a different cylinder size, first change
+                            your plan on the subscription page.
                           </p>
                         </div>
                       )}
@@ -949,7 +936,7 @@ const Gas = () => {
 
                   <button
                     onClick={handleSubmit}
-                    disabled={isLoading || !priceBreakdown}
+                    disabled={isLoading || !priceBreakdown || isSizeChange}
                     className="w-full py-3.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white font-bold rounded-xl transition duration-200 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-base"
                   >
                     {isLoading ? (
@@ -957,10 +944,10 @@ const Gas = () => {
                         <Loader2 className="h-5 w-5 animate-spin mr-2" />
                         Processing...
                       </>
+                    ) : isSizeChange ? (
+                      "Change Plan First"
                     ) : !isActive ? (
                       "Subscribe & Pay"
-                    ) : priceBreakdown.isUpgrade ? (
-                      "Upgrade & Pay"
                     ) : (
                       "Swap & Pay"
                     )}

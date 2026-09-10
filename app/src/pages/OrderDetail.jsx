@@ -1,6 +1,8 @@
 // src/pages/OrderDetail.jsx
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import {
   Package,
   Flame,
@@ -20,14 +22,17 @@ import {
   Receipt,
   DollarSign,
   ArrowRight,
+  Download,
+  FileImage,
 } from "lucide-react";
 import { useGetOrderByIdQuery } from "../features/orderApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
+import ReceiptTemplate from "../components/ReceiptTemplate";
 
 const OrderDetail = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { orderId } = useParams();
 
   // ─── Query ──────────────────────────────────────────────
   const {
@@ -35,9 +40,13 @@ const OrderDetail = () => {
     isLoading,
     error,
     refetch,
-  } = useGetOrderByIdQuery(id, {
-    skip: !id,
+  } = useGetOrderByIdQuery(orderId, {
+    skip: !orderId,
   });
+
+  const receiptRef = useRef(null);
+  const [generating, setGenerating] = useState(null); // "pdf" | "jpg" | null
+  const [downloadError, setDownloadError] = useState("");
 
   // ─── Status colors ──────────────────────────────────────
   const getOrderStatusColor = (status) => {
@@ -156,6 +165,47 @@ const OrderDetail = () => {
     });
   };
 
+  // ─── Receipt download handler ───────────────────────────────
+  // Gated only on payment — the order does not need to be "completed".
+  const handleDownloadReceipt = async (format) => {
+    if (!order || !receiptRef.current) return;
+
+    setDownloadError("");
+    setGenerating(format);
+
+    try {
+      const canvas = await html2canvas(receiptRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const fileBase = `Flanorx-Receipt-${order.orderId || order._id}`;
+
+      if (format === "pdf") {
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${fileBase}.pdf`);
+      } else {
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const link = document.createElement("a");
+        link.href = imgData;
+        link.download = `${fileBase}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error("Failed to generate receipt:", err);
+      setDownloadError("Couldn't generate the receipt. Please try again.");
+    } finally {
+      setGenerating(null);
+    }
+  };
+
   // ─── Loading ─────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -203,6 +253,7 @@ const OrderDetail = () => {
   }
 
   const timeline = getTimeline(order);
+  const canDownloadReceipt = !!order.paid;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -442,6 +493,47 @@ const OrderDetail = () => {
                   </div>
                 </div>
 
+                {/* Receipt Card — available once paid, regardless of completion status */}
+                {canDownloadReceipt && (
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Receipt className="h-5 w-5 text-[#13ec5b]" />
+                        Receipt
+                      </h3>
+                    </div>
+                    <div className="p-4">
+                      <div className="flex flex-col gap-3">
+                        <button
+                          onClick={() => handleDownloadReceipt("pdf")}
+                          disabled={generating !== null}
+                          className="w-full py-2.5 border border-[#13ec5b] text-[#0f9c46] dark:text-[#13ec5b] rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-[#13ec5b]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {generating === "pdf" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          Download PDF
+                        </button>
+                        <button
+                          onClick={() => handleDownloadReceipt("jpg")}
+                          disabled={generating !== null}
+                          className="w-full py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {generating === "jpg" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileImage className="h-4 w-4" />
+                          )}
+                          Download JPG
+                        </button>
+                      </div>
+                      {downloadError && <p className="text-xs text-red-500 mt-2">{downloadError}</p>}
+                    </div>
+                  </div>
+                )}
+
                 {/* Customer Card */}
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
@@ -551,6 +643,19 @@ const OrderDetail = () => {
       </div>
 
       <Bottombar />
+
+      {/* ── Off-screen receipt used as the html2canvas source ──── */}
+      {canDownloadReceipt && (
+        <div style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }} aria-hidden="true">
+          <ReceiptTemplate
+            ref={receiptRef}
+            order={order}
+            reference={order.paymentReference || order.orderId}
+            isSubscription={false}
+            paymentData={null}
+          />
+        </div>
+      )}
     </div>
   );
 };

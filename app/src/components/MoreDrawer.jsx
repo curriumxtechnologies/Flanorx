@@ -13,6 +13,7 @@ import {
   Truck,
   Wallet,
   MapPin,
+  Repeat,
 } from "lucide-react";
 import { logout } from "../features/auth/authSlice";
 import { useTheme } from "../context/ThemeContext";
@@ -56,6 +57,11 @@ const MoreDrawer = ({ isOpen, onClose }) => {
       label: "Tracking",
       icon: MapPin,
       onClick: () => { navigate("/tracking"); onClose(); },
+    },
+    {
+      label: "Gas Subscription",
+      icon: Repeat,
+      onClick: () => { navigate("/gas/subscription"); onClose(); },
     },
     {
       label: "Profile",

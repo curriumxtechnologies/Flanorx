@@ -14,14 +14,23 @@ export const gasApiSlice = apiSlice.injectEndpoints({
       providesTags: ["GasSubscription"],
     }),
 
-    // ─── Subscribe (first time) ────────────────────────────────
+    // ─── 🆕 Get gas payment / transaction history ──────────────
+    getGasPaymentHistory: builder.query({
+      query: () => ({
+        url: `${GAS_URL}/subscription/payments`,
+        method: "GET",
+      }),
+      providesTags: ["GasPayments"],
+    }),
+
+    // ─── Subscribe (first time, with gas order) ────────────────
     subscribeGas: builder.mutation({
       query: (data) => ({
         url: `${GAS_URL}/subscription`,
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["GasSubscription"],
+      invalidatesTags: ["GasSubscription", "GasPayments", "Order"],
     }),
 
     // ─── Verify subscription payment ───────────────────────────
@@ -30,7 +39,7 @@ export const gasApiSlice = apiSlice.injectEndpoints({
         url: `${GAS_URL}/subscription/verify?reference=${reference}`,
         method: "GET",
       }),
-      providesTags: ["GasSubscription"],
+      providesTags: ["GasSubscription", "GasPayments"],
     }),
 
     // ─── Renew subscription ────────────────────────────────────
@@ -40,7 +49,7 @@ export const gasApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: {},
       }),
-      invalidatesTags: ["GasSubscription"],
+      invalidatesTags: ["GasSubscription", "GasPayments"],
     }),
 
     // ─── Verify renewal payment ────────────────────────────────
@@ -49,7 +58,7 @@ export const gasApiSlice = apiSlice.injectEndpoints({
         url: `${GAS_URL}/subscription/verify-renewal?reference=${reference}`,
         method: "GET",
       }),
-      providesTags: ["GasSubscription"],
+      providesTags: ["GasSubscription", "GasPayments"],
     }),
 
     // ─── Upgrade subscription ──────────────────────────────────
@@ -59,7 +68,7 @@ export const gasApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["GasSubscription"],
+      invalidatesTags: ["GasSubscription", "GasPayments"],
     }),
 
     // ─── Verify upgrade payment ────────────────────────────────
@@ -68,7 +77,7 @@ export const gasApiSlice = apiSlice.injectEndpoints({
         url: `${GAS_URL}/subscription/verify-upgrade?reference=${reference}`,
         method: "GET",
       }),
-      providesTags: ["GasSubscription"],
+      providesTags: ["GasSubscription", "GasPayments"],
     }),
 
     // ─── Cancel subscription ───────────────────────────────────
@@ -77,7 +86,26 @@ export const gasApiSlice = apiSlice.injectEndpoints({
         url: `${GAS_URL}/subscription`,
         method: "DELETE",
       }),
-      invalidatesTags: ["GasSubscription"],
+      invalidatesTags: ["GasSubscription", "GasPayments"],
+    }),
+
+    // ─── Cylinder-only subscription ────────────────────────────
+    subscribeCylinderOnly: builder.mutation({
+      query: (data) => ({
+        url: `${GAS_URL}/subscription/cylinder`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["GasSubscription", "GasPayments"],
+    }),
+
+    // ─── Verify cylinder-only payment ──────────────────────────
+    verifyCylinderOnlyPayment: builder.query({
+      query: (reference) => ({
+        url: `${GAS_URL}/subscription/verify-cylinder?reference=${reference}`,
+        method: "GET",
+      }),
+      providesTags: ["GasSubscription", "GasPayments"],
     }),
   }),
 });
@@ -85,6 +113,7 @@ export const gasApiSlice = apiSlice.injectEndpoints({
 // ─── Export hooks ──────────────────────────────────────────────
 export const {
   useGetGasSubscriptionQuery,
+  useGetGasPaymentHistoryQuery,        // 🆕
   useSubscribeGasMutation,
   useVerifySubscriptionPaymentQuery,
   useRenewGasSubscriptionMutation,
@@ -92,4 +121,6 @@ export const {
   useUpgradeGasSubscriptionMutation,
   useVerifyUpgradePaymentQuery,
   useCancelGasSubscriptionMutation,
+  useSubscribeCylinderOnlyMutation,
+  useVerifyCylinderOnlyPaymentQuery,
 } = gasApiSlice;

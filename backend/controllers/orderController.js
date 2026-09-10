@@ -31,11 +31,16 @@ const getAuthActor = (req) => ({
   isAdmin: req.user?.role === "admin",
 });
 
+// ✅ Fixed: handles populated objects AND raw ObjectIds
 const canAccessOrder = (req, order) => {
   const { userId, riderId, isAdmin } = getAuthActor(req);
   if (isAdmin) return true;
-  if (userId && order.user?.toString() === userId.toString()) return true;
-  if (riderId && order.rider?.toString() === riderId.toString()) return true;
+
+  const orderUserId = order.user?._id || order.user;
+  const orderRiderId = order.rider?._id || order.rider;
+
+  if (userId && orderUserId?.toString() === userId.toString()) return true;
+  if (riderId && orderRiderId?.toString() === riderId.toString()) return true;
   return false;
 };
 
@@ -514,7 +519,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
 });
 
 // ─── VERIFY PAYMENT & GET ORDER ──────────────────────────────
-// Handles both normal orders (FLX_) and subscriptions (SUB_)
+// Handles both normal orders (FLX_) and subscription (SUB_) references
 const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   const { reference } = req.params;
   if (!reference) {
@@ -522,7 +527,7 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
     throw new Error("Reference is required");
   }
 
-  // ─── Verify payment with Paystack ──────────────────────────
+  // ─── Verify with Paystack ─────────────────────────────────
   const data = await verifyPaystackPayment(reference);
   if (!data || data.status !== "success") {
     res.status(400);
@@ -533,7 +538,6 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   if (reference.startsWith("SUB_")) {
     const userId = data.metadata?.userId;
     if (!userId) {
-      console.error("Missing userId in metadata for SUB_ reference:", data.metadata);
       res.status(400);
       throw new Error("User not found in payment metadata");
     }
@@ -545,12 +549,52 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
 
     const { cylinderSize, quantityKg } = data.metadata;
     if (!cylinderSize || !quantityKg) {
-      console.error("Missing cylinder metadata:", data.metadata);
       res.status(400);
       throw new Error("Invalid subscription metadata");
     }
 
-    // Activate subscription
+    // ─── Find the existing order created in subscribeGas ──────
+    let order = await Order.findOne({ paymentReference: reference });
+
+    if (order) {
+      // ✅ Mark paid but keep in delivery flow (rider hasn't delivered yet)
+      order.paid = true;
+      order.status = "processing";
+      order.deliveryStatus = "pending";
+      order.paymentDate = new Date();
+      order.paymentMethod = "card";
+      await order.save();
+    } else {
+      // Fallback – create order if missing
+      const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
+      const cylinderCost = CYLINDER_COST[cylinderSize] || 0;
+      const total = gasContentCost + cylinderCost;
+      order = await Order.create({
+        user: user._id,
+        orderType: "gas",
+        gasDetails: {
+          cylinderSize,
+          quantityKg,
+          isFirstTime: true,
+          cylinderCost,
+          gasContentCost,
+        },
+        deliveryAddress: "",
+        scheduleType: "now",
+        status: "processing",
+        paid: true,
+        paymentReference: reference,
+        paymentMethod: "card",
+        paymentDate: new Date(),
+        subtotal: gasContentCost + cylinderCost,
+        deliveryFee: 0,
+        serviceTax: 0,
+        totalAmount: total,
+        deliveryStatus: "pending",
+      });
+    }
+
+    // ─── Activate subscription ────────────────────────────────
     const now = new Date();
     const nextBilling = new Date(now);
     nextBilling.setDate(nextBilling.getDate() + SUBSCRIPTION_DAYS);
@@ -568,39 +612,6 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
     };
     await user.save();
 
-    // Create order
-    const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
-    const cylinderCost = CYLINDER_COST[cylinderSize] || 0;
-    const total = gasContentCost + cylinderCost;
-
-    // Check if an order already exists for this reference (idempotency)
-    let order = await Order.findOne({ paymentReference: reference });
-    if (!order) {
-      order = await Order.create({
-        user: user._id,
-        orderType: "gas",
-        gasDetails: {
-          cylinderSize,
-          quantityKg: quantityKg,
-          isFirstTime: true,
-          cylinderCost,
-          gasContentCost,
-        },
-        deliveryAddress: "", // optional now
-        scheduleType: "now",
-        status: "completed",
-        paid: true,
-        paymentReference: reference,
-        paymentMethod: "card",
-        paymentDate: new Date(),
-        subtotal: gasContentCost + cylinderCost,
-        deliveryFee: 0,
-        serviceTax: 0,
-        totalAmount: total,
-        deliveryStatus: "confirmed",
-      });
-    }
-
     const populatedOrder = await Order.findById(order._id)
       .populate("user", "name email")
       .populate("rider", "name email profilePicture phone");
@@ -612,7 +623,7 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  // ─── Handle normal order references (FLX_) ────────────────
+  // ─── Normal order references (FLX_) ──────────────────────
   const order = await Order.findOne({ paymentReference: reference })
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone");
@@ -682,6 +693,7 @@ const initializePaymentForOrder = asyncHandler(async (req, res) => {
   res.status(200).json({ authorization_url: authUrl, reference: paystackRef, orderId: order._id });
 });
 
+// ─── EXPORT ────────────────────────────────────────────────────
 export {
   createOrder,
   getOrder,

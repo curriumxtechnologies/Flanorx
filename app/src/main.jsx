@@ -17,6 +17,7 @@ import Orders from "./pages/Orders.jsx";
 import OrderDetail from "./pages/OrderDetail.jsx";
 import Fuel from "./pages/Fuel.jsx"; 
 import Gas from "./pages/Gas.jsx";
+import GasSubscription from "./pages/GasSubscription.jsx";
 import Tracking from "./pages/Tracking.jsx";
 import TrackingId from "./pages/TrackingId.jsx";
 import Profile from "./pages/Profile.jsx";
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
       {path: "order/:orderId", element: <OrderDetail />},
       {path: "order/fuel", element: <Fuel />},
       {path: "order/gas", element: <Gas />},
+      {path: "gas/subscription", element: <GasSubscription />},
       {path: "profile", element: <Profile />},
       {path: "*", element: <NotFound />},
       {path: "tracking", element: <Tracking />},

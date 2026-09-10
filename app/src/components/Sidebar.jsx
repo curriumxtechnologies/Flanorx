@@ -1,3 +1,4 @@
+// components/Sidebar.jsx
 import React from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,6 +15,7 @@ import {
   MapPin,
   Truck,
   Wallet,
+  Repeat,
 } from "lucide-react";
 import { logout } from "../features/auth/authSlice";
 import { useTheme } from "../context/ThemeContext";
@@ -36,6 +38,7 @@ const Sidebar = () => {
     { to: "/orders", icon: Package, label: "Orders" },
     { to: "/order/fuel", icon: Fuel, label: "Fuel" },
     { to: "/order/gas", icon: Flame, label: "Gas" },
+    { to: "/gas/subscription", icon: Repeat, label: "Gas Subscription" },
     { to: "/tracking", icon: MapPin, label: "Tracking" },
     { to: "/profile", icon: User, label: "Profile" },
   ];
