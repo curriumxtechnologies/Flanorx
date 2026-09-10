@@ -1,5 +1,5 @@
 // src/pages/OrderDetail.jsx
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -47,6 +47,13 @@ const OrderDetail = () => {
   const receiptRef = useRef(null);
   const [generating, setGenerating] = useState(null); // "pdf" | "jpg" | null
   const [downloadError, setDownloadError] = useState("");
+
+  // ─── Scroll to top on mount / order change ──────────────
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [orderId]);
 
   // ─── Status colors ──────────────────────────────────────
   const getOrderStatusColor = (status) => {
