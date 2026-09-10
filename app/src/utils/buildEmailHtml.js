@@ -225,7 +225,7 @@ export const buildEmailHtml = ({
                 <tr>
                   <td colspan="2" style="padding-top: 16px;">
                     <p style="margin: 0; font-family: ${FONT_STACK}; font-size: 11px; line-height: 1.6; color: ${LEGAL};">
-                      You're receiving this email because you joined the Flanorx waitlist. &copy; ${year} Flanorx. All rights reserved.
+                      You're receiving this email because of your connection with Flanorx. &copy; ${year} Flanorx. All rights reserved.
                     </p>
                   </td>
                 </tr>
