@@ -5,9 +5,18 @@ const ADMIN_URL = "/admin";
 
 export const adminApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // ─── Orders ──────────────────────────────────────────────────
+    // ─── Orders ──────────────────────────────────────────────
     getAllOrders: builder.query({
-      query: ({ month, year, status, paid, deliveryStatus, orderType } = {}) => {
+      query: ({
+        month,
+        year,
+        status,
+        paid,
+        deliveryStatus,
+        orderType,
+        station,
+        fulfillmentType,
+      } = {}) => {
         const params = new URLSearchParams();
         if (month) params.append("month", month);
         if (year) params.append("year", year);
@@ -15,6 +24,8 @@ export const adminApiSlice = apiSlice.injectEndpoints({
         if (paid !== undefined) params.append("paid", paid);
         if (deliveryStatus) params.append("deliveryStatus", deliveryStatus);
         if (orderType) params.append("orderType", orderType);
+        if (station) params.append("station", station);
+        if (fulfillmentType) params.append("fulfillmentType", fulfillmentType);
         const queryString = params.toString() ? `?${params.toString()}` : "";
         return {
           url: `${ADMIN_URL}/orders${queryString}`,
@@ -51,13 +62,23 @@ export const adminApiSlice = apiSlice.injectEndpoints({
       providesTags: ["Order"],
     }),
 
-    // ─── Users ──────────────────────────────────────────────────
+    // ─── Users ──────────────────────────────────────────────
     getAllUsers: builder.query({
-      query: ({ role, isVerified, search } = {}) => {
+      query: ({
+        role,
+        isVerified,
+        search,
+        station,
+        riderType,
+        stationRole,
+      } = {}) => {
         const params = new URLSearchParams();
         if (role) params.append("role", role);
         if (isVerified !== undefined) params.append("isVerified", isVerified);
         if (search) params.append("search", search);
+        if (station) params.append("station", station);
+        if (riderType) params.append("riderType", riderType);
+        if (stationRole) params.append("stationRole", stationRole);
         const queryString = params.toString() ? `?${params.toString()}` : "";
         return {
           url: `${ADMIN_URL}/users${queryString}`,
@@ -90,6 +111,7 @@ export const adminApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: "User", id },
         { type: "User", id: "ADMIN_LIST" },
+        { type: "Station", id: "LIST" },
       ],
     }),
 
@@ -101,10 +123,11 @@ export const adminApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: (result, error, id) => [
         { type: "User", id },
         { type: "User", id: "ADMIN_LIST" },
+        { type: "Station", id: "LIST" },
       ],
     }),
 
-    // ─── Rider Applications ────────────────────────────────────
+    // ─── Rider Applications ────────────────────────────────
     getRiderApplications: builder.query({
       query: ({ status } = {}) => {
         const params = new URLSearchParams();
@@ -118,7 +141,10 @@ export const adminApiSlice = apiSlice.injectEndpoints({
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ _id }) => ({ type: "RiderApplication", id: _id })),
+              ...result.map(({ _id }) => ({
+                type: "RiderApplication",
+                id: _id,
+              })),
               { type: "RiderApplication", id: "LIST" },
             ]
           : [{ type: "RiderApplication", id: "LIST" }],
@@ -152,12 +178,19 @@ export const adminApiSlice = apiSlice.injectEndpoints({
       ],
     }),
 
-    // ─── Riders ──────────────────────────────────────────────────
+    // ─── Riders ─────────────────────────────────────────────
     getAllRiders: builder.query({
-      query: () => ({
-        url: `${ADMIN_URL}/riders`,
-        method: "GET",
-      }),
+      query: ({ riderType, station, search } = {}) => {
+        const params = new URLSearchParams();
+        if (riderType) params.append("riderType", riderType);
+        if (station) params.append("station", station);
+        if (search) params.append("search", search);
+        const queryString = params.toString() ? `?${params.toString()}` : "";
+        return {
+          url: `${ADMIN_URL}/riders${queryString}`,
+          method: "GET",
+        };
+      },
       providesTags: (result) =>
         result
           ? [
@@ -167,12 +200,18 @@ export const adminApiSlice = apiSlice.injectEndpoints({
           : [{ type: "Rider", id: "LIST" }],
     }),
 
-    // ─── Delivery Monitoring ──────────────────────────────────
+    // ─── Delivery Monitoring ────────────────────────────────
     getActiveDeliveries: builder.query({
-      query: () => ({
-        url: `${ADMIN_URL}/deliveries/active`,
-        method: "GET",
-      }),
+      query: ({ orderType, station } = {}) => {
+        const params = new URLSearchParams();
+        if (orderType) params.append("orderType", orderType);
+        if (station) params.append("station", station);
+        const queryString = params.toString() ? `?${params.toString()}` : "";
+        return {
+          url: `${ADMIN_URL}/deliveries/active${queryString}`,
+          method: "GET",
+        };
+      },
       providesTags: (result) =>
         result
           ? [
@@ -184,7 +223,6 @@ export const adminApiSlice = apiSlice.injectEndpoints({
   }),
 });
 
-// ─── Export hooks ──────────────────────────────────────────────
 export const {
   useGetAllOrdersQuery,
   useUpdateOrderStatusMutation,

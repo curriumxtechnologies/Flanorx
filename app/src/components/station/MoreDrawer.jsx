@@ -1,28 +1,29 @@
-// components/admin/MoreDrawer.jsx
+// src/components/station/MoreDrawer.jsx
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   X,
-  Settings,
   LogOut,
   Sun,
   Moon,
   Monitor,
-  BarChart3,
   ArrowLeft,
-  ClipboardList,
-  Store,
+  Users,
+  Truck,
 } from "lucide-react";
 import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
 import { apiSlice } from "../../features/apiSlice";
 
-const AdminMoreDrawer = ({ isOpen, onClose }) => {
+const StationMoreDrawer = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { userInfo } = useSelector((state) => state.auth);
   const { theme, toggleTheme, setSystemTheme } = useTheme();
   const drawerRef = useRef(null);
+
+  const isStationAdmin = userInfo?.stationRole === "admin";
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -49,41 +50,27 @@ const AdminMoreDrawer = ({ isOpen, onClose }) => {
     navigate("/login", { replace: true });
   };
 
-  // ─── Only items NOT already in the bottombar ─────────────
-  const adminItems = [
-    {
-      label: "Pickup Stations",
-      icon: Store,
-      onClick: () => {
-        navigate("/superuser/stations");
-        onClose();
-      },
-    },
-    {
-      label: "Waitlist",
-      icon: ClipboardList,
-      onClick: () => {
-        navigate("/superuser/waitlist");
-        onClose();
-      },
-    },
-    {
-      label: "Analytics",
-      icon: BarChart3,
-      onClick: () => {
-        navigate("/superuser/analytics");
-        onClose();
-      },
-    },
-    {
-      label: "Settings",
-      icon: Settings,
-      onClick: () => {
-        navigate("/superuser/settings");
-        onClose();
-      },
-    },
-  ];
+  // ─── Station admin only ──────────────────────────────────
+  const adminItems = isStationAdmin
+    ? [
+        {
+          label: "Team",
+          icon: Users,
+          onClick: () => {
+            navigate("/station/team");
+            onClose();
+          },
+        },
+        {
+          label: "Riders",
+          icon: Truck,
+          onClick: () => {
+            navigate("/station/riders");
+            onClose();
+          },
+        },
+      ]
+    : [];
 
   return (
     <>
@@ -156,24 +143,27 @@ const AdminMoreDrawer = ({ isOpen, onClose }) => {
             <span>System</span>
           </button>
 
-          <hr className="my-3 border-gray-200 dark:border-gray-800" />
-
-          {/* Admin — items not in the bottombar */}
-          <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1">
-            Admin
-          </p>
-          {adminItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={item.onClick}
-              className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <span className="flex items-center gap-3">
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </span>
-            </button>
-          ))}
+          {/* Station admin section — only rendered for admins */}
+          {adminItems.length > 0 && (
+            <>
+              <hr className="my-3 border-gray-200 dark:border-gray-800" />
+              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1">
+                Station Admin
+              </p>
+              {adminItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.onClick}
+                  className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <span className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
 
           {/* Switch back to user side */}
           <hr className="my-3 border-gray-200 dark:border-gray-800" />
@@ -203,4 +193,4 @@ const AdminMoreDrawer = ({ isOpen, onClose }) => {
   );
 };
 
-export default AdminMoreDrawer;
+export default StationMoreDrawer;

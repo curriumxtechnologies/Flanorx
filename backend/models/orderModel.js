@@ -33,6 +33,21 @@ const orderSchema = new mongoose.Schema(
       enum: ["fuel", "gas"],
     },
 
+    // ⭐ Which station fulfills this gas order (null for fuel)
+    station: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Station",
+      default: null,
+      index: true,
+    },
+
+    // ⭐ Gas only — how the customer gets the cylinder
+    fulfillmentType: {
+      type: String,
+      enum: ["delivery", "pickup", null],
+      default: null,
+    },
+
     fuelType: {
       type: String,
       trim: true,
@@ -104,7 +119,14 @@ const orderSchema = new mongoose.Schema(
     },
     deliveryStatus: {
       type: String,
-      enum: ["pending", "accepted", "picked_up", "in_transit", "delivered", "confirmed"],
+      enum: [
+        "pending",
+        "accepted",
+        "picked_up",
+        "in_transit",
+        "delivered",
+        "confirmed",
+      ],
       default: "pending",
     },
     rider: {
@@ -115,6 +137,29 @@ const orderSchema = new mongoose.Schema(
     riderCommission: { type: Number, default: 0, min: 0 },
     commissionPaidToRider: { type: Boolean, default: false },
     deliveryAcceptedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // ⭐ Who assigned the rider (station admin / staff), for audit
+    riderAssignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    riderAssignedAt: { type: Date, default: null },
+
+    // ⭐ QR verification (fuel + gas)
+    verificationToken: {
+      type: String,
+      default: null,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    verificationScannedAt: { type: Date, default: null },
+    verificationScannedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
@@ -138,7 +183,9 @@ orderSchema.pre("validate", function () {
   this.orderMonth = d.getMonth() + 1;
 
   if (this.scheduleType === "scheduled" && !this.scheduledDate) {
-    throw new Error("Scheduled date is required when schedule type is 'scheduled'");
+    throw new Error(
+      "Scheduled date is required when schedule type is 'scheduled'"
+    );
   }
 
   if (this.orderType === "fuel") {
@@ -148,12 +195,23 @@ orderSchema.pre("validate", function () {
     if (!this.fillingStation) {
       this.fillingStation = "Flanorx Depot";
     }
+    // Fuel orders never belong to a station
+    if (this.station) this.station = null;
+    if (this.fulfillmentType) this.fulfillmentType = null;
   }
 
   if (this.orderType === "gas") {
-    if (!this.gasDetails || !this.gasDetails.cylinderSize || !this.gasDetails.quantityKg) {
-      throw new Error("gasDetails with cylinderSize and quantityKg are required for gas orders");
+    if (
+      !this.gasDetails ||
+      !this.gasDetails.cylinderSize ||
+      !this.gasDetails.quantityKg
+    ) {
+      throw new Error(
+        "gasDetails with cylinderSize and quantityKg are required for gas orders"
+      );
     }
+    if (!this.fulfillmentType) this.fulfillmentType = "delivery";
+
     if (this.gasDetails.isFirstTime) {
       const due = new Date();
       due.setDate(due.getDate() + 30);
@@ -177,9 +235,9 @@ orderSchema.methods.markAsPaid = function (paymentReference, paymentMethod) {
 // ─── Static price calculation (for fuel only) ──────────────
 orderSchema.statics.calculatePrice = function (fuelType, quantity) {
   const prices = {
-    "Petrol": 850,
+    Petrol: 850,
     "Petrol (95 Octane)": 850,
-    "Diesel": 1320,
+    Diesel: 1320,
   };
   const pricePerLiter = prices[fuelType] || 0;
   const subtotal = pricePerLiter * quantity;
@@ -198,6 +256,12 @@ orderSchema.index({ rider: 1, deliveryStatus: 1, status: 1 });
 orderSchema.index({ paid: 1, rider: 1, deliveryStatus: 1 });
 orderSchema.index({ orderType: 1 });
 orderSchema.index({ subscriptionDueDate: 1 });
+orderSchema.index({ station: 1, status: 1, createdAt: -1 });
+
+// NOTE: `verificationToken` already has `unique: true, sparse: true` in the
+// field definition above, which creates the index. Do NOT add a
+// `orderSchema.index({ verificationToken: 1 }, ...)` line — that would
+// trigger the "Duplicate schema index" mongoose warning.
 
 const Order = mongoose.model("Order", orderSchema);
 

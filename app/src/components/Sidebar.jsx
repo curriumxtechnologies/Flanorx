@@ -17,6 +17,7 @@ import {
   Wallet,
   Repeat,
   Shield,
+  Store,
 } from "lucide-react";
 import { logout } from "../features/auth/authSlice";
 import { useTheme } from "../context/ThemeContext";
@@ -37,6 +38,13 @@ const Sidebar = () => {
   const role = profile?.role || userInfo?.role;
   const isRider = role === "rider";
   const isAdmin = role === "admin";
+
+  // ─── Station membership ───────────────────────────────────
+  // The profile response gives us `station` (ObjectId or null) and
+  // `stationRole` ("admin" | "staff" | "rider" | null).
+  const stationId = profile?.station || userInfo?.station;
+  const stationRole = profile?.stationRole || userInfo?.stationRole;
+  const isStationAdmin = !!stationId && stationRole === "admin";
 
   // ─── Polling counts ───────────────────────────────────────
   // Unpaid/pending user orders
@@ -139,6 +147,25 @@ const Sidebar = () => {
             )}
           </NavLink>
         ))}
+
+        {/* ─── Station Admin section ───────────────────────── */}
+        {isStationAdmin && (
+          <>
+            <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="px-4 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                Station
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/station/dashboard")}
+              className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-[#13ec5b] bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 transition-colors"
+            >
+              <Store className="h-5 w-5" />
+              <span>Station Dashboard</span>
+            </button>
+          </>
+        )}
 
         {isRider && (
           <>

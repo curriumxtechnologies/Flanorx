@@ -2,6 +2,7 @@
 import asyncHandler from "express-async-handler";
 import axios from "axios";
 import User from "../models/userModel.js";
+import Station from "../models/stationModel.js";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
@@ -23,8 +24,13 @@ const resolveBankAccount = async (accountNumber, bankCode) => {
     }
     throw new Error(response.data.message || "Bank resolution failed");
   } catch (error) {
-    console.error("Bank resolution error:", error.response?.data || error.message);
-    throw new Error("Could not verify bank account. Please check the number and bank.");
+    console.error(
+      "Bank resolution error:",
+      error.response?.data || error.message
+    );
+    throw new Error(
+      "Could not verify bank account. Please check the number and bank."
+    );
   }
 };
 
@@ -34,10 +40,12 @@ const getFileUrl = (files, fieldName) => {
   return file?.path || file?.secure_url || null;
 };
 
-// ─── Apply to become a rider ──────────────────────────────────
-// @desc    User applies to become a rider (submits verification)
-// @route   POST /api/users/rider/apply
-// @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
+//  Apply to become a rider (FUEL rider)
+//  @desc    User applies to become a fuel rider (submits verification)
+//  @route   POST /api/users/rider/apply
+//  @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
 const applyForRider = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
@@ -84,6 +92,14 @@ const applyForRider = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
+  // ─── NEW: block station members from applying via this flow ─
+  if (user.station) {
+    res.status(400);
+    throw new Error(
+      "You are already part of a station. Ask your station admin to add you as a station rider instead."
+    );
+  }
+
   // Check existing status
   if (user.role === "rider") {
     res.status(400);
@@ -120,7 +136,7 @@ const applyForRider = asyncHandler(async (req, res) => {
   if (ninPicture) user.ninPicture = ninPicture;
   user.bankAccountNumber = bankAccountNumber;
   user.bankName = bankName;
-  user.bankCode = bankCode; // ← added field
+  user.bankCode = bankCode;
   user.accountName = accountName;
   if (phone) user.phone = phone;
 
@@ -135,13 +151,15 @@ const applyForRider = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── Get rider application status ────────────────────────────
-// @desc    Get current rider application status and data
-// @route   GET /api/users/rider/status
-// @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
+//  Get rider application status
+//  @desc    Get current rider application status and data
+//  @route   GET /api/users/rider/status
+//  @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
 const getRiderApplicationStatus = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select(
-    "nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName bankCode accountName phone verificationStatus rejectionReason verificationSubmittedAt role"
+    "nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName bankCode accountName phone verificationStatus rejectionReason verificationSubmittedAt role riderType station stationRole"
   );
 
   if (!user) {
@@ -149,8 +167,25 @@ const getRiderApplicationStatus = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
+  // Optionally hydrate station info for the frontend
+  let stationInfo = null;
+  if (user.station) {
+    const s = await Station.findById(user.station).select("name address status");
+    if (s) {
+      stationInfo = {
+        _id: s._id,
+        name: s.name,
+        address: s.address,
+        status: s.status,
+      };
+    }
+  }
+
   res.status(200).json({
     role: user.role,
+    riderType: user.riderType || null,
+    station: stationInfo,
+    stationRole: user.stationRole || null,
     verificationStatus: user.verificationStatus || "none",
     rejectionReason: user.rejectionReason || null,
     verificationSubmittedAt: user.verificationSubmittedAt || null,
@@ -169,10 +204,12 @@ const getRiderApplicationStatus = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── Update rider application ──────────────────────────────────
-// @desc    Update verification details (if status pending/rejected)
-// @route   PUT /api/users/rider/update
-// @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
+//  Update rider application
+//  @desc    Update verification details (if status pending/rejected)
+//  @route   PUT /api/users/rider/update
+//  @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
 const updateRiderApplication = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   if (!user) {
@@ -183,6 +220,14 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
   if (user.verificationStatus === "approved" || user.role === "rider") {
     res.status(400);
     throw new Error("You cannot update an approved application");
+  }
+
+  // Station members shouldn't be using this flow either
+  if (user.station) {
+    res.status(400);
+    throw new Error(
+      "You are already part of a station. Contact your station admin to update your details."
+    );
   }
 
   const {
@@ -254,10 +299,12 @@ const updateRiderApplication = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── Resolve bank account (public endpoint for frontend) ──────
-// @desc    Verify bank account and return account name
-// @route   POST /api/riders/resolve-bank
-// @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
+//  Resolve bank account (public endpoint for frontend)
+//  @desc    Verify bank account and return account name
+//  @route   POST /api/riders/resolve-bank
+//  @access  Private (user only)
+// ═════════════════════════════════════════════════════════════
 const resolveBank = asyncHandler(async (req, res) => {
   const { accountNumber, bankCode } = req.body;
   if (!accountNumber || !bankCode) {
@@ -279,10 +326,12 @@ const resolveBank = asyncHandler(async (req, res) => {
   }
 });
 
-// ─── Admin: Get all rider applications ──────────────────────
-// @desc    Admin get all applications (filter by status)
-// @route   GET /api/admin/riders/applications
-// @access  Private/Admin
+// ═════════════════════════════════════════════════════════════
+//  Admin: Get all rider applications
+//  @desc    Admin get all applications (filter by status)
+//  @route   GET /api/admin/riders/applications
+//  @access  Private/Admin
+// ═════════════════════════════════════════════════════════════
 const getRiderApplications = asyncHandler(async (req, res) => {
   const { status } = req.query;
 
@@ -295,17 +344,20 @@ const getRiderApplications = asyncHandler(async (req, res) => {
 
   const users = await User.find(filter)
     .select(
-      "name email phone nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName bankCode accountName verificationStatus rejectionReason verificationSubmittedAt role createdAt"
+      "name email phone nin fuelingStation proofOfAddress profilePicture ninPicture bankAccountNumber bankName bankCode accountName verificationStatus rejectionReason verificationSubmittedAt role riderType station stationRole createdAt"
     )
+    .populate("station", "name address")
     .sort({ verificationSubmittedAt: -1 });
 
   res.status(200).json(users);
 });
 
-// ─── Admin: Approve a rider application ──────────────────────
-// @desc    Admin approves a rider application
-// @route   PUT /api/admin/riders/:userId/approve
-// @access  Private/Admin
+// ═════════════════════════════════════════════════════════════
+//  Admin: Approve a rider application (fuel rider)
+//  @desc    Admin approves a rider application
+//  @route   PUT /api/admin/riders/:userId/approve
+//  @access  Private/Admin
+// ═════════════════════════════════════════════════════════════
 const approveRider = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const user = await User.findById(userId);
@@ -320,32 +372,42 @@ const approveRider = asyncHandler(async (req, res) => {
     throw new Error("Only pending applications can be approved");
   }
 
+  // Safety: don't approve a user who somehow belongs to a station
+  if (user.station) {
+    res.status(400);
+    throw new Error(
+      "This user is part of a station. Manage them from the station controller instead."
+    );
+  }
+
   user.verificationStatus = "approved";
   user.role = "rider";
+  user.riderType = "fuel"; // ⭐ this flow creates fuel riders
   user.verificationReviewedAt = new Date();
   user.verificationReviewedBy = req.user._id;
-
-  // Optionally, create a Paystack recipient here for future commissions
-  // (optional – could be done later)
 
   await user.save();
 
   res.status(200).json({
-    message: "Rider application approved. User role updated to rider.",
+    message:
+      "Rider application approved. User is now a fuel rider.",
     user: {
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
+      riderType: user.riderType,
       verificationStatus: user.verificationStatus,
     },
   });
 });
 
-// ─── Admin: Reject a rider application ──────────────────────
-// @desc    Admin rejects a rider application with reason
-// @route   PUT /api/admin/riders/:userId/reject
-// @access  Private/Admin
+// ═════════════════════════════════════════════════════════════
+//  Admin: Reject a rider application
+//  @desc    Admin rejects a rider application with reason
+//  @route   PUT /api/admin/riders/:userId/reject
+//  @access  Private/Admin
+// ═════════════════════════════════════════════════════════════
 const rejectRider = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const { reason } = req.body;
@@ -386,19 +448,25 @@ const rejectRider = asyncHandler(async (req, res) => {
   });
 });
 
+// ═════════════════════════════════════════════════════════════
+//  Get banks (Paystack passthrough)
+//  @desc    List Nigerian banks
+//  @route   GET /api/riders/banks
+//  @access  Private
+// ═════════════════════════════════════════════════════════════
 const getBanks = asyncHandler(async (req, res) => {
   const response = await axios.get(`${PAYSTACK_BASE}/bank`, {
-    headers: getPaystackHeaders()
+    headers: getPaystackHeaders(),
   });
   if (response.data.status) {
-    const banks = response.data.data.map(b => ({
+    const banks = response.data.data.map((b) => ({
       code: b.code,
       name: b.name,
     }));
     res.status(200).json(banks);
   } else {
     res.status(500);
-    throw new Error('Failed to fetch banks');
+    throw new Error("Failed to fetch banks");
   }
 });
 
@@ -406,8 +474,8 @@ export {
   applyForRider,
   getRiderApplicationStatus,
   updateRiderApplication,
-  getBanks, // new endpoint
-  resolveBank, // new endpoint
+  getBanks,
+  resolveBank,
   getRiderApplications,
   approveRider,
   rejectRider,

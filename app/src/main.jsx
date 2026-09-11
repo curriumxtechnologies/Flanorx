@@ -37,6 +37,7 @@ import AdminUsers from "./pages/admin/AdminUsers.jsx";
 import AdminRiders from "./pages/admin/AdminRiders.jsx";
 import AdminAnalytics from "./pages/admin/AdminAnalytics.jsx";
 import AdminSettings from "./pages/admin/AdminSettings.jsx";
+import AdminStations from "./pages/admin/AdminStations.jsx";
 import Waitlist from "./pages/admin/Waitlist.jsx";
 
 // Rider pages
@@ -45,6 +46,17 @@ import RiderDeliveries from "./pages/rider/RiderDeliveries.jsx";
 import RiderEarnings from "./pages/rider/RiderEarnings.jsx";
 import RiderTracking from "./pages/rider/RiderTracking.jsx";
 import RiderTrackingId from "./pages/rider/RiderTrackingId.jsx";
+import RiderScan from "./pages/rider/RiderScan.jsx";
+
+
+
+
+//Station pages
+import StationDashboard from "./pages/station/StationDashboard.jsx";
+import StationOrders from "./pages/station/StationOrders.jsx";
+import StationInventory from "./pages/station/StationInventory.jsx";
+import StationTeam from "./pages/station/StationTeam.jsx";
+import StationRiders from "./pages/station/StationRiders.jsx";
 
 const router = createBrowserRouter([
   {
@@ -80,6 +92,7 @@ const router = createBrowserRouter([
           { path: "superuser/analytics", element: <AdminAnalytics /> },
           { path: "superuser/settings", element: <AdminSettings /> },
           {path: "superuser/waitlist", element: <Waitlist /> },
+          {path: "superuser/stations", element: <AdminStations /> },
 
           // Rider
           { path: "rider/dashboard", element: <RiderDashboard /> },
@@ -87,6 +100,15 @@ const router = createBrowserRouter([
           { path: "rider/earnings", element: <RiderEarnings /> },
           { path: "rider/tracking", element: <RiderTracking /> },
           { path: "rider/tracking/:orderId", element: <RiderTrackingId /> },
+          {path: "rider/scan", element: <RiderScan /> },
+
+
+          // Station
+          {path: "station/dashboard", element: <StationDashboard /> },
+          {path: "station/orders", element: <StationOrders /> },
+          {path: "station/inventory", element: <StationInventory /> },
+          {path: "station/team", element: <StationTeam /> },
+          {path: "station/riders", element: <StationRiders /> },
         ],
       },
 

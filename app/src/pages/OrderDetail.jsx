@@ -1,8 +1,10 @@
 // src/pages/OrderDetail.jsx
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
+import { useSelector } from "react-redux";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import QRCode from "react-qr-code";
 import {
   Package,
   Flame,
@@ -24,6 +26,8 @@ import {
   ArrowRight,
   Download,
   FileImage,
+  QrCode,
+  Store,
 } from "lucide-react";
 import { useGetOrderByIdQuery } from "../features/orderApiSlice";
 import Sidebar from "../components/Sidebar";
@@ -33,6 +37,7 @@ import ReceiptTemplate from "../components/ReceiptTemplate";
 const OrderDetail = () => {
   const navigate = useNavigate();
   const { orderId } = useParams();
+  const { userInfo } = useSelector((state) => state.auth);
 
   // ─── Query ──────────────────────────────────────────────
   const {
@@ -40,8 +45,10 @@ const OrderDetail = () => {
     isLoading,
     error,
     refetch,
+    isFetching,
   } = useGetOrderByIdQuery(orderId, {
     skip: !orderId,
+    pollingInterval: 30000, // pick up QR scans and status changes
   });
 
   const receiptRef = useRef(null);
@@ -58,24 +65,37 @@ const OrderDetail = () => {
   // ─── Status colors ──────────────────────────────────────
   const getOrderStatusColor = (status) => {
     switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-      case "processing": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
-      case "completed": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-      case "cancelled": return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
-      case "failed": return "bg-red-200 text-red-800 dark:bg-red-900/40 dark:text-red-400";
-      default: return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+      case "pending":
+        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+      case "processing":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+      case "completed":
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+      case "cancelled":
+        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+      case "failed":
+        return "bg-red-200 text-red-800 dark:bg-red-900/40 dark:text-red-400";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
     }
   };
 
   const getDeliveryStatusColor = (status) => {
     switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
-      case "accepted": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
-      case "picked_up": return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300";
-      case "in_transit": return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300";
-      case "delivered": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-      case "confirmed": return "bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300";
-      default: return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+      case "pending":
+        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300";
+      case "accepted":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+      case "picked_up":
+        return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300";
+      case "in_transit":
+        return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300";
+      case "delivered":
+        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+      case "confirmed":
+        return "bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+      default:
+        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
     }
   };
 
@@ -94,47 +114,48 @@ const OrderDetail = () => {
   };
 
   // ─── Timeline events ────────────────────────────────────
-  const getTimeline = (order) => {
+  const getTimeline = (o) => {
     const events = [];
-    if (order.createdAt) {
+    if (o.createdAt) {
       events.push({
         label: "Order Placed",
-        date: order.createdAt,
+        date: o.createdAt,
         icon: <Package className="h-4 w-4" />,
       });
     }
-    if (order.acceptedAt) {
+    if (o.acceptedAt) {
       events.push({
         label: "Accepted by Rider",
-        date: order.acceptedAt,
+        date: o.acceptedAt,
         icon: <Truck className="h-4 w-4" />,
       });
     }
-    if (order.pickedUpAt) {
+    if (o.pickedUpAt) {
       events.push({
         label: "Picked Up",
-        date: order.pickedUpAt,
+        date: o.pickedUpAt,
         icon: <Package className="h-4 w-4" />,
       });
     }
-    if (order.deliveredAt) {
+    if (o.deliveredAt) {
       events.push({
         label: "Delivered",
-        date: order.deliveredAt,
+        date: o.deliveredAt,
         icon: <CheckCircle className="h-4 w-4" />,
       });
     }
-    if (order.customerConfirmedAt) {
+    if (o.verificationScannedAt) {
       events.push({
-        label: "Confirmed by Customer",
-        date: order.customerConfirmedAt,
-        icon: <CheckCircle className="h-4 w-4" />,
+        label: "Confirmed by Scan",
+        date: o.verificationScannedAt,
+        icon: <QrCode className="h-4 w-4" />,
       });
     }
-    if (order.completedAt) {
+    if (o.completedAt && !o.verificationScannedAt) {
+      // Fallback for legacy orders completed without a scan
       events.push({
         label: "Completed",
-        date: order.completedAt,
+        date: o.completedAt,
         icon: <CheckCircle className="h-4 w-4" />,
       });
     }
@@ -151,15 +172,6 @@ const OrderDetail = () => {
     });
   };
 
-  const formatTime = (date) => {
-    if (!date) return "—";
-    const d = new Date(date);
-    return d.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const formatFullDate = (date) => {
     if (!date) return "—";
     const d = new Date(date);
@@ -172,8 +184,7 @@ const OrderDetail = () => {
     });
   };
 
-  // ─── Receipt download handler ───────────────────────────────
-  // Gated only on payment — the order does not need to be "completed".
+  // ─── Receipt download ───────────────────────────────────
   const handleDownloadReceipt = async (format) => {
     if (!order || !receiptRef.current) return;
 
@@ -191,7 +202,11 @@ const OrderDetail = () => {
 
       if (format === "pdf") {
         const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "pt",
+          format: "a4",
+        });
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
@@ -240,9 +255,12 @@ const OrderDetail = () => {
             <div className="max-w-2xl mx-auto">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl p-6 text-center">
                 <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Order not found</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Order not found
+                </h2>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  {error?.data?.message || "The order you're looking for doesn't exist."}
+                  {error?.data?.message ||
+                    "The order you're looking for doesn't exist."}
                 </p>
                 <button
                   onClick={() => navigate("/orders")}
@@ -261,6 +279,19 @@ const OrderDetail = () => {
 
   const timeline = getTimeline(order);
   const canDownloadReceipt = !!order.paid;
+  const isCustomer = userInfo?.role === "user";
+  const isQrConfirmed = !!order.verificationScannedAt;
+  const isPickup = order.orderType === "gas" && order.fulfillmentType === "pickup";
+  const canShowQr =
+    isCustomer &&
+    !!order.paid &&
+    !!order.verificationToken &&
+    !isQrConfirmed &&
+    order.status !== "completed" &&
+    order.status !== "cancelled" &&
+    order.status !== "failed";
+
+  const showTo = isPickup ? "station" : "rider";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -287,27 +318,38 @@ const OrderDetail = () => {
             onClick={() => refetch()}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition flex-shrink-0"
           >
-            <Loader2 className={`h-5 w-5 text-gray-500 dark:text-gray-400 ${isLoading ? "animate-spin" : ""}`} />
+            <Loader2
+              className={`h-5 w-5 text-gray-500 dark:text-gray-400 ${
+                isFetching ? "animate-spin" : ""
+              }`}
+            />
           </button>
         </header>
 
         <div className="w-full px-0.5 sm:px-4 lg:px-6 py-4">
           <div className="max-w-4xl mx-auto space-y-5">
-
-            {/* ─── Status Banner (cleaner on mobile) ─────────── */}
+            {/* ─── Status Banner ────────────────────────────── */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl p-3 sm:p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getOrderStatusColor(
+                    order.status
+                  )}`}
                 >
                   {getStatusIcon(order.status)}
-                  <span className="capitalize">{order.status || "pending"}</span>
+                  <span className="capitalize">
+                    {order.status || "pending"}
+                  </span>
                 </span>
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getDeliveryStatusColor(order.deliveryStatus)}`}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getDeliveryStatusColor(
+                    order.deliveryStatus
+                  )}`}
                 >
                   {getStatusIcon(order.deliveryStatus)}
-                  <span className="capitalize">{order.deliveryStatus || "pending"}</span>
+                  <span className="capitalize">
+                    {order.deliveryStatus || "pending"}
+                  </span>
                 </span>
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium sm:ml-auto ${
@@ -325,6 +367,40 @@ const OrderDetail = () => {
                 </span>
               </div>
             </div>
+
+            {/* ─── QR Panel ─────────────────────────────────── */}
+            {canShowQr && (
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                  <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <QrCode className="h-5 w-5 text-[#13ec5b]" />
+                    Confirm Your Order
+                  </h3>
+                </div>
+                <div className="p-4 flex flex-col items-center">
+                  <div
+                    className="bg-white p-3 rounded-xl border border-gray-200"
+                    style={{ width: "100%", maxWidth: 260 }}
+                  >
+                    <QRCode
+                      value={order.verificationToken}
+                      size={240}
+                      level="M"
+                      bgColor="#ffffff"
+                      fgColor="#09090b"
+                      style={{ width: "100%", height: "auto" }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-3 leading-relaxed max-w-xs">
+                    Show this code to the {showTo}{" "}
+                    {order.orderType === "gas" && isPickup
+                      ? "when you arrive to pick up your cylinder"
+                      : "when they arrive"}
+                    . They'll scan it to confirm your order.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* ─── Grid: Order Info ──────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -346,88 +422,186 @@ const OrderDetail = () => {
                     {order.orderType === "fuel" ? (
                       <>
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Fuel Type</span>
-                          <span className="text-gray-900 dark:text-white truncate text-right">{order.fuelType || "—"}</span>
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Fuel Type
+                          </span>
+                          <span className="text-gray-900 dark:text-white truncate text-right">
+                            {order.fuelType || "—"}
+                          </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Quantity</span>
-                          <span className="text-gray-900 dark:text-white">{order.quantity || 0} L</span>
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Quantity
+                          </span>
+                          <span className="text-gray-900 dark:text-white">
+                            {order.quantity || 0} L
+                          </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Price per Liter</span>
-                          <span className="text-gray-900 dark:text-white">₦{order.fuelPricePerLiter?.toFixed(2) || "0.00"}</span>
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Price per Liter
+                          </span>
+                          <span className="text-gray-900 dark:text-white">
+                            ₦{order.fuelPricePerLiter?.toFixed(2) || "0.00"}
+                          </span>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Cylinder Size</span>
-                          <span className="text-gray-900 dark:text-white truncate text-right">{order.gasDetails?.cylinderSize || "—"}</span>
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Cylinder Size
+                          </span>
+                          <span className="text-gray-900 dark:text-white truncate text-right">
+                            {order.gasDetails?.cylinderSize || "—"}
+                          </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Quantity</span>
-                          <span className="text-gray-900 dark:text-white">{order.gasDetails?.quantityKg || 0} kg</span>
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Quantity
+                          </span>
+                          <span className="text-gray-900 dark:text-white">
+                            {order.gasDetails?.quantityKg || 0} kg
+                          </span>
                         </div>
+                        {order.fulfillmentType && (
+                          <div className="flex justify-between gap-3">
+                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                              Fulfillment
+                            </span>
+                            <span className="text-gray-900 dark:text-white capitalize">
+                              {order.fulfillmentType}
+                            </span>
+                          </div>
+                        )}
                         {order.gasDetails?.isFirstTime && (
                           <div className="flex justify-between gap-3">
-                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">New Cylinder</span>
-                            <span className="text-green-600 dark:text-green-400">Yes</span>
+                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                              New Cylinder
+                            </span>
+                            <span className="text-green-600 dark:text-green-400">
+                              Yes
+                            </span>
                           </div>
                         )}
                         {order.subscriptionDueDate && (
                           <div className="flex justify-between gap-3">
-                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Subscription Due</span>
-                            <span className="text-gray-900 dark:text-white">{formatDate(order.subscriptionDueDate)}</span>
+                            <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                              Subscription Due
+                            </span>
+                            <span className="text-gray-900 dark:text-white">
+                              {formatDate(order.subscriptionDueDate)}
+                            </span>
                           </div>
                         )}
                       </>
                     )}
                     <div className="flex justify-between gap-3 border-t border-gray-100 dark:border-gray-700 pt-2">
-                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Order Date</span>
-                      <span className="text-gray-900 dark:text-white truncate text-right">{formatFullDate(order.createdAt)}</span>
+                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                        Order Date
+                      </span>
+                      <span className="text-gray-900 dark:text-white truncate text-right">
+                        {formatFullDate(order.createdAt)}
+                      </span>
                     </div>
                   </div>
                 </div>
+
+                {/* Station Card (gas only) */}
+                {order.orderType === "gas" && order.station && (
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <Store className="h-5 w-5 text-[#13ec5b]" />
+                        {isPickup ? "Pickup Station" : "Fulfilling Station"}
+                      </h3>
+                    </div>
+                    <div className="p-4 space-y-2 text-sm">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                        {order.station.name || "Station"}
+                      </p>
+                      {order.station.address && (
+                        <p className="text-gray-500 dark:text-gray-400 break-words">
+                          {order.station.address}
+                        </p>
+                      )}
+                      {order.station.phone && (
+                        <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
+                          <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">
+                            {order.station.phone}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Delivery Card */}
                 <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <MapPin className="h-5 w-5 text-[#13ec5b]" />
-                      Delivery Details
+                      {isPickup ? "Pickup Details" : "Delivery Details"}
                     </h3>
                   </div>
                   <div className="p-4 space-y-3 text-sm">
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400 text-xs">Address</span>
-                      <p className="text-gray-900 dark:text-white break-words">{order.deliveryAddress || "—"}</p>
-                    </div>
+                    {!isPickup && (
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">
+                          Address
+                        </span>
+                        <p className="text-gray-900 dark:text-white break-words">
+                          {order.deliveryAddress || "—"}
+                        </p>
+                      </div>
+                    )}
                     <div className="flex justify-between gap-3">
-                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Schedule</span>
-                      <span className="text-gray-900 dark:text-white capitalize">{order.scheduleType || "now"}</span>
+                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                        Schedule
+                      </span>
+                      <span className="text-gray-900 dark:text-white capitalize">
+                        {order.scheduleType || "now"}
+                      </span>
                     </div>
                     {order.scheduleType === "scheduled" && (
                       <>
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Scheduled Date</span>
-                          <span className="text-gray-900 dark:text-white">{formatDate(order.scheduledDate)}</span>
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Scheduled Date
+                          </span>
+                          <span className="text-gray-900 dark:text-white">
+                            {formatDate(order.scheduledDate)}
+                          </span>
                         </div>
                         <div className="flex justify-between gap-3">
-                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Scheduled Time</span>
-                          <span className="text-gray-900 dark:text-white">{order.scheduledTime || "—"}</span>
+                          <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                            Scheduled Time
+                          </span>
+                          <span className="text-gray-900 dark:text-white">
+                            {order.scheduledTime || "—"}
+                          </span>
                         </div>
                       </>
                     )}
-                    {order.estimatedDeliveryMinutes && (
+                    {order.estimatedDeliveryMinutes > 0 && (
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Est. Delivery</span>
-                        <span className="text-gray-900 dark:text-white">{order.estimatedDeliveryMinutes} minutes</span>
+                        <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
+                          Est. Delivery
+                        </span>
+                        <span className="text-gray-900 dark:text-white">
+                          {order.estimatedDeliveryMinutes} minutes
+                        </span>
                       </div>
                     )}
                     {order.notes && (
                       <div>
-                        <span className="text-gray-500 dark:text-gray-400 text-xs">Notes</span>
-                        <p className="text-gray-900 dark:text-white break-words">{order.notes}</p>
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">
+                          Notes
+                        </span>
+                        <p className="text-gray-900 dark:text-white break-words">
+                          {order.notes}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -443,7 +617,9 @@ const OrderDetail = () => {
                   </div>
                   <div className="p-4">
                     {timeline.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No events yet</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        No events yet
+                      </p>
                     ) : (
                       <div className="relative">
                         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
@@ -454,8 +630,12 @@ const OrderDetail = () => {
                                 {event.icon}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">{event.label}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 break-words">{formatFullDate(event.date)}</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {event.label}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 break-words">
+                                  {formatFullDate(event.date)}
+                                </p>
                               </div>
                             </div>
                           ))}
@@ -478,25 +658,43 @@ const OrderDetail = () => {
                   </div>
                   <div className="p-4 space-y-3 text-sm">
                     <div className="flex justify-between gap-3">
-                      <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
-                      <span className="text-gray-900 dark:text-white">₦{order.subtotal?.toFixed(2) || "0.00"}</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Subtotal
+                      </span>
+                      <span className="text-gray-900 dark:text-white">
+                        ₦{order.subtotal?.toFixed(2) || "0.00"}
+                      </span>
                     </div>
                     <div className="flex justify-between gap-3">
-                      <span className="text-gray-500 dark:text-gray-400">Delivery Fee</span>
-                      <span className="text-gray-900 dark:text-white">₦{order.deliveryFee?.toFixed(2) || "0.00"}</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Delivery Fee
+                      </span>
+                      <span className="text-gray-900 dark:text-white">
+                        ₦{order.deliveryFee?.toFixed(2) || "0.00"}
+                      </span>
                     </div>
                     <div className="flex justify-between gap-3">
-                      <span className="text-gray-500 dark:text-gray-400">Service Tax</span>
-                      <span className="text-gray-900 dark:text-white">₦{order.serviceTax?.toFixed(2) || "0.00"}</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Service Tax
+                      </span>
+                      <span className="text-gray-900 dark:text-white">
+                        ₦{order.serviceTax?.toFixed(2) || "0.00"}
+                      </span>
                     </div>
                     {order.riderCommission > 0 && (
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-500 dark:text-gray-400">Rider Commission</span>
-                        <span className="text-gray-900 dark:text-white">₦{order.riderCommission?.toFixed(2) || "0.00"}</span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Rider Commission
+                        </span>
+                        <span className="text-gray-900 dark:text-white">
+                          ₦{order.riderCommission?.toFixed(2) || "0.00"}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-3 gap-3">
-                      <span className="font-semibold text-gray-900 dark:text-white">Total</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        Total
+                      </span>
                       <span className="text-xl font-bold text-[#13ec5b] truncate">
                         ₦{order.totalAmount?.toFixed(2) || "0.00"}
                       </span>
@@ -504,7 +702,7 @@ const OrderDetail = () => {
                   </div>
                 </div>
 
-                {/* Receipt Card — available once paid, regardless of completion status */}
+                {/* Receipt Card */}
                 {canDownloadReceipt && (
                   <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
                     <div className="p-4 border-b border-gray-100 dark:border-gray-700">
@@ -540,7 +738,11 @@ const OrderDetail = () => {
                           Download JPG
                         </button>
                       </div>
-                      {downloadError && <p className="text-xs text-red-500 mt-2">{downloadError}</p>}
+                      {downloadError && (
+                        <p className="text-xs text-red-500 mt-2">
+                          {downloadError}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -554,14 +756,20 @@ const OrderDetail = () => {
                     </h3>
                   </div>
                   <div className="p-4 space-y-2 text-sm">
-                    <p className="font-medium text-gray-900 dark:text-white truncate">{order.user?.name || "Unknown"}</p>
+                    <p className="font-medium text-gray-900 dark:text-white truncate">
+                      {order.user?.name || "Unknown"}
+                    </p>
                     <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
                       <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="truncate" title={order.user?.email || "—"}>{order.user?.email || "—"}</span>
+                      <span className="truncate" title={order.user?.email || "—"}>
+                        {order.user?.email || "—"}
+                      </span>
                     </p>
                     <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
                       <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="truncate">{order.user?.phone || "—"}</span>
+                      <span className="truncate">
+                        {order.user?.phone || "—"}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -571,24 +779,37 @@ const OrderDetail = () => {
                   <div className="p-4 border-b border-gray-100 dark:border-gray-700">
                     <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <Truck className="h-5 w-5 text-[#13ec5b]" />
-                      Rider
+                      {isPickup ? "Rider (not needed for pickup)" : "Rider"}
                     </h3>
                   </div>
                   <div className="p-4">
                     {order.rider ? (
                       <div className="space-y-2 text-sm">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">{order.rider.name || "Rider"}</p>
+                        <p className="font-medium text-gray-900 dark:text-white truncate">
+                          {order.rider.name || "Rider"}
+                        </p>
                         <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
                           <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="truncate" title={order.rider.email || "—"}>{order.rider.email || "—"}</span>
+                          <span
+                            className="truncate"
+                            title={order.rider.email || "—"}
+                          >
+                            {order.rider.email || "—"}
+                          </span>
                         </p>
                         <p className="text-gray-500 dark:text-gray-400 flex items-center gap-1 min-w-0">
                           <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span className="truncate">{order.rider.phone || "—"}</span>
+                          <span className="truncate">
+                            {order.rider.phone || "—"}
+                          </span>
                         </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No rider assigned yet</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {isPickup
+                          ? "You'll pick this up at the station — no rider needed."
+                          : "No rider assigned yet"}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -603,7 +824,9 @@ const OrderDetail = () => {
                   </div>
                   <div className="p-4 space-y-2 text-sm">
                     <div className="flex justify-between gap-3">
-                      <span className="text-gray-500 dark:text-gray-400">Status</span>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Status
+                      </span>
                       {order.paid ? (
                         <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
                           <CheckCircle className="h-4 w-4" /> Paid
@@ -616,26 +839,38 @@ const OrderDetail = () => {
                     </div>
                     {order.paymentMethod && (
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-500 dark:text-gray-400">Method</span>
-                        <span className="text-gray-900 dark:text-white capitalize">{order.paymentMethod}</span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Method
+                        </span>
+                        <span className="text-gray-900 dark:text-white capitalize">
+                          {order.paymentMethod}
+                        </span>
                       </div>
                     )}
                     {order.paymentDate && (
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-500 dark:text-gray-400">Date</span>
-                        <span className="text-gray-900 dark:text-white truncate text-right">{formatFullDate(order.paymentDate)}</span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          Date
+                        </span>
+                        <span className="text-gray-900 dark:text-white truncate text-right">
+                          {formatFullDate(order.paymentDate)}
+                        </span>
                       </div>
                     )}
                     {order.paymentReference && (
                       <div>
-                        <span className="text-gray-500 dark:text-gray-400 text-xs">Reference</span>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 break-all">{order.paymentReference}</p>
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">
+                          Reference
+                        </span>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 break-all">
+                          {order.paymentReference}
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Pay Now */}
                 {!order.paid && order.status !== "cancelled" && (
                   <button
                     onClick={() => navigate(`/payment/initiate/${order._id}`)}
@@ -661,7 +896,15 @@ const OrderDetail = () => {
 
       {/* ── Off-screen receipt used as the html2canvas source ──── */}
       {canDownloadReceipt && (
-        <div style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }} aria-hidden="true">
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: "-10000px",
+            pointerEvents: "none",
+          }}
+          aria-hidden="true"
+        >
           <ReceiptTemplate
             ref={receiptRef}
             order={order}

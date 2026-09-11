@@ -5,7 +5,7 @@ const DELIVERY_URL = "/delivery";
 
 export const deliveryApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // ─── Rider: Get available deliveries ────────────────────
+    // ─── Rider: Get available (fuel) deliveries ─────────────
     getAvailableDeliveries: builder.query({
       query: () => ({
         url: `${DELIVERY_URL}/available`,
@@ -29,7 +29,7 @@ export const deliveryApiSlice = apiSlice.injectEndpoints({
           : [{ type: "Delivery", id: "ASSIGNED" }],
     }),
 
-    // ─── Rider: Accept a delivery ───────────────────────────
+    // ─── Rider: Accept a delivery (fuel only) ───────────────
     acceptDelivery: builder.mutation({
       query: (id) => ({
         url: `${DELIVERY_URL}/${id}/accept`,
@@ -42,6 +42,8 @@ export const deliveryApiSlice = apiSlice.injectEndpoints({
     }),
 
     // ─── Rider: Update delivery progress ────────────────────
+    // (picked_up / in_transit / delivered — "delivered" is a status only,
+    //  order completes on QR scan via orderApiSlice.verifyOrderByToken)
     updateDeliveryProgress: builder.mutation({
       query: ({ id, deliveryStatus }) => ({
         url: `${DELIVERY_URL}/${id}/status`,
@@ -49,18 +51,6 @@ export const deliveryApiSlice = apiSlice.injectEndpoints({
         body: { deliveryStatus },
       }),
       invalidatesTags: (result, error, { id }) => [
-        { type: "Delivery", id },
-        "Delivery",
-      ],
-    }),
-
-    // ─── Customer: Confirm delivery ─────────────────────────
-    confirmDelivery: builder.mutation({
-      query: (id) => ({
-        url: `${DELIVERY_URL}/${id}/confirm`,
-        method: "PUT",
-      }),
-      invalidatesTags: (result, error, id) => [
         { type: "Delivery", id },
         "Delivery",
       ],
@@ -86,13 +76,11 @@ export const deliveryApiSlice = apiSlice.injectEndpoints({
   }),
 });
 
-// ─── Export hooks ──────────────────────────────────────────────
 export const {
   useGetAvailableDeliveriesQuery,
   useGetMyAssignedDeliveriesQuery,
   useAcceptDeliveryMutation,
   useUpdateDeliveryProgressMutation,
-  useConfirmDeliveryMutation,
   useGetDeliveryDetailsQuery,
   useGetRiderEarningsQuery,
 } = deliveryApiSlice;

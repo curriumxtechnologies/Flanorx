@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import toast from "react-hot-toast";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import QRCode from "react-qr-code";
 import {
   Package,
   Flame,
@@ -22,9 +23,12 @@ import {
   Download,
   FileImage,
   ArrowRight,
+  QrCode,
 } from "lucide-react";
-import { useGetMyOrdersQuery, useInitializePaymentMutation } from "../features/orderApiSlice";
-import { useConfirmDeliveryMutation } from "../features/deliveryApiSlice";
+import {
+  useGetMyOrdersQuery,
+  useInitializePaymentMutation,
+} from "../features/orderApiSlice";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
 import ReceiptTemplate from "../components/ReceiptTemplate";
@@ -69,35 +73,71 @@ const Orders = () => {
     paid: undefined,
   });
 
-  const [initializePayment, { isLoading: paymentLoading }] = useInitializePaymentMutation();
-  const [confirmDelivery, { isLoading: confirming }] = useConfirmDeliveryMutation();
+  const [initializePayment, { isLoading: paymentLoading }] =
+    useInitializePaymentMutation();
 
   // ─── Status colors ─────────────────────────────────────────
   const getStatusColor = (status) => {
     switch (status) {
-      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
-      case "accepted": case "picked_up": case "in_transit": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
-      case "delivered": return "text-green-600 bg-green-50 dark:bg-green-900/20";
-      case "confirmed": return "text-green-700 bg-green-100 dark:bg-green-900/30";
-      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+      case "pending":
+        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "accepted":
+      case "picked_up":
+      case "in_transit":
+        return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "delivered":
+        return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "confirmed":
+        return "text-green-700 bg-green-100 dark:bg-green-900/30";
+      default:
+        return "text-gray-600 bg-gray-50 dark:bg-gray-800";
     }
   };
 
   const getOrderStatusColor = (status) => {
     switch (status) {
-      case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
-      case "processing": return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
-      case "completed": return "text-green-600 bg-green-50 dark:bg-green-900/20";
-      case "cancelled": return "text-red-600 bg-red-50 dark:bg-red-900/20";
-      case "failed": return "text-red-700 bg-red-100 dark:bg-red-900/30";
-      default: return "text-gray-600 bg-gray-50 dark:bg-gray-800";
+      case "pending":
+        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
+      case "processing":
+        return "text-blue-600 bg-blue-50 dark:bg-blue-900/20";
+      case "completed":
+        return "text-green-600 bg-green-50 dark:bg-green-900/20";
+      case "cancelled":
+        return "text-red-600 bg-red-50 dark:bg-red-900/20";
+      case "failed":
+        return "text-red-700 bg-red-100 dark:bg-red-900/30";
+      default:
+        return "text-gray-600 bg-gray-50 dark:bg-gray-800";
     }
   };
 
+  // ─── QR availability ──────────────────────────────────────
+  // The QR is shown to the customer as soon as the order is paid,
+  // until it's been scanned by the rider / station.
+  const canShowQr = (order) =>
+    !!order?.paid &&
+    !!order?.verificationToken &&
+    !order?.verificationScannedAt &&
+    order?.status !== "completed" &&
+    order?.status !== "cancelled" &&
+    order?.status !== "failed";
+
+  const isQrConfirmed = (order) => !!order?.verificationScannedAt;
+
   // ─── Month / Year helpers ──────────────────────────────────
   const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
   const years = [];
   for (let y = currentYear; y >= currentYear - 4; y--) years.push(y);
@@ -143,7 +183,6 @@ const Orders = () => {
   }, [openDropdown]);
 
   // ─── Receipt download handler ───────────────────────────────
-  // Available as soon as the order is paid — does not require completion.
   const handleDownloadReceipt = async (format) => {
     if (!selectedOrder || !receiptRef.current) return;
 
@@ -157,11 +196,17 @@ const Orders = () => {
         backgroundColor: "#ffffff",
       });
 
-      const fileBase = `Flanorx-Receipt-${selectedOrder.orderId || selectedOrder._id.slice(-6)}`;
+      const fileBase = `Flanorx-Receipt-${
+        selectedOrder.orderId || selectedOrder._id.slice(-6)
+      }`;
 
       if (format === "pdf") {
         const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "pt",
+          format: "a4",
+        });
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
@@ -197,7 +242,11 @@ const Orders = () => {
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition min-w-[140px] justify-between"
         >
           <span>{displayLabel}</span>
-          <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
         </button>
         {isOpen && (
           <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-60 overflow-auto py-1">
@@ -231,15 +280,22 @@ const Orders = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Filter Orders</h3>
-          <button onClick={() => setShowFilterSheet(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            Filter Orders
+          </h3>
+          <button
+            onClick={() => setShowFilterSheet(false)}
+            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
             <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
         <div className="space-y-4">
           {/* Order Type */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Order Type</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Order Type
+            </label>
             <div className="flex flex-wrap gap-2">
               {orderTypes.map((opt) => (
                 <button
@@ -258,7 +314,9 @@ const Orders = () => {
           </div>
           {/* Status */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Status
+            </label>
             <div className="flex flex-wrap gap-2">
               {statusOptions.map((opt) => (
                 <button
@@ -277,7 +335,9 @@ const Orders = () => {
           </div>
           {/* Month */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Month</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Month
+            </label>
             <div className="flex flex-wrap gap-2">
               {months.map((m, idx) => (
                 <button
@@ -296,7 +356,9 @@ const Orders = () => {
           </div>
           {/* Year */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Year</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Year
+            </label>
             <div className="flex flex-wrap gap-2">
               {years.map((y) => (
                 <button
@@ -315,12 +377,18 @@ const Orders = () => {
           </div>
           <div className="flex gap-3 pt-2">
             <button
-              onClick={() => { clearFilters(); setShowFilterSheet(false); }}
+              onClick={() => {
+                clearFilters();
+                setShowFilterSheet(false);
+              }}
               className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium"
             >
               Clear All
             </button>
-            <button onClick={() => setShowFilterSheet(false)} className="flex-1 py-2.5 bg-[#13ec5b] text-white rounded-lg font-medium">
+            <button
+              onClick={() => setShowFilterSheet(false)}
+              className="flex-1 py-2.5 bg-[#13ec5b] text-white rounded-lg font-medium"
+            >
               Apply
             </button>
           </div>
@@ -329,15 +397,54 @@ const Orders = () => {
     </div>
   );
 
-  // ─── Detail Modal (Right slide on desktop, bottom sheet on mobile) ──
+  // ─── QR Panel ─────────────────────────────────────────────
+  // Shown inside the detail modal to any paid, unconfirmed order.
+  const QrPanel = ({ order }) => {
+    if (!canShowQr(order)) return null;
+
+    return (
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="flex items-center gap-2 mb-2">
+          <QrCode className="h-4 w-4 text-[#13ec5b]" />
+          <p className="text-gray-700 dark:text-gray-300 text-xs font-semibold uppercase tracking-wider">
+            Confirm this order
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-white p-4 flex flex-col items-center border border-gray-200 shadow-sm">
+          <div
+            className="bg-white p-3 rounded-lg"
+            style={{ width: "100%", maxWidth: 220 }}
+          >
+            <QRCode
+              value={order.verificationToken}
+              size={200}
+              level="M"
+              bgColor="#ffffff"
+              fgColor="#09090b"
+              style={{ width: "100%", height: "auto" }}
+            />
+          </div>
+          <p className="text-[11px] text-gray-500 text-center mt-3 leading-relaxed">
+            Show this code to the {order.orderType === "gas" && order.fulfillmentType === "pickup"
+              ? "station"
+              : "rider"}{" "}
+            when they arrive. They'll scan it to confirm your order.
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Detail Modal ─────────────────────────────────────────
   const DetailModal = () => {
     if (!selectedOrder) return null;
 
     const order = selectedOrder;
     const isPaid = order.paid;
     const isPendingPayment = !isPaid && order.status !== "cancelled";
-    const canConfirm = order.deliveryStatus === "delivered" && order.status !== "completed";
     const canDownloadReceipt = isPaid;
+    const confirmed = isQrConfirmed(order);
 
     const handlePayNow = async () => {
       try {
@@ -349,17 +456,6 @@ const Orders = () => {
         }
       } catch (err) {
         toast.error(err.data?.message || "Failed to initialize payment");
-      }
-    };
-
-    const handleConfirmDelivery = async () => {
-      try {
-        await confirmDelivery(order._id).unwrap();
-        refetch();
-        setSelectedOrder(null);
-        toast.success("Delivery confirmed successfully!");
-      } catch (err) {
-        toast.error(err.data?.message || "Failed to confirm delivery");
       }
     };
 
@@ -395,48 +491,104 @@ const Orders = () => {
               <div>
                 <p className="text-gray-500 dark:text-gray-400 text-xs">Type</p>
                 <span className="flex items-center gap-1 capitalize">
-                  {order.orderType === "fuel" ? <Flame className="h-4 w-4 text-[#13ec5b]" /> : <Package className="h-4 w-4 text-[#13ec5b]" />}
+                  {order.orderType === "fuel" ? (
+                    <Flame className="h-4 w-4 text-[#13ec5b]" />
+                  ) : (
+                    <Package className="h-4 w-4 text-[#13ec5b]" />
+                  )}
                   {order.orderType}
+                  {order.orderType === "gas" && order.fulfillmentType && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
+                      · {order.fulfillmentType}
+                    </span>
+                  )}
                 </span>
               </div>
               <div>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Status</p>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Status
+                </p>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(
+                    order.status
+                  )}`}
+                >
                   {order.status || "pending"}
                 </span>
               </div>
               <div>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Delivery</p>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.deliveryStatus || "pending")}`}>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Delivery
+                </p>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                    order.deliveryStatus || "pending"
+                  )}`}
+                >
                   {order.deliveryStatus || "pending"}
                 </span>
               </div>
               <div>
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Total</p>
-                <p className="font-bold text-gray-900 dark:text-white">₦{order.totalAmount?.toFixed(2) || "0.00"}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Total
+                </p>
+                <p className="font-bold text-gray-900 dark:text-white">
+                  ₦{order.totalAmount?.toFixed(2) || "0.00"}
+                </p>
               </div>
             </div>
 
             {order.deliveryAddress && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Delivery Address</p>
-                <p className="text-gray-900 dark:text-white text-sm">{order.deliveryAddress}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Delivery Address
+                </p>
+                <p className="text-gray-900 dark:text-white text-sm">
+                  {order.deliveryAddress}
+                </p>
+              </div>
+            )}
+
+            {order.station && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  {order.fulfillmentType === "pickup"
+                    ? "Pickup Station"
+                    : "Fulfilling Station"}
+                </p>
+                <p className="text-gray-900 dark:text-white text-sm">
+                  {order.station.name || order.station.address || "—"}
+                </p>
+                {order.station.address && order.station.name && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {order.station.address}
+                  </p>
+                )}
               </div>
             )}
 
             {order.fuelType && order.quantity && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Fuel Details</p>
-                <p className="text-gray-900 dark:text-white text-sm">{order.fuelType} – {order.quantity} L</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Fuel Details
+                </p>
+                <p className="text-gray-900 dark:text-white text-sm">
+                  {order.fuelType} – {order.quantity} L
+                </p>
               </div>
             )}
 
             {order.gasDetails && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Gas Details</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Gas Details
+                </p>
                 <p className="text-gray-900 dark:text-white text-sm">
-                  {order.gasDetails.cylinderSize} – {order.gasDetails.quantityKg} kg
-                  {order.gasDetails.isFirstTime ? " (New cylinder)" : " (Swap)"}
+                  {order.gasDetails.cylinderSize} – {order.gasDetails.quantityKg}{" "}
+                  kg
+                  {order.gasDetails.isFirstTime
+                    ? " (New cylinder)"
+                    : " (Swap)"}
                 </p>
               </div>
             )}
@@ -451,10 +603,34 @@ const Orders = () => {
               </button>
             </div>
 
+            {/* QR — the customer shows this to the rider / station */}
+            <QrPanel order={order} />
+
+            {/* QR already scanned — small confirmation badge */}
+            {confirmed && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <div className="flex items-start gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-2.5 rounded-lg">
+                  <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      Order confirmed by scan
+                    </p>
+                    <p className="text-[11px] opacity-80 mt-0.5">
+                      {order.verificationScannedAt
+                        ? new Date(order.verificationScannedAt).toLocaleString()
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Receipt Download — available for any paid order */}
             {canDownloadReceipt && (
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Receipt</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Receipt
+                </p>
                 <div className="flex flex-col sm:flex-row gap-3 mt-2">
                   <button
                     onClick={() => handleDownloadReceipt("pdf")}
@@ -481,41 +657,39 @@ const Orders = () => {
                     Download JPG
                   </button>
                 </div>
-                {downloadError && <p className="text-xs text-red-500 mt-2">{downloadError}</p>}
+                {downloadError && (
+                  <p className="text-xs text-red-500 mt-2">{downloadError}</p>
+                )}
               </div>
             )}
 
-            {/* Actions */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
-              {isPendingPayment && (
+            {/* Pay Now — for unpaid orders */}
+            {isPendingPayment && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <button
                   onClick={handlePayNow}
                   disabled={paymentLoading}
                   className="w-full py-3 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {paymentLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+                  {paymentLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-5 w-5" />
+                  )}
                   Pay Now
                 </button>
-              )}
+              </div>
+            )}
 
-              {canConfirm && (
-                <button
-                  onClick={handleConfirmDelivery}
-                  disabled={confirming}
-                  className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {confirming ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
-                  Confirm Delivery
-                </button>
-              )}
-
-              {isPaid && order.status === "completed" && (
+            {/* Completed footer */}
+            {isPaid && order.status === "completed" && !confirmed && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg">
                   <CheckCircle className="h-4 w-4" />
                   <span className="text-sm font-medium">Completed</span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </>
@@ -526,6 +700,8 @@ const Orders = () => {
   const SlimOrderItem = ({ order }) => {
     const isPaid = order.paid;
     const isPendingPayment = !isPaid && order.status !== "cancelled";
+    const qrReady = canShowQr(order);
+    const qrConfirmed = isQrConfirmed(order);
 
     return (
       <div
@@ -533,16 +709,32 @@ const Orders = () => {
         className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-600 cursor-pointer transition"
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
               #{order.orderId || order._id.slice(-6)}
             </span>
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getOrderStatusColor(order.status)}`}>
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${getOrderStatusColor(
+                order.status
+              )}`}
+            >
               {order.status || "pending"}
             </span>
             {isPendingPayment && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
                 Unpaid
+              </span>
+            )}
+            {qrReady && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[#13ec5b]/10 text-[#0f9c46] dark:text-[#13ec5b] border border-[#13ec5b]/20">
+                <QrCode className="h-3 w-3" />
+                Show QR
+              </span>
+            )}
+            {qrConfirmed && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                <CheckCircle className="h-3 w-3" />
+                Confirmed
               </span>
             )}
           </div>
@@ -568,7 +760,9 @@ const Orders = () => {
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3 lg:py-4 lg:px-8 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">Orders</h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
+            Orders
+          </h1>
           <button
             onClick={() => setShowFilterSheet(true)}
             className="lg:hidden flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300"
@@ -580,23 +774,57 @@ const Orders = () => {
         <div className="w-full px-0 sm:px-4 lg:px-8 py-4">
           {/* Desktop filters */}
           <div className="hidden lg:flex flex-wrap items-center gap-3 mb-6 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-            <FilterDropdown label="Order Type" name="orderType" value={filters.orderType} options={orderTypes} onSelect={(v) => handleFilterChange("orderType", v)} />
-            <FilterDropdown label="Status" name="status" value={filters.status} options={statusOptions} onSelect={(v) => handleFilterChange("status", v)} />
-            <FilterDropdown label="Month" name="month" value={filters.month} options={months.map((m, idx) => ({ value: idx + 1, label: m }))} onSelect={(v) => handleFilterChange("month", v)} />
-            <FilterDropdown label="Year" name="year" value={filters.year} options={years.map((y) => ({ value: y, label: y }))} onSelect={(v) => handleFilterChange("year", v)} />
-            <button onClick={clearFilters} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm font-medium">Clear</button>
+            <FilterDropdown
+              label="Order Type"
+              name="orderType"
+              value={filters.orderType}
+              options={orderTypes}
+              onSelect={(v) => handleFilterChange("orderType", v)}
+            />
+            <FilterDropdown
+              label="Status"
+              name="status"
+              value={filters.status}
+              options={statusOptions}
+              onSelect={(v) => handleFilterChange("status", v)}
+            />
+            <FilterDropdown
+              label="Month"
+              name="month"
+              value={filters.month}
+              options={months.map((m, idx) => ({ value: idx + 1, label: m }))}
+              onSelect={(v) => handleFilterChange("month", v)}
+            />
+            <FilterDropdown
+              label="Year"
+              name="year"
+              value={filters.year}
+              options={years.map((y) => ({ value: y, label: y }))}
+              onSelect={(v) => handleFilterChange("year", v)}
+            />
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition text-sm font-medium"
+            >
+              Clear
+            </button>
           </div>
 
           {/* Orders list */}
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl">
             <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{orders.length} {orders.length === 1 ? "Order" : "Orders"} found</h2>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                {orders.length} {orders.length === 1 ? "Order" : "Orders"} found
+              </h2>
             </div>
 
             {isLoading ? (
               <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 px-4 py-3 animate-pulse"
+                  >
                     <div className="w-9 h-9 rounded-xl bg-gray-200 dark:bg-gray-700" />
                     <div className="flex-1">
                       <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -614,8 +842,15 @@ const Orders = () => {
             ) : orders.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">No orders found</p>
-                <button onClick={() => navigate("/order/fuel")} className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium">Place your first order</button>
+                <p className="text-gray-500 dark:text-gray-400">
+                  No orders found
+                </p>
+                <button
+                  onClick={() => navigate("/order/fuel")}
+                  className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium"
+                >
+                  Place your first order
+                </button>
               </div>
             ) : (
               <>
@@ -624,31 +859,63 @@ const Orders = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Order</th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Type</th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Amount</th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Status</th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Delivery</th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Date</th>
-                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">Action</th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Order
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Type
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Amount
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Status
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Delivery
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Date
+                        </th>
+                        <th className="text-left py-2.5 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                          Action
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {orders.map((order) => {
                         const isPaid = order.paid;
-                        const isPendingPayment = !isPaid && order.status !== "cancelled";
-                        const canConfirm = order.deliveryStatus === "delivered" && order.status !== "completed";
+                        const isPendingPayment =
+                          !isPaid && order.status !== "cancelled";
+                        const qrReady = canShowQr(order);
+                        const qrConfirmed = isQrConfirmed(order);
                         return (
                           <tr
                             key={order._id}
                             className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
                             onClick={() => setSelectedOrder(order)}
                           >
-                            <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">#{order.orderId || order._id.slice(-6)}</td>
-                            <td className="py-2.5 px-3 capitalize">{order.orderType}</td>
-                            <td className="py-2.5 px-3">₦{order.totalAmount?.toFixed(2) || "0.00"}</td>
+                            <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">
+                              #{order.orderId || order._id.slice(-6)}
+                            </td>
+                            <td className="py-2.5 px-3 capitalize">
+                              {order.orderType}
+                              {order.orderType === "gas" &&
+                                order.fulfillmentType && (
+                                  <span className="ml-1 text-xs text-gray-400 dark:text-gray-500 capitalize">
+                                    · {order.fulfillmentType}
+                                  </span>
+                                )}
+                            </td>
                             <td className="py-2.5 px-3">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(order.status)}`}>
+                              ₦{order.totalAmount?.toFixed(2) || "0.00"}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getOrderStatusColor(
+                                  order.status
+                                )}`}
+                              >
                                 {order.status || "pending"}
                               </span>
                               {isPendingPayment && (
@@ -658,44 +925,61 @@ const Orders = () => {
                               )}
                             </td>
                             <td className="py-2.5 px-3">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.deliveryStatus || "pending")}`}>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                  order.deliveryStatus || "pending"
+                                )}`}
+                              >
                                 {order.deliveryStatus || "pending"}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</td>
+                            <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </td>
                             <td className="py-2.5 px-3">
-                              {isPendingPayment && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
-                                  className="text-xs bg-[#13ec5b] hover:bg-[#10d04e] text-white px-3 py-1 rounded-lg transition"
-                                >
-                                  Pay
-                                </button>
-                              )}
-                              {isPaid && order.status === "completed" && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
-                                  className="text-xs text-green-600 dark:text-green-400 hover:underline"
-                                >
-                                  Completed · Receipt
-                                </button>
-                              )}
-                              {isPaid && order.status !== "completed" && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
-                                  className="text-xs text-[#0f9c46] dark:text-[#13ec5b] hover:underline"
-                                >
-                                  Receipt
-                                </button>
-                              )}
-                              {canConfirm && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
-                                  className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg transition"
-                                >
-                                  Confirm
-                                </button>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {isPendingPayment && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedOrder(order);
+                                    }}
+                                    className="text-xs bg-[#13ec5b] hover:bg-[#10d04e] text-white px-3 py-1 rounded-lg transition"
+                                  >
+                                    Pay
+                                  </button>
+                                )}
+                                {qrReady && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedOrder(order);
+                                    }}
+                                    className="inline-flex items-center gap-1 text-xs bg-[#13ec5b]/10 text-[#0f9c46] dark:text-[#13ec5b] px-2.5 py-1 rounded-lg border border-[#13ec5b]/20 hover:bg-[#13ec5b]/20 transition"
+                                    title="Show QR to confirm"
+                                  >
+                                    <QrCode className="h-3.5 w-3.5" />
+                                    QR
+                                  </button>
+                                )}
+                                {qrConfirmed && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                                    <CheckCircle className="h-3.5 w-3.5" />
+                                    Confirmed
+                                  </span>
+                                )}
+                                {isPaid && !qrReady && !qrConfirmed && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedOrder(order);
+                                    }}
+                                    className="text-xs text-[#0f9c46] dark:text-[#13ec5b] hover:underline"
+                                  >
+                                    Receipt
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -723,11 +1007,23 @@ const Orders = () => {
 
       {/* ── Off-screen receipt used as the html2canvas source ──── */}
       {selectedOrder && selectedOrder.paid && (
-        <div style={{ position: "fixed", top: 0, left: "-10000px", pointerEvents: "none" }} aria-hidden="true">
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: "-10000px",
+            pointerEvents: "none",
+          }}
+          aria-hidden="true"
+        >
           <ReceiptTemplate
             ref={receiptRef}
             order={selectedOrder}
-            reference={selectedOrder.paymentReference || selectedOrder.reference || selectedOrder.orderId}
+            reference={
+              selectedOrder.paymentReference ||
+              selectedOrder.reference ||
+              selectedOrder.orderId
+            }
             isSubscription={false}
             paymentData={null}
           />

@@ -13,11 +13,30 @@ const generateOtp = () =>
 
 const getOtpExpiry = () => new Date(Date.now() + 10 * 60 * 1000);
 
+// ─── Shared auth response shape ──────────────────────────────
+// Every auth entry point must return the same fields so the frontend
+// can render role-aware navigation without an extra profile fetch.
+const buildAuthResponse = (user, token) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  profile: user.profile,
+  authMethod: user.authMethod,
+  role: user.role || "user",
+  riderType: user.riderType || null,
+  station: user.station || null,
+  stationRole: user.stationRole || null,
+  token,
+});
+
 // ─── Google Auth ──────────────────────────────────────────────
 const getUserInfoFromAccessToken = async (accessToken) => {
-  const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const response = await fetch(
+    "https://www.googleapis.com/oauth2/v3/userinfo",
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
 
   if (!response.ok) {
     throw new Error("Failed to fetch user info from Google");
@@ -26,7 +45,6 @@ const getUserInfoFromAccessToken = async (accessToken) => {
   return response.json();
 };
 
-// ─── Google Auth ──────────────────────────────────────────────
 const googleAuth = asyncHandler(async (req, res) => {
   const { token: googleToken } = req.body;
 
@@ -88,21 +106,13 @@ const googleAuth = asyncHandler(async (req, res) => {
 
   const token = generateToken(res, user._id);
 
-  res.status(200).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    profile: user.profile,
-    authMethod: user.authMethod,
-    token,
-  });
+  res.status(200).json(buildAuthResponse(user, token));
 });
 
 // ─── Register ──────────────────────────────────────────────────
 const registerUser = asyncHandler(async (req, res) => {
   const { email, password, name, username } = req.body;
 
-  // ─── Validations ────────────────────────────────────────────
   if (!email || !password || !name) {
     res.status(400);
     throw new Error("Please provide email, password, and name");
@@ -112,23 +122,20 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Password must be at least 8 characters");
   }
 
-  // ─── Check for existing user ──────────────────────────────
   const existingUser = await User.findOne({ email });
 
-  // If user exists and is verified, block registration
   if (existingUser && existingUser.isVerified) {
     res.status(400);
     throw new Error("User already exists with this email");
   }
 
-  // If user exists but is NOT verified, delete the old record
-  // (this handles cases where OTP verification failed or page was reloaded)
   if (existingUser && !existingUser.isVerified) {
     await User.deleteOne({ _id: existingUser._id });
-    console.log(`🗑️ Deleted unverified user: ${email} (ID: ${existingUser._id})`);
+    console.log(
+      `🗑️ Deleted unverified user: ${email} (ID: ${existingUser._id})`
+    );
   }
 
-  // ─── Generate unique username ──────────────────────────────
   let finalUsername = username;
   if (!finalUsername) {
     const base = email.split("@")[0].toLowerCase().replace(/\s+/g, "");
@@ -146,11 +153,9 @@ const registerUser = asyncHandler(async (req, res) => {
     }
   }
 
-  // ─── Generate OTP ────────────────────────────────────────────
   const otp = generateOtp();
   const otpExpires = getOtpExpiry();
 
-  // ─── Create user ─────────────────────────────────────────────
   const user = await User.create({
     email,
     password,
@@ -160,10 +165,9 @@ const registerUser = asyncHandler(async (req, res) => {
     authMethod: "email",
     otp,
     otpExpires,
-    deleteAfter: new Date(Date.now() + 6 * 60 * 1000), // delete after 6 minutes
+    deleteAfter: new Date(Date.now() + 6 * 60 * 1000),
   });
 
-  // ─── Send OTP email ─────────────────────────────────────────
   await sendOtpEmail(email, otp);
 
   res.status(201).json({
@@ -192,30 +196,20 @@ const verifyOtp = asyncHandler(async (req, res) => {
     throw new Error("User already verified");
   }
 
-  // Check OTP and expiry
   if (user.otp !== otp || user.otpExpires < new Date()) {
     res.status(400);
     throw new Error("Invalid or expired OTP");
   }
 
-  // Mark as verified and clear OTP fields
   user.isVerified = true;
   user.otp = undefined;
   user.otpExpires = undefined;
-  user.deleteAfter = null; // prevent auto-deletion
+  user.deleteAfter = null;
   await user.save();
 
-  // Generate token and send response
   const token = generateToken(res, user._id);
 
-  res.status(200).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    profile: user.profile,
-    authMethod: user.authMethod,
-    token,
-  });
+  res.status(200).json(buildAuthResponse(user, token));
 });
 
 // ─── Resend OTP ───────────────────────────────────────────────
@@ -238,13 +232,12 @@ const resendOtp = asyncHandler(async (req, res) => {
     throw new Error("User already verified");
   }
 
-  // Generate new OTP and update
   const otp = generateOtp();
   const otpExpires = getOtpExpiry();
 
   user.otp = otp;
   user.otpExpires = otpExpires;
-  user.deleteAfter = new Date(Date.now() + 6 * 60 * 1000); // reset deletion timer
+  user.deleteAfter = new Date(Date.now() + 6 * 60 * 1000);
   await user.save();
 
   await sendOtpEmail(email, otp);
@@ -267,7 +260,6 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new Error("Invalid email or password");
   }
 
-  // Check if user is verified (unless Google auth)
   if (!user.isVerified && user.authMethod === "email") {
     res.status(401);
     throw new Error(
@@ -275,7 +267,6 @@ const loginUser = asyncHandler(async (req, res) => {
     );
   }
 
-  // Validate password (for email auth)
   if (user.authMethod === "email") {
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
@@ -284,19 +275,14 @@ const loginUser = asyncHandler(async (req, res) => {
     }
   } else {
     res.status(400);
-    throw new Error("This account uses Google Sign-In. Please use Google login.");
+    throw new Error(
+      "This account uses Google Sign-In. Please use Google login."
+    );
   }
 
   const token = generateToken(res, user._id);
 
-  res.status(200).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    profile: user.profile,
-    authMethod: user.authMethod,
-    token,
-  });
+  res.status(200).json(buildAuthResponse(user, token));
 });
 
 // ─── Forgot Password ──────────────────────────────────────────
@@ -364,9 +350,12 @@ const resetPassword = asyncHandler(async (req, res) => {
 
 // ─── Get Profile ──────────────────────────────────────────────
 const getProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select(
-    "-password -otp -otpExpires -resetOtp -resetOtpExpires -deleteAfter"
-  );
+  const user = await User.findById(req.user._id)
+    .select(
+      "-password -otp -otpExpires -resetOtp -resetOtpExpires -deleteAfter"
+    )
+    .populate("station", "name address status");
+
   if (!user) {
     res.status(404);
     throw new Error("User not found");

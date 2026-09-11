@@ -58,6 +58,32 @@ const userSchema = mongoose.Schema(
       default: "user",
     },
 
+    // ⭐ NEW: rider sub-type. Only meaningful when role === "rider".
+    //   "fuel"    → sees the open fuel delivery pool, accepts orders
+    //   "station" → belongs to a station, receives gas assignments from it
+    riderType: {
+      type: String,
+      enum: ["fuel", "station", null],
+      default: null,
+      index: true,
+    },
+
+    // ⭐ NEW: station membership.
+    //   station     → the Station this user belongs to (if any)
+    //   stationRole → "admin" | "staff" | "rider" (or null if not a member)
+    station: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Station",
+      default: null,
+      index: true,
+    },
+    stationRole: {
+      type: String,
+      enum: ["admin", "staff", "rider", null],
+      default: null,
+      index: true,
+    },
+
     // ─── Rider‑specific fields ──────────────────────────────
     nin: { type: String, default: null },
     fuelingStation: { type: String, default: null },
@@ -65,7 +91,7 @@ const userSchema = mongoose.Schema(
     ninPicture: { type: String, default: null },
     bankAccountNumber: { type: String, default: null },
     bankName: { type: String, default: null },
-    bankCode: { type: String, default: null }, // ✅ Paystack bank code for commission payouts
+    bankCode: { type: String, default: null },
     accountName: { type: String, default: null },
 
     verificationStatus: {
@@ -82,10 +108,19 @@ const userSchema = mongoose.Schema(
       default: null,
     },
 
+    // ─── Rider wallet / earnings ────────────────────────────
+    walletBalance: { type: Number, default: 0, min: 0 },
+    totalEarnings: { type: Number, default: 0, min: 0 },
+    completedDeliveries: { type: Number, default: 0, min: 0 },
+
     // ─── Gas Subscription ────────────────────────────────────
     gasSubscription: {
       cylinderSize: { type: String, enum: ["3kg", "6kg", "12kg"], default: null },
-      status: { type: String, enum: ["active", "expired", "cancelled", "pending"], default: null },
+      status: {
+        type: String,
+        enum: ["active", "expired", "cancelled", "pending"],
+        default: null,
+      },
       startDate: { type: Date, default: null },
       nextBillingDate: { type: Date, default: null },
       gracePeriodEnd: { type: Date, default: null },
@@ -114,6 +149,10 @@ userSchema.pre("save", async function () {
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
+
+// ─── Indexes ────────────────────────────────────────────────
+userSchema.index({ role: 1, riderType: 1 });
+userSchema.index({ station: 1, stationRole: 1 });
 
 const User = mongoose.model("User", userSchema);
 export default User;

@@ -13,6 +13,8 @@ import {
   EyeOff,
   AlertCircle,
   MapPin,
+  Store,
+  QrCode,
 } from "lucide-react";
 import {
   AreaChart,
@@ -41,11 +43,19 @@ const RiderDashboard = () => {
   // ─── Queries ──────────────────────────────────────────────
   const { data: user, isLoading: userLoading } = useGetProfileQuery();
 
+  // Determine rider type — profile first, Redux fallback
+  const riderType = user?.riderType || userInfo?.riderType || "fuel";
+  const isStationRider = riderType === "station";
+
+  // Only fuel riders have access to the open delivery pool.
+  // Station riders would get a 403 from the backend — skip the query.
   const {
     data: availableDeliveries = [],
     isLoading: availableLoading,
     error: availableError,
-  } = useGetAvailableDeliveriesQuery();
+  } = useGetAvailableDeliveriesQuery(undefined, {
+    skip: isStationRider,
+  });
 
   const {
     data: myDeliveries = [],
@@ -64,11 +74,33 @@ const RiderDashboard = () => {
   const totalEarnings = earningsData?.totalEarnings || 0;
   const completedDeliveries = earningsData?.completedDeliveries || 0;
   const earningsHistory = earningsData?.history || [];
-  const availableCount = availableDeliveries.length;
+  const availableCount = isStationRider ? 0 : availableDeliveries.length;
+
+  // Active (in-flight) deliveries — assigned to me and not yet confirmed
+  const activeDeliveriesCount = useMemo(() => {
+    return myDeliveries.filter(
+      (d) =>
+        d.status === "processing" &&
+        ["accepted", "picked_up", "in_transit", "delivered"].includes(
+          d.deliveryStatus
+        )
+    ).length;
+  }, [myDeliveries]);
+
+  // Awaiting scan (rider marked delivered but QR not yet scanned)
+  const awaitingScanCount = useMemo(() => {
+    return myDeliveries.filter(
+      (d) => d.deliveryStatus === "delivered" && !d.verificationScannedAt
+    ).length;
+  }, [myDeliveries]);
 
   const isLoading =
-    userLoading || availableLoading || deliveriesLoading || earningsLoading;
-  const error = availableError || deliveriesError || earningsError;
+    userLoading ||
+    (!isStationRider && availableLoading) ||
+    deliveriesLoading ||
+    earningsLoading;
+
+  const error = deliveriesError || earningsError || (!isStationRider && availableError);
 
   // 6 most recent deliveries (sort defensively by createdAt desc)
   const recentDeliveries = useMemo(() => {
@@ -105,29 +137,49 @@ const RiderDashboard = () => {
     return buckets.map(({ date, amount }) => ({ date, amount }));
   }, [earningsHistory]);
 
-  // ─── Stats cards ──────────────────────────────────────────
-  const stats = [
-    {
-      label: "Wallet Balance",
-      value: hideStats ? "••••" : `₦${walletBalance.toFixed(2)}`,
-      icon: Wallet,
-    },
-    {
-      label: "Total Earnings",
-      value: hideStats ? "••••" : `₦${totalEarnings.toFixed(2)}`,
-      icon: TrendingUp,
-    },
-    {
-      label: "Completed Deliveries",
-      value: hideStats ? "••" : completedDeliveries,
-      icon: Truck,
-    },
-    {
-      label: "Available Deliveries",
-      value: hideStats ? "••" : availableCount,
-      icon: Clock,
-    },
-  ];
+  // ─── Stats cards (role-aware) ─────────────────────────────
+  const stats = useMemo(() => {
+    const base = [
+      {
+        label: "Wallet Balance",
+        value: hideStats ? "••••" : `₦${walletBalance.toFixed(2)}`,
+        icon: Wallet,
+      },
+      {
+        label: "Total Earnings",
+        value: hideStats ? "••••" : `₦${totalEarnings.toFixed(2)}`,
+        icon: TrendingUp,
+      },
+      {
+        label: "Completed",
+        value: hideStats ? "••" : completedDeliveries,
+        icon: Truck,
+      },
+    ];
+
+    if (isStationRider) {
+      base.push({
+        label: "Active Deliveries",
+        value: hideStats ? "••" : activeDeliveriesCount,
+        icon: Clock,
+      });
+    } else {
+      base.push({
+        label: "Available Deliveries",
+        value: hideStats ? "••" : availableCount,
+        icon: Clock,
+      });
+    }
+    return base;
+  }, [
+    hideStats,
+    walletBalance,
+    totalEarnings,
+    completedDeliveries,
+    activeDeliveriesCount,
+    availableCount,
+    isStationRider,
+  ]);
 
   // ─── Status colors ─────────────────────────────────────────
   const getStatusColor = (status) => {
@@ -149,7 +201,7 @@ const RiderDashboard = () => {
     }
   };
 
-  // ─── Mobile Hero Card (skeleton-aware) ─────────────────────
+  // ─── Mobile Hero Card ─────────────────────────────────────
   const HeroCard = () => {
     if (isLoading) {
       return (
@@ -203,6 +255,21 @@ const RiderDashboard = () => {
           </button>
         </div>
 
+        {/* Rider type badge */}
+        <div className="mb-3">
+          {isStationRider ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+              <Store className="h-3 w-3" />
+              Station Rider
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#13ec5b]/10 text-[#0f9c46] dark:text-[#13ec5b]">
+              <Truck className="h-3 w-3" />
+              Fuel Rider
+            </span>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl px-3 py-2 min-w-0">
             <span className="text-[10px] text-gray-500 dark:text-gray-400">Wallet</span>
@@ -223,18 +290,29 @@ const RiderDashboard = () => {
 
         <div className="mt-3 flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
           <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
-            Available deliveries
-          </span>
-          <span className="text-sm font-bold text-gray-900 dark:text-white flex-shrink-0">
-            {availableCount}
+            {isStationRider
+              ? `${activeDeliveriesCount} active`
+              : `${availableCount} available`}
           </span>
           <button
             onClick={() => navigate("/rider/deliveries")}
             className="flex items-center gap-1 text-xs font-medium text-white bg-[#13ec5b] hover:bg-[#10d04e] px-3 py-1.5 rounded-lg transition shadow-sm flex-shrink-0"
           >
-            View all <ChevronRight className="h-3 w-3" />
+            {isStationRider ? "My Deliveries" : "Browse"}
+            <ChevronRight className="h-3 w-3" />
           </button>
         </div>
+
+        {/* Scan QR quick action */}
+        {awaitingScanCount > 0 && (
+          <button
+            onClick={() => navigate("/rider/scan")}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-gray-900 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl text-sm font-semibold transition"
+          >
+            <QrCode className="h-4 w-4" />
+            Scan QR to confirm ({awaitingScanCount})
+          </button>
+        )}
       </div>
     );
   };
@@ -267,6 +345,8 @@ const RiderDashboard = () => {
     const customerLabel = delivery.user?.name || "Unknown";
     const amountLabel = `₦${delivery.totalAmount?.toFixed(2) || "0.00"}`;
     const dateLabel = new Date(delivery.createdAt).toLocaleDateString();
+    const needsScan =
+      delivery.deliveryStatus === "delivered" && !delivery.verificationScannedAt;
 
     return (
       <div
@@ -274,7 +354,7 @@ const RiderDashboard = () => {
         className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-600 cursor-pointer transition last:border-b-0"
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <span
               className="font-medium text-gray-900 dark:text-white text-sm truncate"
               title={deliveryLabel}
@@ -288,6 +368,12 @@ const RiderDashboard = () => {
             >
               {delivery.deliveryStatus || "pending"}
             </span>
+            {needsScan && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 bg-gray-900 text-white dark:bg-gray-700">
+                <QrCode className="h-2.5 w-2.5" />
+                Scan
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             <span className="truncate max-w-[120px]" title={customerLabel}>
@@ -304,7 +390,7 @@ const RiderDashboard = () => {
     );
   };
 
-  // ─── Recent Deliveries (6 max) ────────────────────────────
+  // ─── Recent Deliveries ────────────────────────────────────
   const RecentDeliveries = () => (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl rounded-2xl">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
@@ -344,24 +430,12 @@ const RiderDashboard = () => {
               <tbody>
                 {[...Array(5)].map((_, i) => (
                   <tr key={i} className="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-6 w-14 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
-                    </td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-6 w-14 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" /></td>
                   </tr>
                 ))}
               </tbody>
@@ -386,12 +460,18 @@ const RiderDashboard = () => {
       ) : recentDeliveries.length === 0 ? (
         <div className="text-center py-12">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">No deliveries yet</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {isStationRider
+              ? "No deliveries assigned yet"
+              : "No deliveries yet"}
+          </p>
           <button
             onClick={() => navigate("/rider/deliveries")}
             className="mt-3 text-[#13ec5b] hover:underline text-sm font-medium"
           >
-            Browse available deliveries
+            {isStationRider
+              ? "Your station will assign you orders"
+              : "Browse available deliveries"}
           </button>
         </div>
       ) : (
@@ -422,6 +502,9 @@ const RiderDashboard = () => {
                   const customerLabel = delivery.user?.name || "Unknown";
                   const amountLabel = `₦${delivery.totalAmount?.toFixed(2) || "0.00"}`;
                   const dateLabel = new Date(delivery.createdAt).toLocaleDateString();
+                  const needsScan =
+                    delivery.deliveryStatus === "delivered" &&
+                    !delivery.verificationScannedAt;
 
                   return (
                     <tr
@@ -461,15 +544,28 @@ const RiderDashboard = () => {
                         </div>
                       </td>
                       <td className="py-2.5 px-3">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/tracking/${delivery._id}`);
-                          }}
-                          className="text-xs bg-[#13ec5b] hover:bg-[#10d04e] text-white px-3 py-1 rounded-lg transition flex-shrink-0"
-                        >
-                          Track
-                        </button>
+                        {needsScan ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate("/rider/scan");
+                            }}
+                            className="text-xs bg-gray-900 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 flex-shrink-0"
+                          >
+                            <QrCode className="h-3 w-3" />
+                            Scan
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/tracking/${delivery._id}`);
+                            }}
+                            className="text-xs bg-[#13ec5b] hover:bg-[#10d04e] text-white px-3 py-1 rounded-lg transition flex-shrink-0"
+                          >
+                            Track
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -563,14 +659,29 @@ const RiderDashboard = () => {
               </>
             ) : (
               <>
-                <h2
-                  className="text-2xl font-bold text-gray-900 dark:text-white truncate"
-                  title={`Welcome back, ${user?.name || "Rider"}!`}
-                >
-                  Welcome back, {user?.name || "Rider"}!
-                </h2>
+                <div className="flex items-center gap-3 mb-1 flex-wrap">
+                  <h2
+                    className="text-2xl font-bold text-gray-900 dark:text-white truncate"
+                    title={`Welcome back, ${user?.name || "Rider"}!`}
+                  >
+                    Welcome back, {user?.name || "Rider"}!
+                  </h2>
+                  {isStationRider ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">
+                      <Store className="h-3 w-3" />
+                      Station Rider
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#13ec5b]/10 text-[#0f9c46] dark:text-[#13ec5b] flex-shrink-0">
+                      <Truck className="h-3 w-3" />
+                      Fuel Rider
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-500 dark:text-gray-400 truncate">
-                  Here's your delivery overview.
+                  {isStationRider
+                    ? "Your station assigns gas deliveries directly to you."
+                    : "You can browse and accept fuel deliveries from the open pool."}
                 </p>
               </>
             )}
@@ -602,6 +713,36 @@ const RiderDashboard = () => {
                   />
                 ))}
           </div>
+
+          {/* Awaiting scan callout (desktop) */}
+          {!isLoading && awaitingScanCount > 0 && (
+            <div className="hidden lg:flex mb-6 rounded-2xl bg-gray-900 dark:bg-gray-800 border border-gray-800 dark:border-gray-700 p-4 items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                  <QrCode className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">
+                    {awaitingScanCount}{" "}
+                    {awaitingScanCount === 1
+                      ? "delivery is waiting"
+                      : "deliveries are waiting"}{" "}
+                    for a QR scan
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Scan the customer's QR code to confirm the delivery.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/rider/scan")}
+                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 bg-[#13ec5b] hover:bg-[#10d04e] text-gray-900 rounded-lg text-sm font-semibold transition"
+              >
+                <QrCode className="h-4 w-4" />
+                Scan now
+              </button>
+            </div>
+          )}
 
           {/* Chart + Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -673,7 +814,16 @@ const RiderDashboard = () => {
                 className="bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-2xl p-4 flex flex-col items-center justify-center transition shadow-sm hover:shadow-md"
               >
                 <Truck className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Deliveries</span>
+                <span className="text-sm font-medium">
+                  {isStationRider ? "My Deliveries" : "Available"}
+                </span>
+              </button>
+              <button
+                onClick={() => navigate("/rider/scan")}
+                className="bg-gray-900 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-2xl p-4 flex flex-col items-center justify-center transition shadow-sm hover:shadow-md"
+              >
+                <QrCode className="h-8 w-8 mb-1" />
+                <span className="text-sm font-medium">Scan QR</span>
               </button>
               <button
                 onClick={() => navigate("/rider/earnings")}
@@ -684,11 +834,10 @@ const RiderDashboard = () => {
               </button>
               <button
                 onClick={() => navigate("/tracking")}
-                className="col-span-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl p-3 flex items-center justify-center transition"
+                className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl p-4 flex flex-col items-center justify-center transition"
               >
-                <MapPin className="h-4 w-4 mr-1" />
-                <span className="text-sm font-medium">Active Tracking</span>
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <MapPin className="h-8 w-8 mb-1" />
+                <span className="text-sm font-medium">Tracking</span>
               </button>
             </div>
           </div>

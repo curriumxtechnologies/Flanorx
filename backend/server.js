@@ -14,6 +14,10 @@ import trackingRoutes from "./routes/trackingRoutes.js";
 import gasRoutes from "./routes/gasRoutes.js";
 import waitlistRoutes from "./routes/waitlistRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import {
+  publicRouter as stationPublicRoutes,
+  stationRouter as stationScopedRoutes,
+} from "./routes/stationRoutes.js";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
@@ -78,6 +82,8 @@ app.use("/api/tracking", trackingRoutes);
 app.use("/api/gas", gasRoutes);
 app.use("/api/waitlist", waitlistRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/stations", stationPublicRoutes); // GET /api/stations/nearby
+app.use("/api/station", stationScopedRoutes);  // everything else under /api/station
 
 // ✅ Error middleware order (notFound first)
 app.use(notFound);

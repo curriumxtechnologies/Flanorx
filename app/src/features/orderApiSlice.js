@@ -1,7 +1,7 @@
 // features/orderApiSlice.js
 import { apiSlice } from "./apiSlice.js";
 
-const ORDER_URL = "/order"; // base path, /api is already set in apiSlice
+const ORDER_URL = "/order";
 
 export const orderApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -17,7 +17,14 @@ export const orderApiSlice = apiSlice.injectEndpoints({
 
     // ─── Get my orders (with filters) ────────────────────────
     getMyOrders: builder.query({
-      query: ({ month, year, status, paid, deliveryStatus, orderType } = {}) => {
+      query: ({
+        month,
+        year,
+        status,
+        paid,
+        deliveryStatus,
+        orderType,
+      } = {}) => {
         const params = new URLSearchParams();
         if (month) params.append("month", month);
         if (year) params.append("year", year);
@@ -96,7 +103,7 @@ export const orderApiSlice = apiSlice.injectEndpoints({
       query: (id) => ({
         url: `${ORDER_URL}/${id}/initialize-payment`,
         method: "POST",
-        body: {}, // no extra data needed
+        body: {},
       }),
       invalidatesTags: (result, error, id) => [{ type: "Order", id }],
     }),
@@ -107,12 +114,39 @@ export const orderApiSlice = apiSlice.injectEndpoints({
         url: `${ORDER_URL}/verify/${reference}`,
         method: "GET",
       }),
-      providesTags: (result, error, reference) => [{ type: "Order", id: result?.order?._id }],
+      providesTags: (result, error, reference) => [
+        { type: "Order", id: result?.order?._id },
+      ],
+    }),
+
+    // ⭐ NEW — QR scan to confirm order (fuel delivery / gas delivery / gas pickup)
+    // body: { token }
+    verifyOrderByToken: builder.mutation({
+      query: ({ token }) => ({
+        url: `${ORDER_URL}/verify`,
+        method: "POST",
+        body: { token },
+      }),
+      invalidatesTags: (result, error) => [
+        "Order",
+        "Delivery",
+        "Station",
+        { type: "Order", id: result?.order?._id },
+      ],
     }),
 
     // ─── Admin: all orders ───────────────────────────────────
     getAllOrders: builder.query({
-      query: ({ month, year, status, paid, deliveryStatus, orderType } = {}) => {
+      query: ({
+        month,
+        year,
+        status,
+        paid,
+        deliveryStatus,
+        orderType,
+        station,
+        fulfillmentType,
+      } = {}) => {
         const params = new URLSearchParams();
         if (month) params.append("month", month);
         if (year) params.append("year", year);
@@ -120,6 +154,8 @@ export const orderApiSlice = apiSlice.injectEndpoints({
         if (paid !== undefined) params.append("paid", paid);
         if (deliveryStatus) params.append("deliveryStatus", deliveryStatus);
         if (orderType) params.append("orderType", orderType);
+        if (station) params.append("station", station);
+        if (fulfillmentType) params.append("fulfillmentType", fulfillmentType);
         const queryString = params.toString() ? `?${params.toString()}` : "";
         return {
           url: `${ORDER_URL}${queryString}`,
@@ -153,44 +189,9 @@ export const orderApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, { id }) => [{ type: "Order", id }],
     }),
-
-    // ─── Rider/Admin: assigned orders ────────────────────────
-    getAssignedOrders: builder.query({
-      query: () => ({
-        url: `${ORDER_URL}/rider/assigned`,
-        method: "GET",
-      }),
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map(({ _id }) => ({ type: "Order", id: _id })),
-              { type: "Order", id: "ASSIGNED" },
-            ]
-          : [{ type: "Order", id: "ASSIGNED" }],
-    }),
-
-    // ─── Rider/Admin: update delivery status ─────────────────
-    updateDeliveryStatus: builder.mutation({
-      query: ({ id, status, deliveryStatus }) => ({
-        url: `${ORDER_URL}/${id}/delivery-status`,
-        method: "PUT",
-        body: { status, deliveryStatus },
-      }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Order", id }],
-    }),
-
-    // ─── Rider/Admin: mark as delivered ──────────────────────
-    markDelivered: builder.mutation({
-      query: (id) => ({
-        url: `${ORDER_URL}/${id}/delivered`,
-        method: "PUT",
-      }),
-      invalidatesTags: (result, error, id) => [{ type: "Order", id }],
-    }),
   }),
 });
 
-// ─── Export all hooks ──────────────────────────────────────────
 export const {
   useCreateOrderMutation,
   useGetMyOrdersQuery,
@@ -201,10 +202,8 @@ export const {
   usePayOrderMutation,
   useInitializePaymentMutation,
   useVerifyPaymentQuery,
+  useVerifyOrderByTokenMutation, // ⭐ NEW
   useGetAllOrdersQuery,
   useGetDashboardStatsQuery,
   useUpdateOrderStatusMutation,
-  useGetAssignedOrdersQuery,
-  useUpdateDeliveryStatusMutation,
-  useMarkDeliveredMutation,
 } = orderApiSlice;

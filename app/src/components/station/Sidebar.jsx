@@ -1,87 +1,87 @@
-// components/admin/Sidebar.jsx
+// components/station/Sidebar.jsx
 import React from "react";
 import { NavLink, useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   LayoutDashboard,
   Package,
   Users,
   Truck,
-  Settings,
-  BarChart3,
   LogOut,
   Sun,
   Moon,
   ArrowLeft,
-  ClipboardList,
-  Store,
+  Boxes,
 } from "lucide-react";
 import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
 import { apiSlice } from "../../features/apiSlice";
 import {
-  useGetDashboardStatsQuery,
-  useGetRiderApplicationsQuery,
-} from "../../features/adminApiSlice";
+  useGetStationDashboardQuery,
+  useGetMyStationQuery,
+} from "../../features/stationApiSlice";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { userInfo } = useSelector((state) => state.auth);
   const { theme, toggleTheme } = useTheme();
 
+  const isStationAdmin = userInfo?.stationRole === "admin";
+
   // Live counts
-  const { data: stats } = useGetDashboardStatsQuery(undefined, {
+  const { data: dashboard } = useGetStationDashboardQuery(undefined, {
     pollingInterval: 30000,
     refetchOnFocus: true,
     refetchOnReconnect: true,
   });
-  const { data: pendingApplications = [] } = useGetRiderApplicationsQuery(
-    { status: "pending" },
-    {
-      pollingInterval: 30000,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
-    }
-  );
 
-  const pendingOrdersCount = stats?.pendingOrders || 0;
-  const pendingAppsCount = pendingApplications.length;
+  const { data: station } = useGetMyStationQuery();
+
+  const openOrdersCount = dashboard?.openOrders || 0;
 
   const handleLogout = () => {
     dispatch(logout());
-    dispatch(apiSlice.util.resetApiState());
+    dispatch(apiSlice.resetApiState());
     navigate("/login", { replace: true });
   };
 
   const navItems = [
-    { to: "/superuser/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { to: "/station/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     {
-      to: "/superuser/orders",
+      to: "/station/orders",
       icon: Package,
       label: "Orders",
-      badge: pendingOrdersCount,
+      badge: openOrdersCount,
     },
-    { to: "/superuser/users", icon: Users, label: "Users" },
-    {
-      to: "/superuser/riders",
-      icon: Truck,
-      label: "Riders",
-      badge: pendingAppsCount,
-    },
-    { to: "/superuser/stations", icon: Store, label: "Pickup Stations" },
-    { to: "/superuser/waitlist", icon: ClipboardList, label: "Waitlist" },
-    { to: "/superuser/analytics", icon: BarChart3, label: "Analytics" },
-    { to: "/superuser/settings", icon: Settings, label: "Settings" },
+    { to: "/station/inventory", icon: Boxes, label: "Inventory" },
   ];
+
+  if (isStationAdmin) {
+    navItems.push(
+      { to: "/station/team", icon: Users, label: "Team" },
+      { to: "/station/riders", icon: Truck, label: "Riders" }
+    );
+  }
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 fixed top-0 left-0 z-40">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-6 h-16 flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
+      <div className="flex items-center px-6 h-16 flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
         <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
       </div>
 
-      {/* Navigation */}
+      {/* Station name */}
+      <div className="px-6 py-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
+        <p
+          className="text-sm font-semibold text-gray-900 dark:text-white truncate"
+          title={station?.name || "Station"}
+        >
+          {station?.name || "Loading..."}
+        </p>
+      </div>
+
+      {/* Navigation (scrollable) */}
       <nav className="flex-1 min-h-0 px-4 py-6 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
@@ -119,19 +119,25 @@ const Sidebar = () => {
         </div>
       </nav>
 
-      {/* Bottom actions */}
+      {/* Bottom actions (pinned) */}
       <div className="flex-shrink-0 px-4 py-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
         <button
           onClick={toggleTheme}
           className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           {theme === "dark" ? (
-            <Sun className="h-5 w-5" />
+            <>
+              <Sun className="h-5 w-5" />
+              <span>Light Mode</span>
+            </>
           ) : (
-            <Moon className="h-5 w-5" />
+            <>
+              <Moon className="h-5 w-5" />
+              <span>Dark Mode</span>
+            </>
           )}
-          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
         </button>
+
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

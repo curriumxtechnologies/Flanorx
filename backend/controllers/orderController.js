@@ -1,20 +1,22 @@
 // controllers/orderController.js
 import asyncHandler from "express-async-handler";
 import axios from "axios";
+import crypto from "crypto";
 import Order from "../models/orderModel.js";
 import User from "../models/userModel.js";
+import Station from "../models/stationModel.js";
+import StockLog from "../models/stockLogModel.js";
 
 const PAYSTACK_BASE = "https://api.paystack.co";
 
-// ─── Gas test constants ──────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────
 const GAS_PRICE_PER_KG = 10;
-const CYLINDER_COST = {
-  "3kg": 100,
-  "6kg": 200,
-  "12kg": 300,
-};
+const CYLINDER_COST = { "3kg": 100, "6kg": 200, "12kg": 300 };
 const SUBSCRIPTION_DAYS = 30;
 const GRACE_DAYS = 6;
+const CYLINDER_SIZES = ["3kg", "6kg", "12kg"];
+const COMMISSION_PERCENT = 0.6; // 60% of serviceTax goes to the rider
+const DEFAULT_NEARBY_RADIUS_KM = 50;
 
 // ─── Helpers ──────────────────────────────────────────────────
 const parseMonthYear = (month, year) => {
@@ -27,23 +29,49 @@ const parseMonthYear = (month, year) => {
 
 const getAuthActor = (req) => ({
   userId: req.user?._id || null,
-  riderId: req.rider?._id || null,
+  riderId: req.user?.role === "rider" ? req.user?._id || null : null,
   isAdmin: req.user?.role === "admin",
 });
 
-// ✅ Fixed: handles populated objects AND raw ObjectIds
+// ✅ Handles populated objects AND raw ObjectIds
 const canAccessOrder = (req, order) => {
-  const { userId, riderId, isAdmin } = getAuthActor(req);
+  const { userId, isAdmin } = getAuthActor(req);
   if (isAdmin) return true;
 
   const orderUserId = order.user?._id || order.user;
   const orderRiderId = order.rider?._id || order.rider;
+  const orderStationId = order.station?._id || order.station;
 
   if (userId && orderUserId?.toString() === userId.toString()) return true;
-  if (riderId && orderRiderId?.toString() === riderId.toString()) return true;
+  if (userId && orderRiderId?.toString() === userId.toString()) return true;
+
+  // Station members can access orders assigned to their station
+  if (
+    req.user?.station &&
+    orderStationId &&
+    String(req.user.station) === String(orderStationId)
+  ) {
+    return true;
+  }
   return false;
 };
 
+// Only the owner or main admin sees the QR token
+const shapeOrderForCaller = (order, caller) => {
+  const obj = order.toObject ? order.toObject() : { ...order };
+  const ownerId = obj.user?._id || obj.user;
+  const isOwner = ownerId && String(ownerId) === String(caller?._id);
+  const isAdmin = caller?.role === "admin";
+
+  if (!isOwner && !isAdmin) {
+    delete obj.verificationToken;
+    delete obj.verificationScannedAt;
+    delete obj.verificationScannedBy;
+  }
+  return obj;
+};
+
+// ─── Paystack ─────────────────────────────────────────────────
 const getPaystackHeaders = () => ({
   Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
   "Content-Type": "application/json",
@@ -72,7 +100,7 @@ const verifyPaystackPayment = async (reference) => {
   return verifyResp?.data?.data || null;
 };
 
-// ─── Helper: Check user gas subscription status ──────────────
+// ─── Gas subscription status (unchanged) ─────────────────────
 const getGasSubscriptionStatus = async (userId) => {
   const user = await User.findById(userId).select("gasSubscription");
   if (!user) return { active: false, subscription: null };
@@ -85,16 +113,191 @@ const getGasSubscriptionStatus = async (userId) => {
   const graceEnd = sub.gracePeriodEnd ? new Date(sub.gracePeriodEnd) : null;
 
   let isActive = false;
-  if (nextBilling && now < nextBilling) {
-    isActive = true;
-  } else if (graceEnd && now < graceEnd) {
-    isActive = true;
-  }
+  if (nextBilling && now < nextBilling) isActive = true;
+  else if (graceEnd && now < graceEnd) isActive = true;
 
   return { active: isActive, subscription: sub };
 };
 
-// ─── CREATE ORDER (Fuel & Gas) ────────────────────────────────
+// ─── Geo helper ───────────────────────────────────────────────
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+// Find nearest active station with stock of the given cylinder size.
+// Accepts an optional explicit stationId (for pickup) — must still be active + stocked.
+const findFulfillingStation = async ({ lat, lng, cylinderSize, stationId }) => {
+  if (stationId) {
+    const explicit = await Station.findOne({ _id: stationId, status: "active" });
+    if (!explicit) {
+      const err = new Error("Selected station is not available");
+      err.status = 400;
+      throw err;
+    }
+    const stock = Number(explicit.stock?.[cylinderSize] || 0);
+    if (stock <= 0) {
+      const err = new Error(
+        `Selected station has no ${cylinderSize} cylinders in stock`
+      );
+      err.status = 400;
+      throw err;
+    }
+    return explicit;
+  }
+
+  const stations = await Station.find({ status: "active" }).lean();
+
+  const stocked = stations.filter(
+    (s) => Number(s.stock?.[cylinderSize] || 0) > 0
+  );
+  if (stocked.length === 0) {
+    const err = new Error(
+      `No station has ${cylinderSize} cylinders in stock right now`
+    );
+    err.status = 400;
+    throw err;
+  }
+
+  if (lat === undefined || lng === undefined) {
+    const err = new Error("Delivery coordinates are required for gas orders");
+    err.status = 400;
+    throw err;
+  }
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+
+  const scored = stocked
+    .map((s) => {
+      const sLat = Number(s.coordinates?.lat);
+      const sLng = Number(s.coordinates?.lng);
+      if (!Number.isFinite(sLat) || !Number.isFinite(sLng)) return null;
+      return { station: s, distanceKm: haversineKm(latNum, lngNum, sLat, sLng) };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  if (scored.length === 0) {
+    const err = new Error("No reachable station found");
+    err.status = 400;
+    throw err;
+  }
+  if (scored[0].distanceKm > DEFAULT_NEARBY_RADIUS_KM) {
+    const err = new Error(
+      `No station within ${DEFAULT_NEARBY_RADIUS_KM}km has ${cylinderSize} in stock`
+    );
+    err.status = 400;
+    throw err;
+  }
+
+  return await Station.findById(scored[0].station._id);
+};
+
+// ─── QR token ─────────────────────────────────────────────────
+const generateVerificationToken = () => crypto.randomBytes(24).toString("hex");
+
+// ─── Stock decrement (atomic) ─────────────────────────────────
+// Uses findOneAndUpdate with a guard so two concurrent scans can't go negative.
+const decrementStationStock = async ({
+  stationId,
+  cylinderSize,
+  order,
+  performedBy,
+  note = "Order fulfilled via QR scan",
+}) => {
+  if (!CYLINDER_SIZES.includes(cylinderSize)) {
+    const err = new Error("Invalid cylinder size on order");
+    err.status = 400;
+    throw err;
+  }
+
+  const updated = await Station.findOneAndUpdate(
+    {
+      _id: stationId,
+      [`stock.${cylinderSize}`]: { $gt: 0 },
+    },
+    { $inc: { [`stock.${cylinderSize}`]: -1 } },
+    { new: true }
+  );
+
+  if (!updated) {
+    const err = new Error(
+      `Insufficient ${cylinderSize} stock at station to complete this order`
+    );
+    err.status = 400;
+    throw err;
+  }
+
+  const after = Number(updated.stock?.[cylinderSize] || 0);
+  const before = after + 1;
+
+  await StockLog.create({
+    station: stationId,
+    cylinderSize,
+    delta: -1,
+    reason: "order_fulfilled",
+    order: order?._id || null,
+    performedBy,
+    note,
+    stockBefore: before,
+    stockAfter: after,
+  });
+
+  return updated;
+};
+
+// ─── Commission ───────────────────────────────────────────────
+const calculateRiderCommission = (order) => {
+  const serviceTax = Number(order?.serviceTax || 0);
+  return Number((serviceTax * COMMISSION_PERCENT).toFixed(2));
+};
+
+// ─── Helper: look up assigned parties for QR permission checks ─
+const canScanOrder = (caller, order) => {
+  if (!caller) return false;
+  if (caller.role === "admin") return true;
+
+  const callerId = String(caller._id);
+  const orderRiderId = String(order.rider?._id || order.rider || "");
+  const orderStationId = String(order.station?._id || order.station || "");
+
+  // FUEL: only the assigned fuel rider
+  if (order.orderType === "fuel") {
+    return caller.role === "rider" && orderRiderId === callerId;
+  }
+
+  // GAS
+  if (order.orderType === "gas") {
+    if (order.fulfillmentType === "delivery") {
+      // Assigned station rider for this station
+      return (
+        caller.role === "rider" &&
+        caller.riderType === "station" &&
+        orderRiderId === callerId &&
+        String(caller.station || "") === orderStationId
+      );
+    }
+    if (order.fulfillmentType === "pickup") {
+      // Station admin or staff of that station
+      return (
+        (caller.stationRole === "admin" || caller.stationRole === "staff") &&
+        String(caller.station || "") === orderStationId
+      );
+    }
+  }
+
+  return false;
+};
+
+// ═════════════════════════════════════════════════════════════
+//  CREATE ORDER (Fuel & Gas)
+// ═════════════════════════════════════════════════════════════
 const createOrder = asyncHandler(async (req, res) => {
   const {
     orderType,
@@ -113,6 +316,8 @@ const createOrder = asyncHandler(async (req, res) => {
     serviceTax,
     totalAmount,
     fuelPricePerLiter,
+    fulfillmentType, // gas only: "delivery" | "pickup"
+    stationId,       // gas pickup: optional explicit station
   } = req.body;
 
   if (!req.user?._id) {
@@ -135,6 +340,8 @@ const createOrder = asyncHandler(async (req, res) => {
     throw new Error("Scheduled date and time required");
   }
 
+  const verificationToken = generateVerificationToken();
+
   let orderData = {
     user: req.user._id,
     orderType,
@@ -144,10 +351,15 @@ const createOrder = asyncHandler(async (req, res) => {
     status: "pending",
     paid: false,
     notes: notes || "",
-    estimatedDeliveryMinutes: estimatedDeliveryMinutes || (scheduleType === "now" ? 30 : null),
+    verificationToken,
+    estimatedDeliveryMinutes:
+      estimatedDeliveryMinutes || (scheduleType === "now" ? 30 : null),
   };
 
-  if (deliveryCoordinates?.lat !== undefined && deliveryCoordinates?.lng !== undefined) {
+  if (
+    deliveryCoordinates?.lat !== undefined &&
+    deliveryCoordinates?.lng !== undefined
+  ) {
     orderData.deliveryCoordinates = {
       lat: Number(deliveryCoordinates.lat),
       lng: Number(deliveryCoordinates.lng),
@@ -187,7 +399,7 @@ const createOrder = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("gasDetails: cylinderSize and quantityKg are required");
     }
-    if (!["3kg", "6kg", "12kg"].includes(gasDetails.cylinderSize)) {
+    if (!CYLINDER_SIZES.includes(gasDetails.cylinderSize)) {
       res.status(400);
       throw new Error("Invalid cylinderSize, must be 3kg, 6kg, or 12kg");
     }
@@ -196,6 +408,32 @@ const createOrder = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("quantityKg must be a positive number");
     }
+
+    const resolvedFulfillment =
+      fulfillmentType === "pickup" ? "pickup" : "delivery";
+
+    // Find the fulfilling station BEFORE we persist the order
+    let lat, lng;
+    if (resolvedFulfillment === "delivery") {
+      lat = orderData.deliveryCoordinates?.lat;
+      lng = orderData.deliveryCoordinates?.lng;
+      if (lat === undefined || lng === undefined) {
+        res.status(400);
+        throw new Error(
+          "Delivery coordinates are required for gas delivery orders"
+        );
+      }
+    }
+
+    const station = await findFulfillingStation({
+      lat,
+      lng,
+      cylinderSize: gasDetails.cylinderSize,
+      stationId: resolvedFulfillment === "pickup" ? stationId : undefined,
+    });
+
+    orderData.station = station._id;
+    orderData.fulfillmentType = resolvedFulfillment;
 
     orderData.gasDetails = {
       cylinderSize: gasDetails.cylinderSize,
@@ -207,10 +445,12 @@ const createOrder = asyncHandler(async (req, res) => {
       upgradeCost: gasDetails.upgradeCost || 0,
     };
     orderData.subtotal = subtotal || 0;
-    orderData.deliveryFee = deliveryFee || 0;
+    orderData.deliveryFee =
+      resolvedFulfillment === "pickup" ? 0 : deliveryFee || 0;
     orderData.serviceTax = serviceTax || 0;
     orderData.totalAmount = totalAmount || 0;
-    orderData.estimatedDeliveryMinutes = estimatedDeliveryMinutes || 45;
+    orderData.estimatedDeliveryMinutes =
+      resolvedFulfillment === "pickup" ? 0 : estimatedDeliveryMinutes || 45;
   }
 
   const created = await Order.create(orderData);
@@ -236,14 +476,20 @@ const createOrder = asyncHandler(async (req, res) => {
   created.paymentMethod = "card";
   await created.save();
 
+  const populated = await Order.findById(created._id)
+    .populate("user", "name email")
+    .populate("station", "name address coordinates");
+
   res.status(201).json({
-    order: created,
+    order: shapeOrderForCaller(populated, req.user),
     authorization_url: authUrl,
     reference: paystackRef,
   });
 });
 
-// ─── PAY ORDER (verify & mark paid) ───────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  PAY ORDER (verify & mark paid)
+// ═════════════════════════════════════════════════════════════
 const payOrder = asyncHandler(async (req, res) => {
   const { paymentReference } = req.body;
   if (!req.user?._id) {
@@ -279,19 +525,24 @@ const payOrder = asyncHandler(async (req, res) => {
     throw new Error("Payment amount mismatch");
   }
   const updatedOrder = await order.markAsPaid(refToVerify, "card");
-  res.status(200).json({ success: true, message: "Payment verified", order: updatedOrder });
+  res
+    .status(200)
+    .json({ success: true, message: "Payment verified", order: updatedOrder });
 });
 
-// ─── GET SINGLE ORDER ──────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  GET SINGLE ORDER
+// ═════════════════════════════════════════════════════════════
 const getOrder = asyncHandler(async (req, res) => {
-  const { userId, riderId, isAdmin } = getAuthActor(req);
-  if (!userId && !riderId && !isAdmin) {
+  const { userId, isAdmin } = getAuthActor(req);
+  if (!userId && !isAdmin) {
     res.status(401);
     throw new Error("Not authorized");
   }
   const order = await Order.findById(req.params.id)
     .populate("user", "name email")
-    .populate("rider", "name email profilePicture phone");
+    .populate("rider", "name email profilePicture phone")
+    .populate("station", "name address coordinates phone");
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
@@ -300,10 +551,12 @@ const getOrder = asyncHandler(async (req, res) => {
     res.status(403);
     throw new Error("Not allowed");
   }
-  res.status(200).json(order);
+  res.status(200).json(shapeOrderForCaller(order, req.user));
 });
 
-// ─── GET MY ORDERS ─────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  GET MY ORDERS
+// ═════════════════════════════════════════════════════════════
 const getMyOrders = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -322,11 +575,15 @@ const getMyOrders = asyncHandler(async (req, res) => {
   }
   const orders = await Order.find(filter)
     .sort({ createdAt: -1 })
-    .populate("rider", "name profilePicture phone");
-  res.status(200).json(orders);
+    .populate("rider", "name profilePicture phone")
+    .populate("station", "name address");
+
+  res.status(200).json(orders.map((o) => shapeOrderForCaller(o, req.user)));
 });
 
-// ─── GET MY TOTAL SPENT ────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  GET MY TOTAL SPENT
+// ═════════════════════════════════════════════════════════════
 const getMyTotalSpent = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -368,7 +625,9 @@ const getMyTotalSpent = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── GET ACTIVE ORDER ──────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  GET ACTIVE ORDER
+// ═════════════════════════════════════════════════════════════
 const getMyActiveOrder = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -378,23 +637,34 @@ const getMyActiveOrder = asyncHandler(async (req, res) => {
     user: req.user._id,
     paid: true,
     status: { $in: ["processing"] },
-    deliveryStatus: { $in: ["pending", "accepted", "picked_up", "in_transit", "delivered"] },
+    deliveryStatus: {
+      $in: ["pending", "accepted", "picked_up", "in_transit", "delivered"],
+    },
   })
     .sort({ createdAt: -1 })
-    .populate("rider", "name profilePicture phone");
-  res.status(200).json(activeOrder || null);
+    .populate("rider", "name profilePicture phone")
+    .populate("station", "name address");
+
+  res
+    .status(200)
+    .json(activeOrder ? shapeOrderForCaller(activeOrder, req.user) : null);
 });
 
-// ─── GET DELIVERY STATUS ──────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  GET DELIVERY STATUS
+// ═════════════════════════════════════════════════════════════
 const getDeliveryStatus = asyncHandler(async (req, res) => {
-  const { userId, riderId, isAdmin } = getAuthActor(req);
-  if (!userId && !riderId && !isAdmin) {
+  const { userId, isAdmin } = getAuthActor(req);
+  if (!userId && !isAdmin) {
     res.status(401);
     throw new Error("Not authorized");
   }
   const order = await Order.findById(req.params.id)
-    .select("user rider status deliveryStatus estimatedDeliveryMinutes scheduledDate scheduledTime acceptedAt pickedUpAt deliveredAt completedAt customerConfirmedAt")
-    .populate("rider", "name email profilePicture phone");
+    .select(
+      "user rider station status deliveryStatus fulfillmentType orderType estimatedDeliveryMinutes scheduledDate scheduledTime acceptedAt pickedUpAt deliveredAt completedAt customerConfirmedAt verificationScannedAt"
+    )
+    .populate("rider", "name email profilePicture phone")
+    .populate("station", "name address coordinates");
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
@@ -406,7 +676,10 @@ const getDeliveryStatus = asyncHandler(async (req, res) => {
   res.status(200).json({
     status: order.status,
     deliveryStatus: order.deliveryStatus,
+    fulfillmentType: order.fulfillmentType,
+    orderType: order.orderType,
     rider: order.rider,
+    station: order.station,
     estimatedDeliveryMinutes: order.estimatedDeliveryMinutes,
     scheduledDate: order.scheduledDate,
     scheduledTime: order.scheduledTime,
@@ -415,16 +688,30 @@ const getDeliveryStatus = asyncHandler(async (req, res) => {
     deliveredAt: order.deliveredAt,
     completedAt: order.completedAt,
     customerConfirmedAt: order.customerConfirmedAt,
+    verificationScannedAt: order.verificationScannedAt,
   });
 });
 
-// ─── ADMIN: GET ALL ORDERS ─────────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  ADMIN: GET ALL ORDERS
+// ═════════════════════════════════════════════════════════════
 const getOrders = asyncHandler(async (req, res) => {
-  const { month, year, status, paid, deliveryStatus, orderType } = req.query;
+  const {
+    month,
+    year,
+    status,
+    paid,
+    deliveryStatus,
+    orderType,
+    station,
+    fulfillmentType,
+  } = req.query;
   const filter = {};
   if (status) filter.status = status;
   if (deliveryStatus) filter.deliveryStatus = deliveryStatus;
   if (orderType) filter.orderType = orderType;
+  if (station) filter.station = station;
+  if (fulfillmentType) filter.fulfillmentType = fulfillmentType;
   if (paid !== undefined) filter.paid = paid === "true";
   if (month && year) {
     const { m, y } = parseMonthYear(month, year);
@@ -434,19 +721,39 @@ const getOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find(filter)
     .populate("user", "name email")
     .populate("rider", "name email profilePicture phone")
+    .populate("station", "name address")
     .sort({ createdAt: -1 });
   res.status(200).json(orders);
 });
 
-// ─── ADMIN: UPDATE ORDER STATUS ──────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  ADMIN: UPDATE ORDER STATUS
+// ═════════════════════════════════════════════════════════════
 const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status, deliveryStatus } = req.body;
-  const allowedOrderStatuses = ["pending", "processing", "completed", "cancelled", "failed"];
-  const allowedDeliveryStatuses = ["pending", "accepted", "picked_up", "in_transit", "delivered", "confirmed"];
+  const allowedOrderStatuses = [
+    "pending",
+    "processing",
+    "completed",
+    "cancelled",
+    "failed",
+  ];
+  const allowedDeliveryStatuses = [
+    "pending",
+    "accepted",
+    "picked_up",
+    "in_transit",
+    "delivered",
+    "confirmed",
+  ];
   const order = await Order.findById(req.params.id);
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
+  }
+  if (order.verificationScannedAt && status && status !== "completed") {
+    res.status(400);
+    throw new Error("Order is already confirmed by QR scan");
   }
   if (status !== undefined) {
     if (!allowedOrderStatuses.includes(status)) {
@@ -467,7 +774,9 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   res.status(200).json(updatedOrder);
 });
 
-// ─── ADMIN: DASHBOARD STATS ──────────────────────────────────
+// ═════════════════════════════════════════════════════════════
+//  ADMIN: DASHBOARD STATS
+// ═════════════════════════════════════════════════════════════
 const getDashboardStats = asyncHandler(async (req, res) => {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -498,11 +807,14 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       status: "processing",
       rider: null,
       deliveryStatus: "pending",
+      orderType: "fuel",
     }),
     Order.countDocuments({
       paid: true,
       status: "processing",
-      deliveryStatus: { $in: ["accepted", "picked_up", "in_transit", "delivered"] },
+      deliveryStatus: {
+        $in: ["accepted", "picked_up", "in_transit", "delivered"],
+      },
     }),
   ]);
   res.status(200).json({
@@ -518,8 +830,10 @@ const getDashboardStats = asyncHandler(async (req, res) => {
   });
 });
 
-// ─── VERIFY PAYMENT & GET ORDER ──────────────────────────────
-// Handles both normal orders (FLX_) and subscription (SUB_) references
+// ═════════════════════════════════════════════════════════════
+//  VERIFY PAYMENT & GET ORDER
+//  (handles FLX_ normal orders and SUB_ subscription refs)
+// ═════════════════════════════════════════════════════════════
 const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   const { reference } = req.params;
   if (!reference) {
@@ -527,7 +841,6 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
     throw new Error("Reference is required");
   }
 
-  // ─── Verify with Paystack ─────────────────────────────────
   const data = await verifyPaystackPayment(reference);
   if (!data || data.status !== "success") {
     res.status(400);
@@ -553,19 +866,26 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
       throw new Error("Invalid subscription metadata");
     }
 
-    // ─── Find the existing order created in subscribeGas ──────
     let order = await Order.findOne({ paymentReference: reference });
 
     if (order) {
-      // ✅ Mark paid but keep in delivery flow (rider hasn't delivered yet)
       order.paid = true;
       order.status = "processing";
       order.deliveryStatus = "pending";
       order.paymentDate = new Date();
       order.paymentMethod = "card";
+      // Assign a station if not set
+      if (!order.station) {
+        const station = await findFulfillingStation({
+          lat: order.deliveryCoordinates?.lat,
+          lng: order.deliveryCoordinates?.lng,
+          cylinderSize,
+          stationId: undefined,
+        }).catch(() => null);
+        if (station) order.station = station._id;
+      }
       await order.save();
     } else {
-      // Fallback – create order if missing
       const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
       const cylinderCost = CYLINDER_COST[cylinderSize] || 0;
       const total = gasContentCost + cylinderCost;
@@ -581,6 +901,7 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
         },
         deliveryAddress: "",
         scheduleType: "now",
+        fulfillmentType: "delivery",
         status: "processing",
         paid: true,
         paymentReference: reference,
@@ -591,10 +912,10 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
         serviceTax: 0,
         totalAmount: total,
         deliveryStatus: "pending",
+        verificationToken: generateVerificationToken(),
       });
     }
 
-    // ─── Activate subscription ────────────────────────────────
     const now = new Date();
     const nextBilling = new Date(now);
     nextBilling.setDate(nextBilling.getDate() + SUBSCRIPTION_DAYS);
@@ -614,10 +935,11 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
 
     const populatedOrder = await Order.findById(order._id)
       .populate("user", "name email")
-      .populate("rider", "name email profilePicture phone");
+      .populate("rider", "name email profilePicture phone")
+      .populate("station", "name address");
 
     return res.status(200).json({
-      order: populatedOrder,
+      order: shapeOrderForCaller(populatedOrder, req.user || user),
       subscription: user.gasSubscription,
       isSubscription: true,
     });
@@ -626,7 +948,8 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
   // ─── Normal order references (FLX_) ──────────────────────
   const order = await Order.findOne({ paymentReference: reference })
     .populate("user", "name email")
-    .populate("rider", "name email profilePicture phone");
+    .populate("rider", "name email profilePicture phone")
+    .populate("station", "name address");
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
@@ -650,11 +973,18 @@ const verifyPaymentAndGetOrder = asyncHandler(async (req, res) => {
 
   const refreshedOrder = await Order.findById(order._id)
     .populate("user", "name email")
-    .populate("rider", "name email profilePicture phone");
-  res.status(200).json({ order: refreshedOrder, isSubscription: false });
+    .populate("rider", "name email profilePicture phone")
+    .populate("station", "name address");
+
+  res.status(200).json({
+    order: shapeOrderForCaller(refreshedOrder, req.user),
+    isSubscription: false,
+  });
 });
 
-// ─── INITIALIZE PAYMENT FOR EXISTING ORDER ────────────────────
+// ═════════════════════════════════════════════════════════════
+//  INITIALIZE PAYMENT FOR EXISTING ORDER
+// ═════════════════════════════════════════════════════════════
 const initializePaymentForOrder = asyncHandler(async (req, res) => {
   if (!req.user?._id) {
     res.status(401);
@@ -690,7 +1020,130 @@ const initializePaymentForOrder = asyncHandler(async (req, res) => {
   order.paymentReference = paystackRef;
   order.paymentMethod = "card";
   await order.save();
-  res.status(200).json({ authorization_url: authUrl, reference: paystackRef, orderId: order._id });
+  res.status(200).json({
+    authorization_url: authUrl,
+    reference: paystackRef,
+    orderId: order._id,
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+//  VERIFY ORDER BY QR TOKEN  ⭐ NEW
+// ═════════════════════════════════════════════════════════════
+// @desc    Confirm an order by scanning the customer's QR token
+// @route   POST /api/orders/verify
+// @access  Private (assigned fuel rider / assigned station rider /
+//                   station admin or staff for pickup / main admin)
+const verifyOrderByToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token || !String(token).trim()) {
+    res.status(400);
+    throw new Error("token is required");
+  }
+
+  const caller = req.user;
+  if (!caller) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  const order = await Order.findOne({ verificationToken: String(token).trim() });
+  if (!order) {
+    res.status(404);
+    throw new Error("Invalid QR code — order not found");
+  }
+
+  if (order.verificationScannedAt) {
+    res.status(400);
+    throw new Error("This order has already been confirmed");
+  }
+  if (!order.paid) {
+    res.status(400);
+    throw new Error("Order is not paid");
+  }
+  if (order.status === "cancelled" || order.status === "failed") {
+    res.status(400);
+    throw new Error(`Order is ${order.status} and cannot be confirmed`);
+  }
+
+  // Permission check
+  if (!canScanOrder(caller, order)) {
+    res.status(403);
+    throw new Error("You are not allowed to confirm this order");
+  }
+
+  // Atomic mark — guards against double-scan races
+  const now = new Date();
+  const updated = await Order.findOneAndUpdate(
+    { _id: order._id, verificationScannedAt: null },
+    {
+      $set: {
+        status: "completed",
+        deliveryStatus: "confirmed",
+        verificationScannedAt: now,
+        verificationScannedBy: caller._id,
+        completedAt: order.completedAt || now,
+        deliveredAt: order.deliveredAt || now,
+        customerConfirmedAt: now,
+      },
+    },
+    { new: true }
+  );
+  if (!updated) {
+    res.status(400);
+    throw new Error("This order has already been confirmed");
+  }
+
+  // ─── Gas: decrement station stock ─────────────────────────
+  if (updated.orderType === "gas" && updated.station) {
+    try {
+      await decrementStationStock({
+        stationId: updated.station,
+        cylinderSize: updated.gasDetails?.cylinderSize,
+        order: updated,
+        performedBy: caller._id,
+      });
+    } catch (err) {
+      // Roll back the completion so stock and state stay consistent
+      updated.status = order.status;
+      updated.deliveryStatus = order.deliveryStatus;
+      updated.verificationScannedAt = undefined;
+      updated.verificationScannedBy = undefined;
+      updated.completedAt = order.completedAt;
+      updated.customerConfirmedAt = undefined;
+      await updated.save();
+
+      res.status(400);
+      throw new Error(err.message || "Failed to decrement stock");
+    }
+  }
+
+  // ─── Rider commission ────────────────────────────────────
+  const commission = calculateRiderCommission(updated);
+  if (updated.rider && commission > 0 && !updated.commissionPaidToRider) {
+    const rider = await User.findById(updated.rider);
+    if (rider) {
+      rider.walletBalance = Number(rider.walletBalance || 0) + commission;
+      rider.totalEarnings = Number(rider.totalEarnings || 0) + commission;
+      rider.completedDeliveries = Number(rider.completedDeliveries || 0) + 1;
+      await rider.save();
+
+      updated.riderCommission = commission;
+      updated.commissionPaidToRider = true;
+      await updated.save();
+    }
+  }
+
+  const populated = await Order.findById(updated._id)
+    .populate("user", "name email")
+    .populate("rider", "name email profilePicture phone")
+    .populate("station", "name address");
+
+  res.status(200).json({
+    success: true,
+    message: "Order confirmed",
+    order: shapeOrderForCaller(populated, caller),
+  });
 });
 
 // ─── EXPORT ────────────────────────────────────────────────────
@@ -707,4 +1160,5 @@ export {
   getDashboardStats,
   verifyPaymentAndGetOrder,
   initializePaymentForOrder,
+  verifyOrderByToken,
 };
