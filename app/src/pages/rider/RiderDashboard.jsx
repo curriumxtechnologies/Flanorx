@@ -808,36 +808,37 @@ const RiderDashboard = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Quick Actions — compact on mobile, original on desktop */}
+            <div className="grid grid-cols-2 gap-2 lg:gap-3">
               <button
                 onClick={() => navigate("/rider/deliveries")}
-                className="bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-2xl p-4 flex flex-col items-center justify-center transition shadow-sm hover:shadow-md"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-xl lg:rounded-2xl transition shadow-sm hover:shadow-md min-w-0"
               >
-                <Truck className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">
+                <Truck className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">
                   {isStationRider ? "My Deliveries" : "Available"}
                 </span>
               </button>
               <button
                 onClick={() => navigate("/rider/scan")}
-                className="bg-gray-900 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-2xl p-4 flex flex-col items-center justify-center transition shadow-sm hover:shadow-md"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-gray-900 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl lg:rounded-2xl transition shadow-sm hover:shadow-md min-w-0"
               >
-                <QrCode className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Scan QR</span>
+                <QrCode className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">Scan QR</span>
               </button>
               <button
                 onClick={() => navigate("/rider/earnings")}
-                className="bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-2xl p-4 flex flex-col items-center justify-center transition border border-[#13ec5b]/20"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
               >
-                <Wallet className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Earnings</span>
+                <Wallet className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">Earnings</span>
               </button>
               <button
                 onClick={() => navigate("/tracking")}
-                className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl p-4 flex flex-col items-center justify-center transition"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl lg:rounded-2xl transition min-w-0"
               >
-                <MapPin className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Tracking</span>
+                <MapPin className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">Tracking</span>
               </button>
             </div>
           </div>

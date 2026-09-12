@@ -487,51 +487,51 @@ const StationDashboard = () => {
               )}
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Quick Actions — compact on mobile, original on desktop */}
+            <div className="grid grid-cols-2 gap-2 lg:gap-3">
               <button
                 onClick={() => navigate("/station/orders")}
-                className="bg-[#13ec5b] hover:bg-[#10d04e] text-gray-900 rounded-2xl p-4 flex flex-col items-center justify-center transition shadow-sm hover:shadow-md"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b] hover:bg-[#10d04e] text-gray-900 rounded-xl lg:rounded-2xl transition shadow-sm hover:shadow-md min-w-0"
               >
-                <Package className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Orders</span>
+                <Package className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">Orders</span>
               </button>
               <button
                 onClick={() => navigate("/station/inventory")}
-                className="bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#0f9c46] dark:text-[#13ec5b] rounded-2xl p-4 flex flex-col items-center justify-center transition border border-[#13ec5b]/20"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#0f9c46] dark:text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
               >
-                <Boxes className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Inventory</span>
+                <Boxes className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">Inventory</span>
               </button>
               {isStationAdmin ? (
                 <>
                   <button
                     onClick={() => navigate("/station/team")}
-                    className="bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#0f9c46] dark:text-[#13ec5b] rounded-2xl p-4 flex flex-col items-center justify-center transition border border-[#13ec5b]/20"
+                    className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#0f9c46] dark:text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
                   >
-                    <Users className="h-8 w-8 mb-1" />
-                    <span className="text-sm font-medium">Team</span>
+                    <Users className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                    <span className="text-xs lg:text-sm font-medium truncate">Team</span>
                   </button>
                   <button
                     onClick={() => navigate("/station/riders")}
-                    className="bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#0f9c46] dark:text-[#13ec5b] rounded-2xl p-4 flex flex-col items-center justify-center transition border border-[#13ec5b]/20"
+                    className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#0f9c46] dark:text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
                   >
-                    <Truck className="h-8 w-8 mb-1" />
-                    <span className="text-sm font-medium">Riders</span>
+                    <Truck className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                    <span className="text-xs lg:text-sm font-medium truncate">Riders</span>
                   </button>
                 </>
               ) : (
                 <>
                   <button
                     onClick={() => refetchDashboard()}
-                    className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl p-4 flex flex-col items-center justify-center transition"
+                    className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl lg:rounded-2xl transition min-w-0"
                   >
-                    <RefreshCw className="h-8 w-8 mb-1" />
-                    <span className="text-sm font-medium">Refresh</span>
+                    <RefreshCw className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                    <span className="text-xs lg:text-sm font-medium truncate">Refresh</span>
                   </button>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700">
-                    <ArrowUpDown className="h-8 w-8 mb-1 text-gray-400" />
-                    <span className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  <div className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl lg:rounded-2xl border border-gray-200 dark:border-gray-700 min-w-0">
+                    <ArrowUpDown className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 text-gray-400 flex-shrink-0" />
+                    <span className="text-xs lg:text-sm text-gray-500 dark:text-gray-400 truncate">
                       {teamCount} staff
                     </span>
                   </div>

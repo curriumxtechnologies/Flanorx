@@ -732,34 +732,35 @@ const AdminDashboard = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* Quick Actions — compact on mobile, original on desktop */}
+      <div className="grid grid-cols-2 gap-2 lg:gap-3">
         <button
           onClick={() => navigate("/superuser/orders")}
-          className="bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-2xl p-4 flex flex-col items-center justify-center transition shadow-sm hover:shadow-md"
+          className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-xl lg:rounded-2xl transition shadow-sm hover:shadow-md min-w-0"
         >
-          <Package className="h-8 w-8 mb-1" />
-          <span className="text-sm font-medium">Orders</span>
+          <Package className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+          <span className="text-xs lg:text-sm font-medium truncate">Orders</span>
         </button>
         <button
           onClick={() => navigate("/superuser/users")}
-          className="bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-2xl p-4 flex flex-col items-center justify-center transition border border-[#13ec5b]/20"
+          className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
         >
-          <Users className="h-8 w-8 mb-1" />
-          <span className="text-sm font-medium">Users</span>
+          <Users className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+          <span className="text-xs lg:text-sm font-medium truncate">Users</span>
         </button>
         <button
           onClick={() => navigate("/superuser/riders")}
-          className="bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-2xl p-4 flex flex-col items-center justify-center transition border border-[#13ec5b]/20"
+          className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
         >
-          <Truck className="h-8 w-8 mb-1" />
-          <span className="text-sm font-medium">Riders</span>
+          <Truck className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+          <span className="text-xs lg:text-sm font-medium truncate">Riders</span>
         </button>
         <button
           onClick={() => navigate("/superuser/analytics")}
-          className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl p-4 flex flex-col items-center justify-center transition"
+          className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl lg:rounded-2xl transition min-w-0"
         >
-          <TrendingUp className="h-8 w-8 mb-1" />
-          <span className="text-sm font-medium">Analytics</span>
+          <TrendingUp className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+          <span className="text-xs lg:text-sm font-medium truncate">Analytics</span>
         </button>
       </div>
     </div>

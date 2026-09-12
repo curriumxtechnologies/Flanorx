@@ -398,7 +398,9 @@ const Dashboard = () => {
       : defaultCenter;
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm h-full flex flex-col">
+      // `isolate` creates its own stacking context so Leaflet's internal
+      // z-index (400–1000) can never escape above sidebar/header/floating button.
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm h-full flex flex-col isolate">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <MapPin className="h-4 w-4 text-[#13ec5b] flex-shrink-0" />
@@ -421,7 +423,8 @@ const Dashboard = () => {
             </span>
           )}
         </div>
-        <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+        {/* `isolate z-0` on the map wrapper keeps Leaflet's panes contained */}
+        <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 isolate z-0">
           {isLoadingState ? (
             <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />
           ) : hasActiveOrder ? (
@@ -942,26 +945,27 @@ const Dashboard = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Quick actions — compact on mobile, original on desktop */}
+            <div className="grid grid-cols-2 gap-2 lg:gap-3">
               <button
                 onClick={() => navigate("/order/fuel")}
-                className="bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-2xl p-4 flex flex-col items-center justify-center transition shadow-sm hover:shadow-md"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-xl lg:rounded-2xl transition shadow-sm hover:shadow-md min-w-0"
               >
-                <PlusCircle className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Order Fuel</span>
+                <PlusCircle className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">Order Fuel</span>
               </button>
               <button
                 onClick={() => navigate("/order/gas")}
-                className="bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-2xl p-4 flex flex-col items-center justify-center transition border border-[#13ec5b]/20"
+                className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
               >
-                <Flame className="h-8 w-8 mb-1" />
-                <span className="text-sm font-medium">Order Gas</span>
+                <Flame className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
+                <span className="text-xs lg:text-sm font-medium truncate">Order Gas</span>
               </button>
               <button
                 onClick={() => navigate("/orders")}
-                className="col-span-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl p-3 flex items-center justify-center transition"
+                className="col-span-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl lg:rounded-2xl px-3 py-2.5 lg:p-3 flex items-center justify-center transition"
               >
-                <span className="text-sm font-medium">View All Orders</span>
+                <span className="text-xs lg:text-sm font-medium">View All Orders</span>
                 <ChevronRight className="h-4 w-4 ml-1" />
               </button>
             </div>

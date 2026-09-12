@@ -3,10 +3,22 @@ import asyncHandler from "express-async-handler";
 import Order from "../models/orderModel.js";
 import User from "../models/userModel.js";
 import Station from "../models/stationModel.js";
+import {
+  sendEmail,
+  notifyRiderEvent,
+  isEmailConfigured,
+} from "../utils/emailNotify.js";
+import {
+  sendToUser,
+  notifyRiderApplicationPush,
+  isPushConfigured,
+} from "../utils/pushNotify.js";
 
 // ─── Constants ────────────────────────────────────────────────
 const CYLINDER_SIZES = ["3kg", "6kg", "12kg"];
 const LOW_STOCK_THRESHOLD = 5;
+
+const WEB_URL = process.env.WEB_URL || "https://web.flanorx.com";
 
 // ─── Helpers ──────────────────────────────────────────────────
 const parseMonthYear = (month, year) => {
@@ -27,6 +39,84 @@ const assertMainAdmin = (req, res) => {
 const startOfToday = () => new Date(new Date().setHours(0, 0, 0, 0));
 const startOfMonth = () =>
   new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+// ═════════════════════════════════════════════════════════════
+//  NOTIFICATION HELPERS
+//  Fire-and-forget. Never throws — a bad email/push must never
+//  break the admin's API response.
+// ═════════════════════════════════════════════════════════════
+
+// Absolute URL for the email CTA (email clients need full URLs).
+const emailDashboardUrl = (role) => {
+  if (role === "rider") return `${WEB_URL}/rider/dashboard`;
+  if (role === "admin") return `${WEB_URL}/superuser/dashboard`;
+  return `${WEB_URL}/dashboard`;
+};
+
+// Relative path for the push `link` — matches the convention used
+// everywhere else in pushNotify.js (`/rider/deliveries`, `/order/:id`).
+const pushDashboardPath = (role) => {
+  if (role === "rider") return "/rider/dashboard";
+  if (role === "admin") return "/superuser/dashboard";
+  return "/dashboard";
+};
+
+const roleLabel = (role) => {
+  if (role === "rider") return "Rider";
+  if (role === "admin") return "Administrator";
+  return "Customer";
+};
+
+const notifyUserRoleChange = async (user, newRole) => {
+  const firstName = (user.name || "there").split(" ")[0];
+  const label = roleLabel(newRole);
+
+  // ── Email (absolute URL) ─────────────────────────────────
+  if (isEmailConfigured() && user.email) {
+    try {
+      const bodyCopy =
+        newRole === "rider"
+          ? "You can now browse and accept fuel deliveries from the open pool."
+          : newRole === "admin"
+          ? "You now have administrator access to the Flanorx platform."
+          : "Your account now has standard customer access.";
+
+      await sendEmail({
+        to: user.email,
+        subject: `Your Flanorx role has been updated to ${label}`,
+        preheader: `You now have ${label} access on Flanorx.`,
+        body:
+          `Hi ${firstName},\n\n` +
+          `Your Flanorx account role has been changed to ${label}.\n\n` +
+          `${bodyCopy}\n\n` +
+          `If you didn't expect this change, please contact support immediately.`,
+        ctaLabel: `Open My ${label} Dashboard`,
+        ctaUrl: emailDashboardUrl(newRole),
+      });
+    } catch (err) {
+      console.error("[admin] role-change email failed:", err);
+    }
+  }
+
+  // ── Push (relative link, matches pushNotify convention) ──
+  if (isPushConfigured()) {
+    try {
+      await sendToUser(user._id, {
+        title: `Role updated to ${label}`,
+        body:
+          newRole === "rider"
+            ? "You can now accept fuel deliveries. Tap to open your rider dashboard."
+            : newRole === "admin"
+            ? "You now have administrator access. Tap to open the admin dashboard."
+            : "Your account role has been updated.",
+        link: pushDashboardPath(newRole),
+        data: { type: "role_change", role: newRole },
+      });
+    } catch (err) {
+      console.error("[admin] role-change push failed:", err);
+    }
+  }
+};
 
 // ═════════════════════════════════════════════════════════════
 //  ORDER MANAGEMENT
@@ -307,8 +397,16 @@ const updateUserRole = asyncHandler(async (req, res) => {
     user.riderType = null;
   }
 
+  const oldRole = user.role;
   user.role = role;
   await user.save();
+
+  // ── Notify the user (fire-and-forget) ─────────────────────
+  if (oldRole !== role) {
+    notifyUserRoleChange(user, role).catch((err) =>
+      console.error("[admin] role-change notify failed:", err)
+    );
+  }
 
   res.status(200).json({
     message: `User role updated to ${role}`,
@@ -414,6 +512,18 @@ const approveRider = asyncHandler(async (req, res) => {
   user.verificationReviewedAt = new Date();
   user.verificationReviewedBy = req.user._id;
   await user.save();
+
+  // ── Email (absolute URL for the CTA) ──────────────────────
+  notifyRiderEvent(user, "approved", {
+    dashboardUrl: emailDashboardUrl("rider"),
+  }).catch((err) =>
+    console.error("[admin] rider-approved email failed:", err)
+  );
+
+  // ── Push (uses the existing helper, relative link inside) ─
+  notifyRiderApplicationPush(user._id, "approved").catch((err) =>
+    console.error("[admin] rider-approved push failed:", err)
+  );
 
   res.status(200).json({
     message: "Rider application approved. User is now a fuel rider.",
