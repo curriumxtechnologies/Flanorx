@@ -1,11 +1,9 @@
 // components/admin/MoreDrawer.jsx
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
 import {
   X,
   Settings,
-  LogOut,
   Sun,
   Moon,
   Monitor,
@@ -14,13 +12,11 @@ import {
   ClipboardList,
   Store,
 } from "lucide-react";
-import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
-import { apiSlice } from "../../features/apiSlice";
+import LogoutButton from "../../utils/logoutBtn";
 
 const AdminMoreDrawer = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { theme, toggleTheme, setSystemTheme } = useTheme();
   const drawerRef = useRef(null);
 
@@ -41,13 +37,6 @@ const AdminMoreDrawer = ({ isOpen, onClose }) => {
       document.body.style.overflow = "auto";
     };
   }, [isOpen, onClose]);
-
-  const handleLogout = () => {
-    onClose();
-    dispatch(logout());
-    dispatch(apiSlice.util.resetApiState());
-    navigate("/login", { replace: true });
-  };
 
   // ─── Only items NOT already in the bottombar ─────────────
   const adminItems = [
@@ -188,15 +177,12 @@ const AdminMoreDrawer = ({ isOpen, onClose }) => {
             <span>User Dashboard</span>
           </button>
 
-          {/* Logout */}
+          {/* ⭐ Drop-in logout — closes the drawer first, then logs out */}
           <hr className="my-3 border-gray-200 dark:border-gray-800" />
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
+          <LogoutButton
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-60"
+            onBeforeLogout={onClose}
+          />
         </div>
       </div>
     </>

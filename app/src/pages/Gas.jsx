@@ -109,7 +109,7 @@ const MapClickHandler = ({ setPosition, onAddressUpdate }) => {
   return null;
 };
 
-// ─── Distance helper (for display) ─────────────────────────
+// ─── Distance helper ──────────────────────────────────────
 const formatDistance = (km) => {
   if (!Number.isFinite(km)) return "";
   if (km < 1) return `${Math.round(km * 1000)} m`;
@@ -121,7 +121,7 @@ const Gas = () => {
   const { userInfo } = useSelector((state) => state.auth);
   const { data: user, isLoading: userLoading } = useGetProfileQuery();
 
-  // ─── Subscription queries ──────────────────────────────────
+  // ─── Subscription queries ─────────────────────────────────
   const {
     data: subscriptionData,
     isLoading: subLoading,
@@ -131,20 +131,17 @@ const Gas = () => {
     useSubscribeGasMutation();
   const [createOrder, { isLoading: orderLoading }] = useCreateOrderMutation();
 
-  // ─── Derived subscription state ────────────────────────────
+  // ─── Derived subscription state ───────────────────────────
   const subscription = subscriptionData?.subscription || null;
   const isActive = subscriptionData?.isActive || false;
   const currentCylinderSize = subscription?.cylinderSize || null;
   const daysRemaining = subscriptionData?.daysRemaining || 0;
 
-  // ─── Form state ──────────────────────────────────────────────
+  // ─── Form state ───────────────────────────────────────────
   const [cylinderSize, setCylinderSize] = useState(
     currentCylinderSize || "3kg"
   );
-  const [quantityKg, setQuantityKg] = useState(() => {
-    return parseInt(cylinderSize) || 3;
-  });
-  const [fulfillmentType, setFulfillmentType] = useState("delivery"); // "delivery" | "pickup"
+  const [fulfillmentType, setFulfillmentType] = useState("delivery");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [scheduleType, setScheduleType] = useState("now");
   const [scheduledDate, setScheduledDate] = useState("");
@@ -155,12 +152,12 @@ const Gas = () => {
   const [showCylinderDropdown, setShowCylinderDropdown] = useState(false);
   const [showAddressDropdown, setShowAddressDropdown] = useState(false);
 
-  // ─── Pickup station state ──────────────────────────────────
-  const [pickupCoords, setPickupCoords] = useState(null); // { lat, lng } used to find stations
+  // ─── Pickup station state ─────────────────────────────────
+  const [pickupCoords, setPickupCoords] = useState(null);
   const [selectedStationId, setSelectedStationId] = useState(null);
   const [isLocatingForPickup, setIsLocatingForPickup] = useState(false);
 
-  // ─── Map state ──────────────────────────────────────────────
+  // ─── Map state ────────────────────────────────────────────
   const [showMap, setShowMap] = useState(false);
   const [mapPosition, setMapPosition] = useState([6.5244, 3.3792]);
   const [markerPosition, setMarkerPosition] = useState([6.5244, 3.3792]);
@@ -183,11 +180,16 @@ const Gas = () => {
     { label: "12kg", value: "12kg" },
   ];
 
+  // ⭐ Quantity is derived from cylinder size — a 3kg cylinder = 3kg of gas.
+  const quantityKg = useMemo(() => {
+    const n = parseInt(cylinderSize, 10);
+    return Number.isFinite(n) && n > 0 ? n : 3;
+  }, [cylinderSize]);
+
   // ─── Update cylinder size when subscription loads ─────────
   useEffect(() => {
     if (currentCylinderSize) {
       setCylinderSize(currentCylinderSize);
-      setQuantityKg(parseInt(currentCylinderSize));
     }
   }, [currentCylinderSize]);
 
@@ -226,9 +228,8 @@ const Gas = () => {
     if (!stillValid) setSelectedStationId(null);
   }, [stockedStations, selectedStationId]);
 
-  // ─── Calculate price ────────────────────────────────────────
+  // ─── Calculate price ──────────────────────────────────────
   useEffect(() => {
-    // Cylinder cost only charged for FIRST-TIME subscription
     const cylinderCost = !isActive ? CYLINDER_COST[cylinderSize] || 0 : 0;
     const gasContentCost = quantityKg * GAS_PRICE_PER_KG;
     const subtotal = gasContentCost + cylinderCost;
@@ -257,7 +258,7 @@ const Gas = () => {
     fulfillmentType,
   ]);
 
-  // ─── Address selection ──────────────────────────────────────
+  // ─── Address selection ────────────────────────────────────
   const addresses = user?.addresses || [];
   const defaultAddress = addresses.find((a) => a.isDefault);
   const addressOptions = addresses.map((a) => ({
@@ -283,12 +284,10 @@ const Gas = () => {
 
   const handleCylinderSelect = (size) => {
     setCylinderSize(size);
-    const kg = parseInt(size);
-    setQuantityKg(kg);
     setShowCylinderDropdown(false);
   };
 
-  // ─── Map handlers ────────────────────────────────────────────
+  // ─── Map handlers ─────────────────────────────────────────
   const handleMapAddressUpdate = (addr) => {
     if (addr) {
       setDeliveryAddress(addr);
@@ -325,7 +324,7 @@ const Gas = () => {
     );
   };
 
-  // ─── Pickup: fetch location to find nearby stations ────────
+  // ─── Pickup: fetch location to find nearby stations ──────
   const locateForPickup = () => {
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
@@ -346,7 +345,6 @@ const Gas = () => {
     );
   };
 
-  // Auto-trigger pickup location once when the user switches to pickup
   useEffect(() => {
     if (fulfillmentType === "pickup" && !pickupCoords && !isLocatingForPickup) {
       locateForPickup();
@@ -354,7 +352,7 @@ const Gas = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fulfillmentType]);
 
-  // ─── Handle submit ──────────────────────────────────────────
+  // ─── Handle submit ────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -367,12 +365,6 @@ const Gas = () => {
       return;
     }
 
-    if (quantityKg < 1 || quantityKg > 50) {
-      setError("Quantity must be between 1 and 50 kg");
-      return;
-    }
-
-    // Fulfillment-specific validation
     let coords = null;
     if (fulfillmentType === "delivery") {
       if (!deliveryAddress.trim()) {
@@ -404,11 +396,10 @@ const Gas = () => {
     try {
       let result;
 
-      // ─── FIRST-TIME SUBSCRIPTION + GAS ────────────────────
       if (!isActive) {
         const payload = {
           cylinderSize,
-          quantityKg: Number(quantityKg),
+          quantityKg,
           fulfillmentType,
         };
         if (fulfillmentType === "pickup") {
@@ -425,12 +416,11 @@ const Gas = () => {
         return;
       }
 
-      // ─── SWAP (active subscription, same cylinder size) ───
       const orderData = {
         orderType: "gas",
         gasDetails: {
           cylinderSize,
-          quantityKg: Number(quantityKg),
+          quantityKg,
           isFirstTime: false,
           cylinderCost: 0,
           gasContentCost: priceBreakdown.gasContentCost,
@@ -472,10 +462,8 @@ const Gas = () => {
   const isLoading =
     userLoading || subLoading || subscribeLoading || orderLoading;
 
-  const quantityPresets = [3, 6, 12, 20];
   const isPickup = fulfillmentType === "pickup";
 
-  // ─── Selected station (for summary) ────────────────────────
   const selectedStation = useMemo(
     () =>
       stockedStations.find((s) => String(s._id) === String(selectedStationId)) ||
@@ -489,12 +477,12 @@ const Gas = () => {
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
+          <h1 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white lg:text-xl truncate">
             {isActive ? "Order Gas Swap" : "Get Gas Subscription"}
           </h1>
           <button
             onClick={() => navigate("/orders")}
-            className="text-sm text-[#13ec5b] hover:underline"
+            className="text-xs sm:text-sm text-[#13ec5b] hover:underline flex-shrink-0 ml-2"
           >
             View Orders
           </button>
@@ -506,51 +494,51 @@ const Gas = () => {
             <div className="lg:col-span-2">
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
                 <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Flame className="h-5 w-5 text-[#13ec5b]" />
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Flame className="h-4 w-4 sm:h-5 sm:w-5 text-[#13ec5b] flex-shrink-0" />
                     {isActive ? "Swap Your Gas" : "Start Your Gas Subscription"}
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {isActive
                       ? `You have an active ${currentCylinderSize} subscription (${daysRemaining} days left).`
                       : "Choose how you want to get your gas."}
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5">
+                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                   {error && (
-                    <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800 flex items-center gap-2">
-                      <span>⚠️</span>
-                      {error}
+                    <div className="p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-xs sm:text-sm border border-red-200 dark:border-red-800 flex items-start gap-2">
+                      <span className="flex-shrink-0">⚠️</span>
+                      <span className="min-w-0 break-words">{error}</span>
                     </div>
                   )}
                   {success && (
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-sm border border-green-200 dark:border-green-800 flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5" />
+                    <div className="p-2.5 sm:p-3 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-xs sm:text-sm border border-green-200 dark:border-green-800 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 flex-shrink-0" />
                       {success}
                     </div>
                   )}
 
                   {isActive && (
-                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 sm:p-4 border border-green-200 dark:border-green-800 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-300 truncate">
                           Active Subscription
                         </p>
-                        <p className="text-xs text-green-600 dark:text-green-400">
+                        <p className="text-[11px] sm:text-xs text-green-600 dark:text-green-400 truncate">
                           {currentCylinderSize} · {daysRemaining} days remaining
                         </p>
                       </div>
-                      <span className="text-xs bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                      <span className="text-[10px] sm:text-xs bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-1 rounded-full flex-shrink-0">
                         Active
                       </span>
                     </div>
                   )}
 
                   {isSizeChange && (
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 text-sm text-yellow-700 dark:text-yellow-300">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-yellow-700 dark:text-yellow-300">
                       <p className="font-medium">Changing cylinder size?</p>
-                      <p className="mt-1 text-xs">
+                      <p className="mt-1 text-[11px] sm:text-xs">
                         Size changes are handled as a plan change on your
                         subscription page. You'll pay the difference there, then
                         come back here to order a gas swap.
@@ -558,7 +546,7 @@ const Gas = () => {
                       <button
                         type="button"
                         onClick={() => navigate("/gas/subscription")}
-                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-xs font-medium transition"
+                        className="mt-2 sm:mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-[11px] sm:text-xs font-medium transition"
                       >
                         Go to Subscription Page{" "}
                         <ArrowRight className="h-3 w-3" />
@@ -568,41 +556,41 @@ const Gas = () => {
 
                   {/* ─── Fulfillment Type ─────────────────────────── */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       How do you want your gas?
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                       <button
                         type="button"
                         onClick={() => setFulfillmentType("delivery")}
-                        className={`flex flex-col items-start gap-1 py-3 px-4 rounded-xl text-sm font-medium transition border-2 text-left ${
+                        className={`flex flex-col items-start gap-0.5 sm:gap-1 p-2.5 sm:p-3.5 rounded-xl text-xs sm:text-sm font-medium transition border-2 text-left ${
                           !isPickup
                             ? "border-[#13ec5b] bg-[#13ec5b]/10 text-[#13ec5b]"
                             : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
                         }`}
                       >
-                        <span className="flex items-center gap-2">
-                          <Truck className="h-4 w-4" />
-                          Delivery
+                        <span className="flex items-center gap-1.5 sm:gap-2">
+                          <Truck className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span>Delivery</span>
                         </span>
-                        <span className="text-[10px] opacity-75">
-                          We bring it to your door
+                        <span className="text-[9px] sm:text-[10px] opacity-75 leading-tight">
+                          Bring it to your door
                         </span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setFulfillmentType("pickup")}
-                        className={`flex flex-col items-start gap-1 py-3 px-4 rounded-xl text-sm font-medium transition border-2 text-left ${
+                        className={`flex flex-col items-start gap-0.5 sm:gap-1 p-2.5 sm:p-3.5 rounded-xl text-xs sm:text-sm font-medium transition border-2 text-left ${
                           isPickup
                             ? "border-[#13ec5b] bg-[#13ec5b]/10 text-[#13ec5b]"
                             : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
                         }`}
                       >
-                        <span className="flex items-center gap-2">
-                          <Store className="h-4 w-4" />
-                          Pickup
+                        <span className="flex items-center gap-1.5 sm:gap-2">
+                          <Store className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <span>Pickup</span>
                         </span>
-                        <span className="text-[10px] opacity-75">
+                        <span className="text-[9px] sm:text-[10px] opacity-75 leading-tight">
                           Swap at a nearby station
                         </span>
                       </button>
@@ -611,12 +599,15 @@ const Gas = () => {
 
                   {/* ─── Cylinder Size ───────────────────────────── */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Cylinder Size
                     </label>
+                    <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      You'll receive {quantityKg}kg of gas.
+                    </p>
 
                     {/* Mobile: grid buttons */}
-                    <div className="lg:hidden grid grid-cols-3 gap-2">
+                    <div className="lg:hidden grid grid-cols-3 gap-1.5 sm:gap-2">
                       {CYLINDER_SIZES.map((size) => {
                         const isSelected = cylinderSize === size.value;
                         const isCurrent =
@@ -627,21 +618,23 @@ const Gas = () => {
                         } else if (isCurrent) {
                           costLabel = "current";
                         } else {
-                          costLabel = "change plan";
+                          costLabel = "change";
                         }
                         return (
                           <button
                             key={size.value}
                             type="button"
                             onClick={() => handleCylinderSelect(size.value)}
-                            className={`py-2.5 px-1 rounded-xl text-sm font-medium transition-all border-2 ${
+                            className={`py-2 px-0.5 sm:py-2.5 sm:px-1 rounded-xl text-xs sm:text-sm font-medium transition-all border-2 ${
                               isSelected
                                 ? "border-[#13ec5b] bg-[#13ec5b] text-white shadow-lg shadow-[#13ec5b]/20"
                                 : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
                             }`}
                           >
-                            <div className="font-semibold">{size.label}</div>
-                            <div className="text-[10px] opacity-80">
+                            <div className="font-semibold leading-tight">
+                              {size.label}
+                            </div>
+                            <div className="text-[9px] sm:text-[10px] opacity-80 leading-tight mt-0.5">
                               {costLabel}
                             </div>
                           </button>
@@ -710,57 +703,16 @@ const Gas = () => {
                     </div>
                   </div>
 
-                  {/* ─── Quantity (kg) ───────────────────────────── */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Quantity (kg)
-                    </label>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {quantityPresets.map((qty) => (
-                        <button
-                          key={qty}
-                          type="button"
-                          onClick={() => setQuantityKg(qty)}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
-                            quantityKg === qty
-                              ? "bg-[#13ec5b] text-white"
-                              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                          }`}
-                        >
-                          {qty}kg
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="range"
-                        min="1"
-                        max="50"
-                        step="1"
-                        value={quantityKg}
-                        onChange={(e) => setQuantityKg(Number(e.target.value))}
-                        className="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-[#13ec5b]"
-                        disabled={isLoading}
-                      />
-                      <span className="text-lg font-bold text-[#13ec5b] min-w-[60px] text-right">
-                        {quantityKg}kg
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Min 1kg · Max 50kg
-                    </p>
-                  </div>
-
                   {/* ─── Delivery: Address + Map ─────────────────── */}
                   {!isPickup && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Delivery Address
                       </label>
 
                       <div className="flex flex-wrap gap-2 mb-2">
                         {addresses.length > 0 && (
-                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <label className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                             <input
                               type="checkbox"
                               checked={useSavedAddress}
@@ -775,18 +727,18 @@ const Gas = () => {
                         <button
                           type="button"
                           onClick={() => setShowMap(!showMap)}
-                          className="text-sm text-[#13ec5b] hover:underline flex items-center gap-1"
+                          className="text-xs sm:text-sm text-[#13ec5b] hover:underline flex items-center gap-1"
                         >
-                          <MapPin className="h-4 w-4" />
+                          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           {showMap ? "Hide map" : "Pick on map"}
                         </button>
                         <button
                           type="button"
                           onClick={getCurrentLocation}
                           disabled={isLocating}
-                          className="text-sm text-[#13ec5b] hover:underline flex items-center gap-1 disabled:opacity-50"
+                          className="text-xs sm:text-sm text-[#13ec5b] hover:underline flex items-center gap-1 disabled:opacity-50"
                         >
-                          <Navigation className="h-4 w-4" />
+                          <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           {isLocating ? "Locating..." : "Current location"}
                         </button>
                       </div>
@@ -798,7 +750,7 @@ const Gas = () => {
                             onClick={() =>
                               setShowAddressDropdown(!showAddressDropdown)
                             }
-                            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white hover:border-[#13ec5b]/50 transition focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
+                            className="w-full flex items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white hover:border-[#13ec5b]/50 transition focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
                           >
                             <span className="flex items-center gap-2 truncate">
                               <MapPin className="h-4 w-4 text-[#13ec5b] flex-shrink-0" />
@@ -809,7 +761,7 @@ const Gas = () => {
                               </span>
                             </span>
                             <ChevronDown
-                              className={`h-5 w-5 text-gray-400 transition-transform ${
+                              className={`h-5 w-5 text-gray-400 transition-transform flex-shrink-0 ${
                                 showAddressDropdown ? "rotate-180" : ""
                               }`}
                             />
@@ -839,7 +791,7 @@ const Gas = () => {
                                       {opt.label}
                                     </span>
                                     {isDefault && (
-                                      <span className="text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                                      <span className="text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full flex-shrink-0 ml-2">
                                         Default
                                       </span>
                                     )}
@@ -851,7 +803,7 @@ const Gas = () => {
                         </div>
                       ) : (
                         <div className="relative">
-                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                           <input
                             type="text"
                             value={deliveryAddress}
@@ -859,7 +811,7 @@ const Gas = () => {
                               setDeliveryAddress(e.target.value)
                             }
                             placeholder="Enter your delivery address"
-                            className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
+                            className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
                             disabled={isLoading}
                           />
                         </div>
@@ -896,14 +848,14 @@ const Gas = () => {
                               />
                             </MapContainer>
                           </div>
-                          <div className="bg-gray-50 dark:bg-gray-700/30 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
-                            <span>
-                              Drag the marker or tap the map to set location
+                          <div className="bg-gray-50 dark:bg-gray-700/30 px-3 py-2 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between gap-2">
+                            <span className="truncate">
+                              Drag the marker or tap the map
                             </span>
                             <button
                               type="button"
                               onClick={() => setShowMap(false)}
-                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -916,30 +868,30 @@ const Gas = () => {
                   {/* ─── Pickup: Station selector ───────────────── */}
                   {isPickup && (
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Pickup Station
                         </label>
                         <button
                           type="button"
                           onClick={locateForPickup}
                           disabled={isLocatingForPickup}
-                          className="text-xs text-[#13ec5b] hover:underline flex items-center gap-1 disabled:opacity-50"
+                          className="text-[11px] sm:text-xs text-[#13ec5b] hover:underline flex items-center gap-1 disabled:opacity-50 flex-shrink-0"
                         >
-                          <Navigation className="h-3.5 w-3.5" />
-                          {isLocatingForPickup ? "Locating..." : "Refresh nearby"}
+                          <Navigation className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                          {isLocatingForPickup ? "Locating..." : "Refresh"}
                         </button>
                       </div>
 
                       {!pickupCoords ? (
-                        <div className="rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600 p-4 text-center text-sm text-gray-600 dark:text-gray-400">
-                          <MapPin className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                        <div className="rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600 p-4 text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                          <MapPin className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-2 text-gray-400" />
                           We need your location to show stations near you.
                           <button
                             type="button"
                             onClick={locateForPickup}
                             disabled={isLocatingForPickup}
-                            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-[#13ec5b] text-white rounded-lg text-xs font-medium disabled:opacity-50"
+                            className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 bg-[#13ec5b] text-white rounded-lg text-xs font-medium disabled:opacity-50"
                           >
                             {isLocatingForPickup ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -957,7 +909,7 @@ const Gas = () => {
                           </p>
                         </div>
                       ) : stockedStations.length === 0 ? (
-                        <div className="rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 text-sm text-yellow-800 dark:text-yellow-300">
+                        <div className="rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3 sm:p-4 text-xs sm:text-sm text-yellow-800 dark:text-yellow-300">
                           No nearby station has{" "}
                           <span className="font-semibold">{cylinderSize}</span>{" "}
                           cylinders in stock right now. Try a different size, or
@@ -979,26 +931,26 @@ const Gas = () => {
                                 onClick={() =>
                                   setSelectedStationId(station._id)
                                 }
-                                className={`w-full text-left px-4 py-3 rounded-xl border-2 transition flex items-start gap-3 ${
+                                className={`w-full text-left p-3 rounded-xl border-2 transition flex items-start gap-2.5 sm:gap-3 ${
                                   isSelected
                                     ? "border-[#13ec5b] bg-[#13ec5b]/10"
                                     : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40 hover:border-gray-300 dark:hover:border-gray-500"
                                 }`}
                               >
                                 <div
-                                  className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                                  className={`mt-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                                     isSelected
                                       ? "border-[#13ec5b] bg-[#13ec5b]"
                                       : "border-gray-300 dark:border-gray-500"
                                   }`}
                                 >
                                   {isSelected && (
-                                    <CheckCircle className="h-3 w-3 text-white" />
+                                    <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                                   )}
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center justify-between gap-2">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">
                                       {station.name}
                                     </p>
                                     {Number.isFinite(station.distanceKm) && (
@@ -1007,13 +959,13 @@ const Gas = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                                     {station.address}
                                   </p>
-                                  <div className="flex items-center gap-3 mt-1.5 text-[10px]">
+                                  <div className="flex items-center gap-3 mt-1.5 text-[10px] flex-wrap">
                                     <span className="inline-flex items-center gap-1 text-[#0f9c46] dark:text-[#13ec5b] font-medium">
                                       <Package className="h-3 w-3" />
-                                      {stock} × {cylinderSize} in stock
+                                      {stock} × {cylinderSize}
                                     </span>
                                     {station.phone && (
                                       <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
@@ -1035,41 +987,41 @@ const Gas = () => {
                   {!isPickup && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Delivery Schedule
                         </label>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
                           <button
                             type="button"
                             onClick={() => setScheduleType("now")}
-                            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition border-2 ${
+                            className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition border-2 ${
                               scheduleType === "now"
                                 ? "border-[#13ec5b] bg-[#13ec5b]/10 text-[#13ec5b]"
                                 : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
                             }`}
                           >
-                            <Zap className="h-4 w-4" />
+                            <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             Now
                           </button>
                           <button
                             type="button"
                             onClick={() => setScheduleType("scheduled")}
-                            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition border-2 ${
+                            className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition border-2 ${
                               scheduleType === "scheduled"
                                 ? "border-[#13ec5b] bg-[#13ec5b]/10 text-[#13ec5b]"
                                 : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
                             }`}
                           >
-                            <Calendar className="h-4 w-4" />
+                            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             Schedule
                           </button>
                         </div>
                       </div>
 
                       {scheduleType === "scheduled" && (
-                        <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700/30 rounded-none sm:rounded-xl p-4 border border-gray-200 dark:border-gray-600">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4 bg-gray-50 dark:bg-gray-700/30 rounded-none sm:rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-600">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                               Date
                             </label>
                             <input
@@ -1078,12 +1030,12 @@ const Gas = () => {
                               onChange={(e) =>
                                 setScheduledDate(e.target.value)
                               }
-                              className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
+                              className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
                               disabled={isLoading}
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                               Time
                             </label>
                             <input
@@ -1092,7 +1044,7 @@ const Gas = () => {
                               onChange={(e) =>
                                 setScheduledTime(e.target.value)
                               }
-                              className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
+                              className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
                               disabled={isLoading}
                             />
                           </div>
@@ -1102,7 +1054,7 @@ const Gas = () => {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Special Instructions
                     </label>
                     <textarea
@@ -1110,7 +1062,7 @@ const Gas = () => {
                       onChange={(e) => setNotes(e.target.value)}
                       rows="2"
                       placeholder="Any special instructions (e.g., gate code, landmark)"
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent resize-none"
+                      className="w-full px-3 py-2.5 sm:px-4 sm:py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent resize-none"
                       disabled={isLoading}
                     />
                   </div>
@@ -1122,28 +1074,28 @@ const Gas = () => {
             <div className="lg:col-span-1">
               <div className="sticky top-24 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
                 <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-700">
-                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-[#13ec5b]" />
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-[#13ec5b] flex-shrink-0" />
                     Order Summary
                   </h3>
                 </div>
 
-                <div className="p-4 sm:p-5 space-y-4">
+                <div className="p-4 sm:p-5 space-y-3 sm:space-y-4">
                   {priceBreakdown ? (
                     <>
                       <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-700">
-                        <div className="w-10 h-10 rounded-xl bg-[#13ec5b]/10 flex items-center justify-center">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#13ec5b]/10 flex items-center justify-center flex-shrink-0">
                           {isPickup ? (
-                            <Store className="h-5 w-5 text-[#13ec5b]" />
+                            <Store className="h-4 w-4 sm:h-5 sm:w-5 text-[#13ec5b]" />
                           ) : (
-                            <Flame className="h-5 w-5 text-[#13ec5b]" />
+                            <Flame className="h-4 w-4 sm:h-5 sm:w-5 text-[#13ec5b]" />
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
                             {cylinderSize} Cylinder
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
                             {quantityKg}kg gas ·{" "}
                             {isPickup ? "Pickup" : "Delivery"}
                             {!isActive && " · New subscription"}
@@ -1153,77 +1105,77 @@ const Gas = () => {
                       </div>
 
                       {isPickup && selectedStation && (
-                        <div className="rounded-lg bg-gray-50 dark:bg-gray-700/30 px-3 py-2 text-xs">
+                        <div className="rounded-lg bg-gray-50 dark:bg-gray-700/30 px-3 py-2 text-[11px] sm:text-xs">
                           <p className="text-gray-500 dark:text-gray-400">
                             Pickup at
                           </p>
                           <p className="font-semibold text-gray-900 dark:text-white truncate">
                             {selectedStation.name}
                           </p>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
                             {selectedStation.address}
                           </p>
                         </div>
                       )}
 
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                         {priceBreakdown.cylinderCost > 0 && (
-                          <div className="flex justify-between">
+                          <div className="flex justify-between gap-2">
                             <span className="text-gray-500 dark:text-gray-400">
                               Cylinder cost
                             </span>
-                            <span className="text-gray-900 dark:text-white">
+                            <span className="text-gray-900 dark:text-white flex-shrink-0">
                               ₦{priceBreakdown.cylinderCost.toFixed(2)}
                             </span>
                           </div>
                         )}
-                        <div className="flex justify-between">
+                        <div className="flex justify-between gap-2">
                           <span className="text-gray-500 dark:text-gray-400">
                             Gas ({quantityKg}kg × ₦{GAS_PRICE_PER_KG})
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-gray-900 dark:text-white flex-shrink-0">
                             ₦{priceBreakdown.gasContentCost.toFixed(2)}
                           </span>
                         </div>
                         {!isPickup && (
-                          <div className="flex justify-between">
+                          <div className="flex justify-between gap-2">
                             <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
                               <Truck className="h-3 w-3" />
                               Delivery Fee
                             </span>
-                            <span className="text-gray-900 dark:text-white">
+                            <span className="text-gray-900 dark:text-white flex-shrink-0">
                               ₦{priceBreakdown.deliveryFee.toFixed(2)}
                             </span>
                           </div>
                         )}
-                        <div className="flex justify-between">
+                        <div className="flex justify-between gap-2">
                           <span className="text-gray-500 dark:text-gray-400">
                             Service Tax (1%)
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-gray-900 dark:text-white flex-shrink-0">
                             ₦{priceBreakdown.serviceTax.toFixed(2)}
                           </span>
                         </div>
                       </div>
 
                       <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                             Total
                           </span>
-                          <span className="text-2xl font-bold text-[#13ec5b]">
+                          <span className="text-xl sm:text-2xl font-bold text-[#13ec5b] truncate">
                             ₦{priceBreakdown.total.toFixed(2)}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {isPickup
                             ? "No delivery fee for pickup"
                             : "Includes delivery fee and tax"}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/30 px-3 py-2 rounded-lg">
-                        <Clock className="h-4 w-4 text-[#13ec5b]" />
+                      <div className="flex items-start gap-2 text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/30 px-3 py-2 rounded-lg">
+                        <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#13ec5b] flex-shrink-0 mt-0.5" />
                         {isPickup ? (
                           <span>Ready for pickup shortly after payment</span>
                         ) : scheduleType === "now" ? (
@@ -1236,35 +1188,33 @@ const Gas = () => {
                       </div>
 
                       {!isActive && (
-                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-xs text-blue-700 dark:text-blue-300">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 sm:p-3 text-[11px] sm:text-xs text-blue-700 dark:text-blue-300">
                           <p className="font-medium">
                             Cylinder subscription included
                           </p>
                           <p className="mt-1">
-                            Your cylinder subscription is valid for 30 days.
-                            You'll get a 6-day grace period to renew.
+                            Valid for 30 days. 6-day grace period to renew.
                           </p>
                         </div>
                       )}
 
                       {isActive && !isSizeChange && (
-                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-xs text-green-700 dark:text-green-300">
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2.5 sm:p-3 text-[11px] sm:text-xs text-green-700 dark:text-green-300">
                           <p className="font-medium">Gas Swap</p>
                           <p className="mt-1">
                             You're ordering gas content only — your cylinder
-                            subscription continues on its own 30-day cycle.
+                            subscription continues on its own cycle.
                           </p>
                         </div>
                       )}
 
                       {isSizeChange && (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 text-xs text-yellow-700 dark:text-yellow-300">
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-2.5 sm:p-3 text-[11px] sm:text-xs text-yellow-700 dark:text-yellow-300">
                           <p className="font-medium">
                             Cylinder change required
                           </p>
                           <p className="mt-1">
-                            To swap to a different cylinder size, first change
-                            your plan on the subscription page.
+                            First change your plan on the subscription page.
                           </p>
                         </div>
                       )}
@@ -1286,11 +1236,11 @@ const Gas = () => {
                       isSizeChange ||
                       (isPickup && !selectedStationId)
                     }
-                    className="w-full py-3.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white font-bold rounded-xl transition duration-200 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                    className="w-full py-3 sm:py-3.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white font-bold rounded-xl transition duration-200 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base"
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin mr-2" />
                         Processing...
                       </>
                     ) : isSizeChange ? (

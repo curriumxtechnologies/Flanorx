@@ -9,6 +9,8 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  Camera,
+  Image as ImageIcon,
   Upload,
   X,
   ChevronDown,
@@ -20,8 +22,161 @@ import {
   useResolveBankMutation,
   useGetBanksQuery,
 } from "../features/riderApiSlice";
+import { pickMedia, dataUrlToFile } from "../utils/mediaPicker";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
+
+// ═══════════════════════════════════════════════════════════
+//  Media Source Modal — custom picker (camera / gallery)
+//  Reused for all three document uploads.
+// ═══════════════════════════════════════════════════════════
+const MediaSourceModal = ({ isOpen, onClose, onPick, title }) => {
+  if (!isOpen) return null;
+
+  const options = [
+    {
+      key: "camera",
+      label: "Take a photo",
+      description: "Use your camera",
+      icon: Camera,
+    },
+    {
+      key: "gallery",
+      label: "Choose from gallery",
+      description: "Pick an existing image",
+      icon: ImageIcon,
+    },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+            {title || "Upload image"}
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition flex-shrink-0"
+          >
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-2">
+          {options.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => onPick(opt.key)}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/40 active:bg-gray-100 dark:active:bg-gray-600 transition text-left"
+              >
+                <div className="w-10 h-10 rounded-full bg-[#13ec5b]/10 flex items-center justify-center flex-shrink-0">
+                  <Icon className="h-5 w-5 text-[#13ec5b]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {opt.label}
+                  </p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                    {opt.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="p-2 pt-0 border-t border-gray-100 dark:border-gray-700">
+          <button
+            onClick={onClose}
+            className="w-full py-3 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40 rounded-xl transition"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+//  Document Upload Field
+//  Handles: preview, remove, "current file" link, error text.
+// ═══════════════════════════════════════════════════════════
+const DocumentField = ({
+  label,
+  required,
+  fieldKey,
+  preview,
+  existingUrl,
+  error,
+  disabled,
+  onPick,
+  onRemove,
+  isRound = false,
+}) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <div className="flex items-center gap-3 flex-wrap">
+      <button
+        type="button"
+        onClick={onPick}
+        disabled={disabled}
+        className="cursor-pointer flex items-center gap-2 px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        <Upload className="h-4 w-4 flex-shrink-0" />
+        <span>Choose file</span>
+      </button>
+
+      {preview && (
+        <div
+          className={`relative w-12 h-12 overflow-hidden border border-gray-200 dark:border-gray-600 flex-shrink-0 ${
+            isRound ? "rounded-full" : "rounded"
+          }`}
+        >
+          <img
+            src={preview}
+            alt={`${label} preview`}
+            className="w-full h-full object-cover"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
+            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+            aria-label={`Remove ${label}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {existingUrl && !preview && (
+        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+          Current:{" "}
+          <a
+            href={existingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#13ec5b] underline"
+          >
+            View
+          </a>
+        </div>
+      )}
+    </div>
+    {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+  </div>
+);
 
 const RiderApplication = () => {
   const navigate = useNavigate();
@@ -43,7 +198,8 @@ const RiderApplication = () => {
   } = useGetBanksQuery();
 
   const [applyForRider, { isLoading: applyLoading }] = useApplyForRiderMutation();
-  const [updateRiderApplication, { isLoading: updateLoading }] = useUpdateRiderApplicationMutation();
+  const [updateRiderApplication, { isLoading: updateLoading }] =
+    useUpdateRiderApplicationMutation();
   const [resolveBank, { isLoading: resolvingBank }] = useResolveBankMutation();
 
   // ─── Local state ──────────────────────────────────────────
@@ -72,17 +228,21 @@ const RiderApplication = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ─── Bank lookup state ──────────────────────────────────────
+  // ─── Bank lookup state ────────────────────────────────────
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [accountNameFetched, setAccountNameFetched] = useState("");
   const [isResolving, setIsResolving] = useState(false);
 
-  // ─── Determine application status ──────────────────────────
+  // ─── Media picker modal state ─────────────────────────────
+  // Tracks which field is being picked: "profilePicture" | "ninPicture" | "proofOfAddress" | null
+  const [mediaField, setMediaField] = useState(null);
+
+  // ─── Determine application status ─────────────────────────
   const verificationStatus = statusData?.verificationStatus;
   const existingData = statusData?.data || {};
   const rejectionReason = statusData?.rejectionReason || null;
 
-  // ─── Pre‑fill form with existing data ──────────────────────
+  // ─── Pre-fill form with existing data ─────────────────────
   useEffect(() => {
     if (existingData && verificationStatus !== "none") {
       setFormData({
@@ -100,18 +260,17 @@ const RiderApplication = () => {
     }
   }, [existingData, verificationStatus]);
 
-  // ─── Handle account number change ──────────────────────────
+  // ─── Handle account number change ─────────────────────────
   const handleAccountNumberChange = (value) => {
     const cleaned = value.replace(/\s+/g, "");
     setFormData((prev) => ({
       ...prev,
       bankAccountNumber: cleaned,
-      accountName: "", // clear account name when account number changes
+      accountName: "",
     }));
     setAccountNameFetched("");
     setErrors((prev) => ({ ...prev, bankAccountNumber: "", accountName: "" }));
 
-    // Show bank dropdown when we have a 10-digit number and banks are loaded
     if (cleaned.length === 10 && !banksLoading && banksData.length > 0) {
       setShowBankDropdown(true);
     } else {
@@ -119,7 +278,7 @@ const RiderApplication = () => {
     }
   };
 
-  // ─── Handle bank selection ──────────────────────────────────
+  // ─── Handle bank selection ────────────────────────────────
   const handleBankSelect = async (bank) => {
     setFormData((prev) => ({
       ...prev,
@@ -159,10 +318,12 @@ const RiderApplication = () => {
     }
   };
 
-  // ─── Manual verify button ────────────────────────────────────
+  // ─── Manual verify ────────────────────────────────────────
   const handleManualVerify = async () => {
     if (!formData.bankCode || formData.bankAccountNumber.length !== 10) {
-      toast.warning("Please enter a valid 10-digit account number and select a bank");
+      toast.warning(
+        "Please enter a valid 10-digit account number and select a bank"
+      );
       return;
     }
 
@@ -201,31 +362,47 @@ const RiderApplication = () => {
       handleAccountNumberChange(value);
       return;
     }
-
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // ─── File handlers ──────────────────────────────────────────
-  const handleFileChange = (e, field) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFiles((prev) => ({ ...prev, [field]: file }));
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFilePreviews((prev) => ({ ...prev, [field]: reader.result }));
-    };
-    reader.readAsDataURL(file);
+  // ═══════════════════════════════════════════════════════════
+  //  Media picking — Capacitor + web via pickMedia()
+  // ═══════════════════════════════════════════════════════════
+  const openMediaPicker = (field) => setMediaField(field);
+
+  const handleMediaPick = async (source) => {
+    const field = mediaField;
+    setMediaField(null);
+    if (!field) return;
+
+    try {
+      const result = await pickMedia({ source });
+      if (!result?.dataUrl) return; // user cancelled
+
+      // Convert data URL → File so we can attach it to FormData
+      const ext = (result.file?.type || "image/jpeg").split("/")[1] || "jpeg";
+      const file =
+        result.file || dataUrlToFile(result.dataUrl, ext);
+
+      setFiles((prev) => ({ ...prev, [field]: file }));
+      setFilePreviews((prev) => ({ ...prev, [field]: result.dataUrl }));
+
+      // Clear any prior error for this field
+      if (errors[field]) {
+        setErrors((prev) => ({ ...prev, [field]: "" }));
+      }
+    } catch (err) {
+      toast.error(err?.message || "Failed to pick image");
+    }
   };
 
   const removeFile = (field) => {
     setFiles((prev) => ({ ...prev, [field]: null }));
     setFilePreviews((prev) => ({ ...prev, [field]: null }));
-    const input = document.getElementById(`file-${field}`);
-    if (input) input.value = "";
   };
 
-  // ─── Validation ─────────────────────────────────────────────
+  // ─── Validation ───────────────────────────────────────────
   const validate = () => {
     const newErrors = {};
     const cleanedNin = formData.nin.replace(/\s+/g, "");
@@ -235,14 +412,18 @@ const RiderApplication = () => {
     if (!formData.fuelingStation.trim()) {
       newErrors.fuelingStation = "Fueling station is required";
     }
-    if (!formData.bankAccountNumber.trim() || formData.bankAccountNumber.length !== 10) {
+    if (
+      !formData.bankAccountNumber.trim() ||
+      formData.bankAccountNumber.length !== 10
+    ) {
       newErrors.bankAccountNumber = "Valid 10-digit account number is required";
     }
     if (!formData.bankName.trim() || !formData.bankCode) {
       newErrors.bankName = "Please select a bank";
     }
     if (!formData.accountName.trim()) {
-      newErrors.accountName = "Account name is required – please verify the account";
+      newErrors.accountName =
+        "Account name is required – please verify the account";
     }
     if (!files.proofOfAddress) {
       newErrors.proofOfAddress = "Proof of address is required";
@@ -251,7 +432,7 @@ const RiderApplication = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ─── Submit ──────────────────────────────────────────────────
+  // ─── Submit ───────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -260,9 +441,11 @@ const RiderApplication = () => {
     Object.entries(formData).forEach(([key, value]) => {
       if (value) submitData.append(key, value);
     });
-    if (files.profilePicture) submitData.append("profilePicture", files.profilePicture);
+    if (files.profilePicture)
+      submitData.append("profilePicture", files.profilePicture);
     if (files.ninPicture) submitData.append("ninPicture", files.ninPicture);
-    if (files.proofOfAddress) submitData.append("proofOfAddress", files.proofOfAddress);
+    if (files.proofOfAddress)
+      submitData.append("proofOfAddress", files.proofOfAddress);
 
     setIsSubmitting(true);
     try {
@@ -283,9 +466,10 @@ const RiderApplication = () => {
     }
   };
 
-  const isLoading = statusLoading || applyLoading || updateLoading || isSubmitting;
+  const isLoading =
+    statusLoading || applyLoading || updateLoading || isSubmitting;
 
-  // ─── Render status message ──────────────────────────────────
+  // ─── Status message ───────────────────────────────────────
   const renderStatusMessage = () => {
     if (verificationStatus === "pending") {
       return (
@@ -294,7 +478,10 @@ const RiderApplication = () => {
             <Loader2 className="h-5 w-5 animate-spin flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">Application pending</p>
-              <p className="text-sm mt-1">Your application is being reviewed by the admin. You will be notified once it's approved or rejected.</p>
+              <p className="text-sm mt-1">
+                Your application is being reviewed by the admin. You will be
+                notified once it's approved or rejected.
+              </p>
             </div>
           </div>
         </div>
@@ -307,7 +494,10 @@ const RiderApplication = () => {
             <CheckCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">Application approved!</p>
-              <p className="text-sm mt-1">You are now a registered rider. You can access the rider dashboard.</p>
+              <p className="text-sm mt-1">
+                You are now a registered rider. You can access the rider
+                dashboard.
+              </p>
               <button
                 onClick={() => navigate("/rider/dashboard")}
                 className="mt-2 px-4 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition text-sm"
@@ -327,9 +517,14 @@ const RiderApplication = () => {
             <div>
               <p className="font-medium">Application rejected</p>
               {rejectionReason && (
-                <p className="text-sm mt-1"><span className="font-medium">Reason:</span> {rejectionReason}</p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">Reason:</span>{" "}
+                  {rejectionReason}
+                </p>
               )}
-              <p className="text-sm mt-1">You can update your details and re‑apply using the form below.</p>
+              <p className="text-sm mt-1">
+                You can update your details and re‑apply using the form below.
+              </p>
             </div>
           </div>
         </div>
@@ -338,16 +533,16 @@ const RiderApplication = () => {
     return null;
   };
 
-  // ─── Render form ────────────────────────────────────────────
+  // ─── Form ─────────────────────────────────────────────────
   const renderForm = () => {
     if (verificationStatus === "pending" || verificationStatus === "approved") {
       return null;
     }
     return (
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {/* NIN */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             NIN (11 digits) <span className="text-red-500">*</span>
           </label>
           <input
@@ -356,17 +551,22 @@ const RiderApplication = () => {
             value={formData.nin}
             onChange={handleChange}
             placeholder="e.g. 12345678901"
-            className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
-              errors.nin ? "border-red-500" : "border-gray-200 dark:border-gray-600"
+            inputMode="numeric"
+            className={`w-full px-3 sm:px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
+              errors.nin
+                ? "border-red-500"
+                : "border-gray-200 dark:border-gray-600"
             }`}
             disabled={isLoading}
           />
-          {errors.nin && <p className="mt-1 text-sm text-red-500">{errors.nin}</p>}
+          {errors.nin && (
+            <p className="mt-1 text-xs sm:text-sm text-red-500">{errors.nin}</p>
+          )}
         </div>
 
         {/* Fueling Station */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Fueling Station <span className="text-red-500">*</span>
           </label>
           <input
@@ -375,17 +575,23 @@ const RiderApplication = () => {
             value={formData.fuelingStation}
             onChange={handleChange}
             placeholder="e.g. TotalEnergies, Ikeja"
-            className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
-              errors.fuelingStation ? "border-red-500" : "border-gray-200 dark:border-gray-600"
+            className={`w-full px-3 sm:px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
+              errors.fuelingStation
+                ? "border-red-500"
+                : "border-gray-200 dark:border-gray-600"
             }`}
             disabled={isLoading}
           />
-          {errors.fuelingStation && <p className="mt-1 text-sm text-red-500">{errors.fuelingStation}</p>}
+          {errors.fuelingStation && (
+            <p className="mt-1 text-xs sm:text-sm text-red-500">
+              {errors.fuelingStation}
+            </p>
+          )}
         </div>
 
-        {/* Bank Details */}
+        {/* Account Number */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Account Number <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -395,8 +601,11 @@ const RiderApplication = () => {
               value={formData.bankAccountNumber}
               onChange={handleChange}
               placeholder="Enter 10-digit account number"
-              className={`w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
-                errors.bankAccountNumber ? "border-red-500" : "border-gray-200 dark:border-gray-600"
+              inputMode="numeric"
+              className={`w-full px-3 sm:px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
+                errors.bankAccountNumber
+                  ? "border-red-500"
+                  : "border-gray-200 dark:border-gray-600"
               }`}
               disabled={isLoading || isResolving}
             />
@@ -406,40 +615,64 @@ const RiderApplication = () => {
               </div>
             )}
           </div>
-          {errors.bankAccountNumber && <p className="mt-1 text-sm text-red-500">{errors.bankAccountNumber}</p>}
+          {errors.bankAccountNumber && (
+            <p className="mt-1 text-xs sm:text-sm text-red-500">
+              {errors.bankAccountNumber}
+            </p>
+          )}
         </div>
 
-        {/* Bank Selection – live from Paystack via backend */}
+        {/* Bank Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Select Bank <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <button
               type="button"
               onClick={() => {
-                if (formData.bankAccountNumber.length === 10 && banksData.length > 0) {
+                if (
+                  formData.bankAccountNumber.length === 10 &&
+                  banksData.length > 0
+                ) {
                   setShowBankDropdown(!showBankDropdown);
                 } else if (banksLoading) {
                   toast.info("Loading banks...");
                 } else if (banksError) {
                   toast.error("Failed to load banks. Please refresh.");
                 } else if (formData.bankAccountNumber.length !== 10) {
-                  toast.warning("Please enter a valid 10-digit account number first");
+                  toast.warning(
+                    "Please enter a valid 10-digit account number first"
+                  );
                 }
               }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
-                errors.bankName ? "border-red-500" : "border-gray-200 dark:border-gray-600"
-              } ${formData.bankAccountNumber.length !== 10 || banksLoading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-              disabled={isLoading || isResolving || formData.bankAccountNumber.length !== 10 || banksLoading}
+              className={`w-full flex items-center justify-between px-3 sm:px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
+                errors.bankName
+                  ? "border-red-500"
+                  : "border-gray-200 dark:border-gray-600"
+              } ${
+                formData.bankAccountNumber.length !== 10 || banksLoading
+                  ? "opacity-60 cursor-not-allowed"
+                  : "cursor-pointer"
+              }`}
+              disabled={
+                isLoading ||
+                isResolving ||
+                formData.bankAccountNumber.length !== 10 ||
+                banksLoading
+              }
             >
-              <span>
+              <span className="truncate">
                 {banksLoading
                   ? "Loading banks..."
                   : formData.bankName || "Select bank"}
               </span>
               {!banksLoading && (
-                <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showBankDropdown ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  className={`h-5 w-5 text-gray-400 transition-transform flex-shrink-0 ${
+                    showBankDropdown ? "rotate-180" : ""
+                  }`}
+                />
               )}
             </button>
 
@@ -460,30 +693,36 @@ const RiderApplication = () => {
                     }`}
                   >
                     {bank.name}
-                    <span className="text-xs text-gray-400 ml-2">({bank.code})</span>
+                    <span className="text-xs text-gray-400 ml-2">
+                      ({bank.code})
+                    </span>
                   </button>
                 ))}
               </div>
             )}
-
-            {banksLoading && formData.bankAccountNumber.length === 10 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 p-4 text-center text-sm text-gray-500">
-                <Loader2 className="h-5 w-5 animate-spin inline-block mr-2" />
-                Loading banks...
-              </div>
-            )}
           </div>
-          {errors.bankName && <p className="mt-1 text-sm text-red-500">{errors.bankName}</p>}
+          {errors.bankName && (
+            <p className="mt-1 text-xs sm:text-sm text-red-500">
+              {errors.bankName}
+            </p>
+          )}
           {banksError && (
             <p className="mt-1 text-xs text-red-500">
-              Could not load banks. <button type="button" onClick={refetchBanks} className="text-[#13ec5b] hover:underline">Retry</button>
+              Could not load banks.{" "}
+              <button
+                type="button"
+                onClick={refetchBanks}
+                className="text-[#13ec5b] hover:underline"
+              >
+                Retry
+              </button>
             </p>
           )}
         </div>
 
-        {/* Account Name - auto-filled */}
+        {/* Account Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Account Name <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -497,8 +736,10 @@ const RiderApplication = () => {
                   ? "Verifying..."
                   : "Auto-fills after bank selection"
               }
-              className={`w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
-                errors.accountName ? "border-red-500" : "border-gray-200 dark:border-gray-600"
+              className={`w-full px-3 sm:px-4 py-2.5 bg-gray-100 dark:bg-gray-600 border rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent ${
+                errors.accountName
+                  ? "border-red-500"
+                  : "border-gray-200 dark:border-gray-600"
               } ${isResolving || resolvingBank ? "opacity-70" : ""}`}
               disabled={true}
             />
@@ -508,17 +749,25 @@ const RiderApplication = () => {
               </div>
             )}
           </div>
-          {errors.accountName && <p className="mt-1 text-sm text-red-500">{errors.accountName}</p>}
-          {formData.bankCode && formData.bankAccountNumber.length === 10 && !formData.accountName && !isResolving && !resolvingBank && (
-            <button
-              type="button"
-              onClick={handleManualVerify}
-              className="mt-1 text-xs text-[#13ec5b] hover:underline flex items-center gap-1"
-            >
-              <Loader2 className="h-3 w-3" />
-              Verify account now
-            </button>
+          {errors.accountName && (
+            <p className="mt-1 text-xs sm:text-sm text-red-500">
+              {errors.accountName}
+            </p>
           )}
+          {formData.bankCode &&
+            formData.bankAccountNumber.length === 10 &&
+            !formData.accountName &&
+            !isResolving &&
+            !resolvingBank && (
+              <button
+                type="button"
+                onClick={handleManualVerify}
+                className="mt-1 text-xs text-[#13ec5b] hover:underline flex items-center gap-1"
+              >
+                <Loader2 className="h-3 w-3" />
+                Verify account now
+              </button>
+            )}
           {formData.accountName && accountNameFetched && (
             <p className="mt-1 text-xs text-green-500">✓ Verified from bank</p>
           )}
@@ -526,7 +775,7 @@ const RiderApplication = () => {
 
         {/* Phone */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Phone Number
           </label>
           <input
@@ -535,131 +784,55 @@ const RiderApplication = () => {
             value={formData.phone}
             onChange={handleChange}
             placeholder="e.g. 08012345678"
-            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
+            inputMode="tel"
+            className="w-full px-3 sm:px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent"
             disabled={isLoading}
           />
         </div>
 
-        {/* File Uploads */}
+        {/* ─── File Uploads (Capacitor-aware) ─────────────── */}
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Profile Picture
-            </label>
-            <div className="flex items-center gap-4">
-              <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                <Upload className="h-4 w-4" />
-                <span className="text-sm">Choose file</span>
-                <input
-                  id="file-profilePicture"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, "profilePicture")}
-                  className="hidden"
-                  disabled={isLoading}
-                />
-              </label>
-              {filePreviews.profilePicture && (
-                <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600">
-                  <img src={filePreviews.profilePicture} alt="Profile preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeFile("profilePicture")}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              {existingData.profilePicture && !filePreviews.profilePicture && (
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Current: <a href={existingData.profilePicture} target="_blank" rel="noopener noreferrer" className="text-[#13ec5b] underline">View</a>
-                </div>
-              )}
-            </div>
-          </div>
+          <DocumentField
+            label="Profile Picture"
+            fieldKey="profilePicture"
+            preview={filePreviews.profilePicture}
+            existingUrl={existingData.profilePicture}
+            error={errors.profilePicture}
+            disabled={isLoading}
+            isRound
+            onPick={() => openMediaPicker("profilePicture")}
+            onRemove={() => removeFile("profilePicture")}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              NIN Picture
-            </label>
-            <div className="flex items-center gap-4">
-              <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                <Upload className="h-4 w-4" />
-                <span className="text-sm">Choose file</span>
-                <input
-                  id="file-ninPicture"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, "ninPicture")}
-                  className="hidden"
-                  disabled={isLoading}
-                />
-              </label>
-              {filePreviews.ninPicture && (
-                <div className="relative w-12 h-12 rounded overflow-hidden border border-gray-200 dark:border-gray-600">
-                  <img src={filePreviews.ninPicture} alt="NIN preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeFile("ninPicture")}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              {existingData.ninPicture && !filePreviews.ninPicture && (
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Current: <a href={existingData.ninPicture} target="_blank" rel="noopener noreferrer" className="text-[#13ec5b] underline">View</a>
-                </div>
-              )}
-            </div>
-          </div>
+          <DocumentField
+            label="NIN Picture"
+            fieldKey="ninPicture"
+            preview={filePreviews.ninPicture}
+            existingUrl={existingData.ninPicture}
+            error={errors.ninPicture}
+            disabled={isLoading}
+            onPick={() => openMediaPicker("ninPicture")}
+            onRemove={() => removeFile("ninPicture")}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Proof of Address <span className="text-red-500">*</span>
-            </label>
-            <div className="flex items-center gap-4">
-              <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
-                <Upload className="h-4 w-4" />
-                <span className="text-sm">Choose file</span>
-                <input
-                  id="file-proofOfAddress"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, "proofOfAddress")}
-                  className="hidden"
-                  disabled={isLoading}
-                />
-              </label>
-              {filePreviews.proofOfAddress && (
-                <div className="relative w-12 h-12 rounded overflow-hidden border border-gray-200 dark:border-gray-600">
-                  <img src={filePreviews.proofOfAddress} alt="Proof preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeFile("proofOfAddress")}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              {existingData.proofOfAddress && !filePreviews.proofOfAddress && (
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Current: <a href={existingData.proofOfAddress} target="_blank" rel="noopener noreferrer" className="text-[#13ec5b] underline">View</a>
-                </div>
-              )}
-            </div>
-            {errors.proofOfAddress && <p className="mt-1 text-sm text-red-500">{errors.proofOfAddress}</p>}
-          </div>
+          <DocumentField
+            label="Proof of Address"
+            required
+            fieldKey="proofOfAddress"
+            preview={filePreviews.proofOfAddress}
+            existingUrl={existingData.proofOfAddress}
+            error={errors.proofOfAddress}
+            disabled={isLoading}
+            onPick={() => openMediaPicker("proofOfAddress")}
+            onRemove={() => removeFile("proofOfAddress")}
+          />
         </div>
 
         {/* Submit */}
         <button
           type="submit"
           disabled={isLoading || isResolving || resolvingBank}
-          className="w-full py-3 bg-[#13ec5b] hover:bg-[#10d04e] text-white font-bold rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-60"
+          className="w-full py-3 bg-[#13ec5b] hover:bg-[#10d04e] text-white font-bold rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-60 text-sm sm:text-base"
         >
           {isLoading ? (
             <>
@@ -681,18 +854,18 @@ const RiderApplication = () => {
     );
   };
 
-  // ─── Main render ────────────────────────────────────────────
+  // ─── Main render ──────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
       <div className="lg:ml-64 pb-20 lg:pb-8">
-        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl">
+        <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between gap-2">
+          <h1 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white lg:text-xl truncate">
             Become a Rider
           </h1>
           <button
             onClick={() => navigate("/profile")}
-            className="text-sm text-[#13ec5b] hover:underline"
+            className="text-xs sm:text-sm text-[#13ec5b] hover:underline flex-shrink-0"
           >
             Profile
           </button>
@@ -701,10 +874,12 @@ const RiderApplication = () => {
         <div className="w-full px-0 sm:px-4 lg:px-6 py-4">
           <div className="max-w-2xl mx-auto">
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
-              <div className="p-5">
+              <div className="p-4 sm:p-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <UserCheck className="h-6 w-6 text-[#13ec5b]" />
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Rider Application</h2>
+                  <UserCheck className="h-5 w-5 sm:h-6 sm:w-6 text-[#13ec5b] flex-shrink-0" />
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">
+                    Rider Application
+                  </h2>
                 </div>
 
                 {statusLoading ? (
@@ -712,7 +887,7 @@ const RiderApplication = () => {
                     <Loader2 className="h-8 w-8 animate-spin text-[#13ec5b]" />
                   </div>
                 ) : statusError ? (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-300 text-sm">
                     <AlertCircle className="h-5 w-5 inline-block mr-2" />
                     Failed to load application status. Please try again.
                   </div>
@@ -726,19 +901,44 @@ const RiderApplication = () => {
             </div>
 
             <div className="mt-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
-              <div className="p-5 text-sm text-gray-600 dark:text-gray-300">
-                <p className="font-medium text-gray-800 dark:text-gray-200">What happens next?</p>
+              <div className="p-4 sm:p-5 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                <p className="font-medium text-gray-800 dark:text-gray-200">
+                  What happens next?
+                </p>
                 <ul className="list-disc list-inside space-y-1 mt-2">
                   <li>Your application will be reviewed by an admin.</li>
-                  <li>You'll receive a notification once your status changes.</li>
-                  <li>If approved, you'll get access to the Rider Dashboard.</li>
-                  <li>You can update your details if your application is rejected.</li>
+                  <li>
+                    You'll receive a notification once your status changes.
+                  </li>
+                  <li>
+                    If approved, you'll get access to the Rider Dashboard.
+                  </li>
+                  <li>
+                    You can update your details if your application is
+                    rejected.
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ─── Media picker modal ─────────────────────────── */}
+      <MediaSourceModal
+        isOpen={!!mediaField}
+        onClose={() => setMediaField(null)}
+        onPick={handleMediaPick}
+        title={
+          mediaField === "profilePicture"
+            ? "Profile picture"
+            : mediaField === "ninPicture"
+            ? "NIN picture"
+            : mediaField === "proofOfAddress"
+            ? "Proof of address"
+            : "Upload image"
+        }
+      />
 
       <Bottombar />
     </div>

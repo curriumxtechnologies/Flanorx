@@ -1,29 +1,26 @@
 // components/station/Sidebar.jsx
 import React from "react";
 import { NavLink, useNavigate } from "react-router";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import {
   LayoutDashboard,
   Package,
   Users,
   Truck,
-  LogOut,
   Sun,
   Moon,
   ArrowLeft,
   Boxes,
 } from "lucide-react";
-import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
-import { apiSlice } from "../../features/apiSlice";
 import {
   useGetStationDashboardQuery,
   useGetMyStationQuery,
 } from "../../features/stationApiSlice";
+import LogoutButton from "../../utils/logoutBtn";
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { userInfo } = useSelector((state) => state.auth);
   const { theme, toggleTheme } = useTheme();
 
@@ -39,12 +36,6 @@ const Sidebar = () => {
   const { data: station } = useGetMyStationQuery();
 
   const openOrdersCount = dashboard?.openOrders || 0;
-
-  const handleLogout = () => {
-    dispatch(logout());
-    dispatch(apiSlice.resetApiState());
-    navigate("/login", { replace: true });
-  };
 
   const navItems = [
     { to: "/station/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -138,13 +129,8 @@ const Sidebar = () => {
           )}
         </button>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Logout</span>
-        </button>
+        {/* ⭐ Drop-in logout */}
+        <LogoutButton className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-60" />
       </div>
     </aside>
   );

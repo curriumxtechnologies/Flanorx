@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Flanorx</string>
+    <string name="title_activity_main">Flanorx</string>
+    <string name="package_name">com.flanorx.flanorx</string>
+    <string name="custom_url_scheme">com.flanorx.flanorx</string>
+</resources>

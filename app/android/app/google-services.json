@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "648354728103",
+    "project_id": "flanorx-547b5",
+    "storage_bucket": "flanorx-547b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648354728103:android:132466e8feb976e7893382",
+        "android_client_info": {
+          "package_name": "com.flanorx.flanorx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEsZ8pr0ZVNce90-nL_6Nfldsggbw24IQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,27 +1,24 @@
 // src/components/rider/Sidebar.jsx
 import React from "react";
 import { NavLink, useNavigate } from "react-router";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import {
   LayoutDashboard,
   Truck,
   Wallet,
   MapPin,
   User,
-  LogOut,
   Settings,
   Sun,
   Moon,
   Home,
 } from "lucide-react";
-import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
 import { useGetAvailableDeliveriesQuery } from "../../features/deliveryApiSlice";
-import { apiSlice } from "../../features/apiSlice";
+import LogoutButton from "../../utils/logoutBtn";
 
 const RiderSidebar = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { theme, toggleTheme } = useTheme();
   const { userInfo } = useSelector((state) => state.auth);
 
@@ -31,17 +28,6 @@ const RiderSidebar = () => {
     { pollingInterval: 15000, refetchOnFocus: true, refetchOnReconnect: true }
   );
   const availableCount = availableDeliveries.length;
-
-  const handleLogout = () => {
-    // 1. Clear Redux auth state + all storage keys
-    dispatch(logout());
-
-    // 2. Wipe RTK Query cache so no stale data lingers
-    dispatch(apiSlice.util.resetApiState());
-
-    // 3. Redirect with replace
-    navigate("/login", { replace: true });
-  };
 
   const navItems = [
     { to: "/rider/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -129,13 +115,8 @@ const RiderSidebar = () => {
           <span>Settings</span>
         </button>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Logout</span>
-        </button>
+        {/* ⭐ Drop-in logout */}
+        <LogoutButton className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-60" />
       </div>
     </aside>
   );

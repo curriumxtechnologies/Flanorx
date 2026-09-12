@@ -20,15 +20,47 @@ import {
 } from "../features/userApiSlice";
 import { setCredentials } from "../features/auth/authSlice";
 
+// ─── Brand icons ────────────────────────────────────────────
 const AppleIcon = ({ className }) => (
-  <svg viewBox="0 0 384 512" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+  <svg
+    viewBox="0 0 384 512"
+    fill="currentColor"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76-19.7C63.3 141 0 184.8 0 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-57.7-90-57.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
   </svg>
 );
 
 const FacebookIcon = ({ className }) => (
-  <svg viewBox="0 0 320 512" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+  <svg
+    viewBox="0 0 320 512"
+    fill="currentColor"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z" />
+  </svg>
+);
+
+const GoogleIcon = ({ className }) => (
+  <svg viewBox="0 0 48 48" className={className}>
+    <path
+      fill="#EA4335"
+      d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+    />
+    <path
+      fill="#4285F4"
+      d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+    />
+    <path
+      fill="#34A853"
+      d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+    />
   </svg>
 );
 
@@ -103,7 +135,7 @@ const Signup = () => {
     }
 
     try {
-      const result = await register({
+      await register({
         name,
         email,
         password,
@@ -160,6 +192,7 @@ const Signup = () => {
           _id: result._id,
           name: result.name,
           email: result.email,
+          role: result.role,
           profile: result.profile,
           authMethod: result.authMethod,
           userType: "customer",
@@ -196,7 +229,9 @@ const Signup = () => {
       callback: async (resp) => {
         try {
           if (!resp?.access_token) throw new Error("No access token");
-          const result = await googleAuth({ token: resp.access_token }).unwrap();
+          const result = await googleAuth({
+            token: resp.access_token,
+          }).unwrap();
           dispatch(setCredentials(result));
           localStorage.setItem(
             "flanorx_auth",
@@ -205,6 +240,7 @@ const Signup = () => {
               _id: result._id,
               name: result.name,
               email: result.email,
+              role: result.role,
               profile: result.profile,
               authMethod: result.authMethod,
               userType: "customer",
@@ -229,163 +265,143 @@ const Signup = () => {
     isRegisterLoading || isVerifyLoading || isResendLoading || isGoogleLoading;
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-gray-950 font-sans">
-      {/* LEFT – fixed image (desktop only) */}
+    <div className="min-h-screen flex bg-white dark:bg-gray-950">
+      {/* ═══ LEFT — image panel (desktop only) ═══ */}
       <div className="hidden lg:flex lg:w-1/2 min-h-screen sticky top-0 h-screen overflow-hidden">
         <img
           src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
-          alt="Fuel and Gas delivery"
+          alt="Fuel and gas delivery"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#13ec5b]/20 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#13ec5b]/20 to-transparent" />
         <div className="absolute bottom-10 left-10 text-white">
           <h2 className="text-3xl font-bold drop-shadow-lg">
-            Fuel & Gas at your doorstep
+            Fuel &amp; Gas at your doorstep
           </h2>
           <p className="text-lg opacity-90">Skip the line, we deliver.</p>
         </div>
       </div>
 
-      {/* RIGHT – form panel (scrollable) */}
-      <div className="w-full lg:w-1/2 min-h-screen overflow-y-auto flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-20 bg-white dark:bg-gray-950">
-        <div className="max-w-md w-full mx-auto">
+      {/* ═══ RIGHT — form panel ═══ */}
+      <div className="w-full lg:w-1/2 min-h-screen overflow-y-auto flex flex-col justify-center bg-white dark:bg-gray-950">
+        <div className="w-full max-w-md mx-auto px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
           {/* Logo */}
-          <div className="flex items-center justify-center lg:justify-start mb-8">
-            <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
+          <div className="flex justify-center lg:justify-start mb-8 lg:mb-10">
+            <img src="/flanorx.png" alt="Flanorx" className="h-7 sm:h-8 w-auto" />
           </div>
 
           {step === 1 ? (
-            // ----- SIGNUP FORM -----
+            // ═══ SIGNUP FORM ═══
             <>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white text-center lg:text-left">
-                Create an account
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 text-center lg:text-left">
-                Join Flanorx and start saving on fuel & gas.
-              </p>
+              <div className="text-center lg:text-left mb-7 lg:mb-8">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  Create your account
+                </h1>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
+                  Join Flanorx and start saving on fuel &amp; gas.
+                </p>
+              </div>
 
               {error && (
-                <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800">
+                <div className="mb-5 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm border border-green-200 dark:border-green-800">
+                <div className="mb-5 p-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm border border-green-200 dark:border-green-800">
                   {success}
                 </div>
               )}
 
-              <div className="flex items-center justify-center gap-3 mt-6">
-                <button
-                  onClick={() => handleSocialUnavailable("Apple")}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 transition font-medium text-slate-700 dark:text-slate-300 shadow-sm hover:shadow"
-                >
-                  <AppleIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleGoogleSignup}
-                  disabled={isLoading}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 transition font-medium text-slate-700 dark:text-slate-300 disabled:opacity-60 shadow-sm hover:shadow"
-                >
-                  {isGoogleLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <svg viewBox="0 0 48 48" className="h-5 w-5">
-                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                      <path fill="none" d="M0 0h48v48H0z"/>
-                    </svg>
-                  )}
-                  <span>Google</span>
-                </button>
-                <button
-                  onClick={() => handleSocialUnavailable("Facebook")}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700 transition font-medium text-slate-700 dark:text-slate-300 shadow-sm hover:shadow"
-                >
-                  <FacebookIcon className="h-5 w-5 text-[#1877F2]" />
-                </button>
-              </div>
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-3 mb-6">
-                Or sign up with
-              </p>
-
+              {/* ═══ Form ═══ */}
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Full Name <span className="text-red-500 dark:text-red-400">*</span>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Full name <span className="text-red-500 dark:text-red-400">*</span>
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="John Doe"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent transition"
+                      autoComplete="name"
+                      className="w-full pl-10 pr-4 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
                       disabled={isLoading}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Email Address <span className="text-red-500 dark:text-red-400">*</span>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Email <span className="text-red-500 dark:text-red-400">*</span>
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="you@example.com"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent transition"
+                      autoComplete="email"
+                      inputMode="email"
+                      className="w-full pl-10 pr-4 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
                       disabled={isLoading}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Password <span className="text-red-500 dark:text-red-400">*</span>
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
                     <input
                       type={showPassword ? "text" : "password"}
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="Min 8 characters"
-                      className="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent transition"
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-12 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
                       disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4.5 w-4.5" />
+                      ) : (
+                        <Eye className="h-4.5 w-4.5" />
+                      )}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Username (optional)
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Username{" "}
+                    <span className="text-slate-400 dark:text-slate-500 font-normal">
+                      (optional)
+                    </span>
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-slate-500" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
                     <input
                       type="text"
                       name="username"
                       value={formData.username}
                       onChange={handleChange}
                       placeholder="johndoe"
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent transition"
+                      autoComplete="username"
+                      className="w-full pl-10 pr-4 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
                       disabled={isLoading}
                     />
                   </div>
@@ -394,26 +410,78 @@ const Signup = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 px-4 bg-[#13ec5b] hover:bg-[#10d04e] text-white font-bold rounded-lg transition duration-200 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-full py-3.5 px-4 bg-[#13ec5b] hover:bg-[#10d04e] active:bg-[#0fbe47] text-gray-900 font-bold rounded-xl transition duration-150 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base"
                 >
-                  {isRegisterLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Create Account"}
+                  {isRegisterLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    "Create account"
+                  )}
                 </button>
               </form>
 
-              <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+              {/* ═══ Divider ═══ */}
+              <div className="my-6 flex items-center gap-3">
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                <span className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  or continue with
+                </span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+              </div>
+
+              {/* ═══ Social buttons ═══ */}
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignup}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-2.5 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
+                >
+                  {isGoogleLoading ? (
+                    <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                  ) : (
+                    <GoogleIcon className="h-4.5 w-4.5" />
+                  )}
+                  <span>Continue with Google</span>
+                </button>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSocialUnavailable("Apple")}
+                    disabled={isLoading}
+                    className="flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
+                  >
+                    <AppleIcon className="h-4 w-4" />
+                    <span>Apple</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSocialUnavailable("Facebook")}
+                    disabled={isLoading}
+                    className="flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
+                  >
+                    <FacebookIcon className="h-4 w-4 text-[#1877F2]" />
+                    <span>Facebook</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ═══ Sign in link ═══ */}
+              <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="font-medium text-[#13ec5b] hover:underline"
+                  className="font-semibold text-[#0f9c46] dark:text-[#13ec5b] hover:underline"
                 >
                   Sign in
                 </Link>
               </p>
             </>
           ) : (
-            // ----- OTP VERIFICATION -----
+            // ═══ OTP VERIFICATION ═══
             <>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-6">
                 <button
                   onClick={() => {
                     setStep(1);
@@ -421,41 +489,52 @@ const Signup = () => {
                     setError("");
                     setSuccess("");
                   }}
-                  className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition mb-4"
                 >
-                  <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
                 </button>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Verify Your Email</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  Verify your email
+                </h1>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
+                  We sent a 6-digit code to{" "}
+                  <span className="font-medium text-slate-700 dark:text-slate-300 break-all">
+                    {registeredEmail}
+                  </span>
+                </p>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
-                We sent a 6-digit code to{" "}
-                <span className="font-medium text-slate-700 dark:text-slate-300">{registeredEmail}</span>. Enter it below to verify your account.
-              </p>
 
               {error && (
-                <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800">
+                <div className="mb-5 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm border border-green-200 dark:border-green-800">
+                <div className="mb-5 p-3 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm border border-green-200 dark:border-green-800">
                   {success}
                 </div>
               )}
 
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Enter OTP</label>
-                <div className="flex gap-2 justify-center">
+              {/* OTP inputs */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Enter the 6-digit code
+                </label>
+                <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
                       id={`otp-${index}`}
                       type="text"
                       maxLength="1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
-                      className="w-12 h-14 text-center text-xl font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-transparent transition"
+                      className="w-full aspect-square text-center text-lg sm:text-xl font-bold rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
                       disabled={isLoading}
                     />
                   ))}
@@ -465,25 +544,35 @@ const Signup = () => {
               <button
                 onClick={handleVerifyOtp}
                 disabled={isLoading}
-                className="w-full mt-6 py-3 px-4 bg-[#13ec5b] hover:bg-[#10d04e] text-white font-bold rounded-lg transition duration-200 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full py-3.5 px-4 bg-[#13ec5b] hover:bg-[#10d04e] active:bg-[#0fbe47] text-gray-900 font-bold rounded-xl transition duration-150 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base"
               >
-                {isVerifyLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify Email"}
+                {isVerifyLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  "Verify email"
+                )}
               </button>
 
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-sm text-slate-500 dark:text-slate-400">
-                  {timer > 0 ? (
-                    `Resend code in ${timer}s`
-                  ) : (
-                    <button
-                      onClick={handleResendOtp}
-                      disabled={isResendLoading || !canResend}
-                      className="text-[#13ec5b] hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isResendLoading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Resend OTP"}
-                    </button>
-                  )}
-                </span>
+              <div className="mt-5 flex items-center justify-between gap-2 text-sm">
+                {timer > 0 ? (
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Resend in{" "}
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                      {timer}s
+                    </span>
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleResendOtp}
+                    disabled={isResendLoading || !canResend}
+                    className="text-[#0f9c46] dark:text-[#13ec5b] hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                  >
+                    {isResendLoading && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    )}
+                    Resend code
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setStep(1);
@@ -491,7 +580,7 @@ const Signup = () => {
                     setError("");
                     setSuccess("");
                   }}
-                  className="text-sm text-slate-500 dark:text-slate-400 hover:text-[#13ec5b] transition"
+                  className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition text-sm"
                 >
                   Change email
                 </button>

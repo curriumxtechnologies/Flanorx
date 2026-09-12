@@ -165,6 +165,9 @@ const orderSchema = new mongoose.Schema(
       default: null,
     },
 
+    // ⭐ Idempotency for the automatic "pending too long" reminder email
+    pendingReminderSentAt: { type: Date, default: null },
+
     acceptedAt: { type: Date, default: null },
     pickedUpAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
@@ -257,6 +260,14 @@ orderSchema.index({ paid: 1, rider: 1, deliveryStatus: 1 });
 orderSchema.index({ orderType: 1 });
 orderSchema.index({ subscriptionDueDate: 1 });
 orderSchema.index({ station: 1, status: 1, createdAt: -1 });
+
+// Scheduler lookup: pending + unpaid + not-yet-reminded + old enough
+orderSchema.index({
+  paid: 1,
+  status: 1,
+  pendingReminderSentAt: 1,
+  createdAt: 1,
+});
 
 // NOTE: `verificationToken` already has `unique: true, sparse: true` in the
 // field definition above, which creates the index. Do NOT add a

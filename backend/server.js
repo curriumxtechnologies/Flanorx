@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -14,58 +15,67 @@ import trackingRoutes from "./routes/trackingRoutes.js";
 import gasRoutes from "./routes/gasRoutes.js";
 import waitlistRoutes from "./routes/waitlistRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import emailRoutes from "./routes/emailNotificationRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import {
   publicRouter as stationPublicRoutes,
   stationRouter as stationScopedRoutes,
 } from "./routes/stationRoutes.js";
+
+import {
+  startEmailScheduler,
+  stopEmailScheduler,
+} from "./controllers/emailNotificationController.js";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
 
 // ✅ Fix DNS SRV resolution issues on Windows/VPN setups
-dns.setDefaultResultOrder('ipv4first');
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+dns.setDefaultResultOrder("ipv4first");
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 const MONGO_URL = process.env.MONGO_URL;
 
 // ✅ Parse JSON with increased limit for base64 images
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// ✅ CORS configuration 
+// ✅ CORS configuration
 const allowedOrigins = [
-  'http://localhost:3000', 
-  'http://127.0.0.1:5500', 
-  'http://localhost:8000',
-  'https://flanorx.onrender.com', 
-  'https://flanorx.vercel.app',
-  'https://flanorx.com',
-  'https://flanorx-api-6920.onrender.com',
-  'https://staging.flanorx.com',
-  'https://flanorx-kduo.onrender.com',
-  'https://web.flanorx.com',
+  "http://localhost:3000",
+  "http://127.0.0.1:5500",
+  "http://localhost:8000",
+  "https://flanorx.onrender.com",
+  "https://flanorx.vercel.app",
+  "https://flanorx.com",
+  "https://flanorx-api-6920.onrender.com",
+  "https://staging.flanorx.com",
+  "https://flanorx-kduo.onrender.com",
+  "https://web.flanorx.com",
 ];
 
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('Blocked origin:', origin);
-      callback(null, false);
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.log("Blocked origin:", origin);
+        callback(null, false);
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
 
 // ✅ Health test endpoint
 app.get("/api/health", (req, res) => {
@@ -82,8 +92,10 @@ app.use("/api/tracking", trackingRoutes);
 app.use("/api/gas", gasRoutes);
 app.use("/api/waitlist", waitlistRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/email", emailRoutes); // email status / debug / manual trigger
+app.use("/api/notifications", notificationRoutes); // push tokens + send + broadcast
 app.use("/api/stations", stationPublicRoutes); // GET /api/stations/nearby
-app.use("/api/station", stationScopedRoutes);  // everything else under /api/station
+app.use("/api/station", stationScopedRoutes); // everything else under /api/station
 
 // ✅ Error middleware order (notFound first)
 app.use(notFound);
@@ -94,9 +106,28 @@ mongoose
   .connect(MONGO_URL)
   .then(() => {
     console.log("✅ Connected to MongoDB");
-    app.listen(PORT, "0.0.0.0", () =>
-      // console.log(`✅ Server running on http://0.0.0.0:${PORT}`)
-    console.log(`✅ Server running on port ${PORT}`)
+
+    const server = app.listen(PORT, "0.0.0.0", () =>
+      console.log(`✅ Server running on port ${PORT}`)
     );
+
+    // ✅ Boot the automatic email scheduler
+    // Sweeps for pending/unpaid orders every 60s and sends reminder emails.
+    // Silently skips if RESEND_API_KEY is not set.
+    startEmailScheduler();
+
+    // Graceful shutdown so intervals don't keep the process alive
+    const shutdown = (signal) => {
+      console.log(`\n${signal} received — shutting down cleanly...`);
+      stopEmailScheduler();
+      server.close(() => {
+        mongoose.connection.close(false).finally(() => {
+          process.exit(0);
+        });
+      });
+    };
+
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   })
   .catch((err) => console.error("❌ Mongo error:", err.message));

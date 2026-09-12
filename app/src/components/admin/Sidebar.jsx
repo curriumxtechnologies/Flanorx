@@ -1,7 +1,6 @@
 // components/admin/Sidebar.jsx
 import React from "react";
 import { NavLink, useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
 import {
   LayoutDashboard,
   Package,
@@ -9,24 +8,21 @@ import {
   Truck,
   Settings,
   BarChart3,
-  LogOut,
   Sun,
   Moon,
   ArrowLeft,
   ClipboardList,
   Store,
 } from "lucide-react";
-import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
-import { apiSlice } from "../../features/apiSlice";
 import {
   useGetDashboardStatsQuery,
   useGetRiderApplicationsQuery,
 } from "../../features/adminApiSlice";
+import LogoutButton from "../../utils/logoutBtn";
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { theme, toggleTheme } = useTheme();
 
   // Live counts
@@ -46,12 +42,6 @@ const Sidebar = () => {
 
   const pendingOrdersCount = stats?.pendingOrders || 0;
   const pendingAppsCount = pendingApplications.length;
-
-  const handleLogout = () => {
-    dispatch(logout());
-    dispatch(apiSlice.util.resetApiState());
-    navigate("/login", { replace: true });
-  };
 
   const navItems = [
     { to: "/superuser/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -132,13 +122,9 @@ const Sidebar = () => {
           )}
           <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
         </button>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Logout</span>
-        </button>
+
+        {/* ⭐ Drop-in logout */}
+        <LogoutButton className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-60" />
       </div>
     </aside>
   );

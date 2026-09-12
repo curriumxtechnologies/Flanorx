@@ -1,12 +1,10 @@
 // src/components/rider/MoreDrawer.jsx
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
 import {
   X,
   User,
   Settings,
-  LogOut,
   Sun,
   Moon,
   Monitor,
@@ -15,13 +13,11 @@ import {
   Wallet,
   MapPin,
 } from "lucide-react";
-import { logout } from "../../features/auth/authSlice";
 import { useTheme } from "../../context/ThemeContext";
-import { apiSlice } from "../../features/apiSlice";
+import LogoutButton from "../../utils/logoutBtn";
 
 const RiderMoreDrawer = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { theme, toggleTheme, setSystemTheme } = useTheme();
   const drawerRef = useRef(null);
 
@@ -43,36 +39,31 @@ const RiderMoreDrawer = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose]);
 
-  const handleLogout = () => {
-    // 1. Close the drawer first (stops animation vs navigation clash)
-    onClose();
-
-    // 2. Clear Redux auth state + all storage keys
-    dispatch(logout());
-
-    // 3. Wipe RTK Query cache so no stale data leaks to the next user
-    dispatch(apiSlice.util.resetApiState());
-
-    // 4. Redirect with replace (login not pushed into history)
-    navigate("/login", { replace: true });
-  };
-
   // Rider-specific shortcuts
   const riderItems = [
     {
       label: "Deliveries",
       icon: Truck,
-      onClick: () => { navigate("/rider/deliveries"); onClose(); },
+      onClick: () => {
+        navigate("/rider/deliveries");
+        onClose();
+      },
     },
     {
       label: "Earnings",
       icon: Wallet,
-      onClick: () => { navigate("/rider/earnings"); onClose(); },
+      onClick: () => {
+        navigate("/rider/earnings");
+        onClose();
+      },
     },
     {
       label: "Tracking",
       icon: MapPin,
-      onClick: () => { navigate("/rider/tracking"); onClose(); },
+      onClick: () => {
+        navigate("/rider/tracking");
+        onClose();
+      },
     },
   ];
 
@@ -81,12 +72,18 @@ const RiderMoreDrawer = ({ isOpen, onClose }) => {
     {
       label: "Profile",
       icon: User,
-      onClick: () => { navigate("/rider/profile"); onClose(); },
+      onClick: () => {
+        navigate("/rider/profile");
+        onClose();
+      },
     },
     {
       label: "Settings",
       icon: Settings,
-      onClick: () => { navigate("/settings"); onClose(); },
+      onClick: () => {
+        navigate("/settings");
+        onClose();
+      },
     },
   ];
 
@@ -123,7 +120,10 @@ const RiderMoreDrawer = ({ isOpen, onClose }) => {
             Theme
           </p>
           <button
-            onClick={() => { toggleTheme(); onClose(); }}
+            onClick={() => {
+              if (theme !== "light") toggleTheme();
+              onClose();
+            }}
             className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
               theme === "light"
                 ? "bg-[#13ec5b]/10 text-[#13ec5b]"
@@ -134,7 +134,10 @@ const RiderMoreDrawer = ({ isOpen, onClose }) => {
             <span>Light</span>
           </button>
           <button
-            onClick={() => { toggleTheme(); onClose(); }}
+            onClick={() => {
+              if (theme !== "dark") toggleTheme();
+              onClose();
+            }}
             className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
               theme === "dark"
                 ? "bg-[#13ec5b]/10 text-[#13ec5b]"
@@ -145,7 +148,10 @@ const RiderMoreDrawer = ({ isOpen, onClose }) => {
             <span>Dark</span>
           </button>
           <button
-            onClick={() => { setSystemTheme(); onClose(); }}
+            onClick={() => {
+              setSystemTheme();
+              onClose();
+            }}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <Monitor className="h-5 w-5" />
@@ -187,7 +193,10 @@ const RiderMoreDrawer = ({ isOpen, onClose }) => {
           <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-800">
             <button
               type="button"
-              onClick={() => { navigate("/dashboard"); onClose(); }}
+              onClick={() => {
+                navigate("/dashboard");
+                onClose();
+              }}
               className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <Home className="h-5 w-5" />
@@ -195,14 +204,12 @@ const RiderMoreDrawer = ({ isOpen, onClose }) => {
             </button>
           </div>
 
+          {/* ⭐ Drop-in logout — closes the drawer first, then logs out */}
           <hr className="my-3 border-gray-200 dark:border-gray-800" />
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
+          <LogoutButton
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-60"
+            onBeforeLogout={onClose}
+          />
         </div>
       </div>
     </>

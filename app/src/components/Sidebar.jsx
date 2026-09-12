@@ -8,7 +8,6 @@ import {
   Flame,
   Fuel,
   User,
-  LogOut,
   Settings,
   Sun,
   Moon,
@@ -19,17 +18,16 @@ import {
   Shield,
   Store,
 } from "lucide-react";
-import { logout } from "../features/auth/authSlice";
 import { useTheme } from "../context/ThemeContext";
 import { useGetMyOrdersQuery } from "../features/orderApiSlice";
 import { useGetProfileQuery } from "../features/userApiSlice";
 import { useGetAvailableDeliveriesQuery } from "../features/deliveryApiSlice";
 import { useGetRiderApplicationsQuery } from "../features/adminApiSlice";
-import { apiSlice } from "../features/apiSlice";
+import LogoutButton from "../utils/logoutBtn";
 
 const Sidebar = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch(); // still needed if other things use it; otherwise remove
   const { theme, toggleTheme } = useTheme();
   const { userInfo } = useSelector((state) => state.auth);
 
@@ -40,14 +38,11 @@ const Sidebar = () => {
   const isAdmin = role === "admin";
 
   // ─── Station membership ───────────────────────────────────
-  // The profile response gives us `station` (ObjectId or null) and
-  // `stationRole` ("admin" | "staff" | "rider" | null).
   const stationId = profile?.station || userInfo?.station;
   const stationRole = profile?.stationRole || userInfo?.stationRole;
   const isStationAdmin = !!stationId && stationRole === "admin";
 
   // ─── Polling counts ───────────────────────────────────────
-  // Unpaid/pending user orders
   const { data: myOrders = [] } = useGetMyOrdersQuery(
     { paid: false },
     {
@@ -60,7 +55,6 @@ const Sidebar = () => {
     (o) => o.status !== "cancelled"
   ).length;
 
-  // Available deliveries (rider only)
   const { data: availableDeliveries = [] } = useGetAvailableDeliveriesQuery(
     undefined,
     {
@@ -72,7 +66,6 @@ const Sidebar = () => {
   );
   const availableDeliveriesCount = availableDeliveries.length;
 
-  // Pending rider applications (admin only)
   const { data: pendingApplications = [] } = useGetRiderApplicationsQuery(
     { status: "pending" },
     {
@@ -83,12 +76,6 @@ const Sidebar = () => {
     }
   );
   const pendingAppsCount = pendingApplications.length;
-
-  const handleLogout = () => {
-    dispatch(logout());
-    dispatch(apiSlice.util.resetApiState());
-    navigate("/login", { replace: true });
-  };
 
   const navItems = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -122,7 +109,7 @@ const Sidebar = () => {
         <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
       </div>
 
-      {/* Navigation (scrollable) */}
+      {/* Navigation */}
       <nav className="flex-1 min-h-0 px-4 py-6 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
@@ -148,7 +135,7 @@ const Sidebar = () => {
           </NavLink>
         ))}
 
-        {/* ─── Station Admin section ───────────────────────── */}
+        {/* Station Admin section */}
         {isStationAdmin && (
           <>
             <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
@@ -261,13 +248,8 @@ const Sidebar = () => {
           <span>Settings</span>
         </button>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Logout</span>
-        </button>
+        {/* ⭐ Drop-in logout */}
+        <LogoutButton className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" />
       </div>
     </aside>
   );
