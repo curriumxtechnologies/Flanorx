@@ -67,7 +67,7 @@ const Welcome = () => {
   }, []);
 
   const features = [
-    { icon: Zap, label: "30-min delivery" },
+    { icon: Zap, label: "Fast delivery" },
     { icon: Tag, label: "Member pricing" },
     { icon: MapPin, label: "Live tracking" },
     { icon: ShieldCheck, label: "Secure payment" },
@@ -128,25 +128,26 @@ const Welcome = () => {
             where you need it.
           </p>
 
+          {/* Honest value props — no fake stats */}
           <div className="mt-6 flex items-center gap-5 text-white/85">
             <div>
-              <p className="text-lg font-bold leading-none">28 min</p>
+              <p className="text-lg font-bold leading-none">Fast</p>
               <p className="text-[10px] text-white/55 mt-1 uppercase tracking-wider">
-                Avg. delivery
+                Delivery
               </p>
             </div>
             <div className="w-px h-7 bg-white/15" />
             <div>
-              <p className="text-lg font-bold leading-none">15k+</p>
+              <p className="text-lg font-bold leading-none">Live</p>
               <p className="text-[10px] text-white/55 mt-1 uppercase tracking-wider">
-                Customers
+                Tracking
               </p>
             </div>
             <div className="w-px h-7 bg-white/15" />
             <div>
-              <p className="text-lg font-bold leading-none">4.9★</p>
+              <p className="text-lg font-bold leading-none">Safe</p>
               <p className="text-[10px] text-white/55 mt-1 uppercase tracking-wider">
-                Rating
+                Payments
               </p>
             </div>
           </div>
@@ -184,12 +185,9 @@ const Welcome = () => {
 
       {/* ═══════════════════════════════════════════════════════
           DESKTOP — one-screen layout
-          Everything fits inside 100vh, no scroll.
-          Uses grid rows [auto, 1fr, auto] so header + footer
-          take natural height, main fills the rest.
           ═══════════════════════════════════════════════════════ */}
       <div className="hidden lg:grid h-screen overflow-hidden grid-rows-[auto_1fr_auto] bg-gradient-to-b from-white via-slate-50 to-slate-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 font-sans">
-        {/* Header — natural height */}
+        {/* Header */}
         <header className="flex items-center justify-between px-8 xl:px-12 py-5 max-w-[1400px] mx-auto w-full">
           <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
           <div className="flex items-center gap-3">
@@ -208,13 +206,13 @@ const Welcome = () => {
           </div>
         </header>
 
-        {/* Main — fills the remaining viewport height */}
+        {/* Main */}
         <main className="min-h-0 w-full max-w-[1400px] mx-auto px-8 xl:px-12 py-4">
           <div
             ref={heroRef}
             className="h-full min-h-0 grid grid-cols-2 gap-10 xl:gap-14 items-stretch opacity-0"
           >
-            {/* Image — fills whatever height the row has */}
+            {/* Image side */}
             <div className="relative h-full min-h-0 rounded-3xl overflow-hidden shadow-xl ring-1 ring-black/5 dark:ring-white/5">
               <img
                 src={HERO_IMAGE}
@@ -235,7 +233,7 @@ const Welcome = () => {
                 </span>
               </div>
 
-              {/* Stats overlay */}
+              {/* Value props overlay — replaces fake stats */}
               <div className="absolute bottom-4 left-4 right-4">
                 <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -244,10 +242,10 @@ const Welcome = () => {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-                        Avg. delivery
+                        Fast delivery
                       </p>
                       <p className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                        28 minutes
+                        Right to your door
                       </p>
                     </div>
                   </div>
@@ -258,10 +256,10 @@ const Welcome = () => {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
-                        Happy customers
+                        Live tracking
                       </p>
                       <p className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                        15k+
+                        Follow every order
                       </p>
                     </div>
                   </div>
@@ -269,7 +267,7 @@ const Welcome = () => {
               </div>
             </div>
 
-            {/* Content — vertically centered in its column */}
+            {/* Content side */}
             <div className="flex flex-col justify-center min-h-0 py-2">
               <h1 className="text-[2.5rem] xl:text-[3rem] 2xl:text-[3.5rem] font-extrabold text-slate-900 dark:text-white leading-[1.08] tracking-tight">
                 Fuel &amp; gas,{" "}
@@ -315,7 +313,7 @@ const Welcome = () => {
           </div>
         </main>
 
-        {/* Footer — natural height */}
+        {/* Footer */}
         <footer className="py-4 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/60 dark:border-slate-800/60">
           <p>© {new Date().getFullYear()} Flanorx. All rights reserved.</p>
         </footer>
