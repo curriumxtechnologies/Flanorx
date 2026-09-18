@@ -90,6 +90,16 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+    <!-- ═══ Location (required for @capacitor/geolocation) ═══ -->
+
+    <!-- Coarse location: network/Wi-Fi based (approximate).
+         Required for Android 12+ even when you only want fine location. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Fine location: GPS based (precise).
+         This is what enableHighAccuracy:true uses. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <!-- ═══ Feature declarations ═════════════════════════════ -->
     <!-- Mark camera as optional so the app is still installable on
          devices without a camera (e.g. some emulators, tablets). -->
@@ -98,6 +108,15 @@
         android:required="false" />
     <uses-feature
         android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+
+    <!-- Declare GPS as optional so devices without GPS hardware
+         (rare, but possible) can still install the app. -->
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.network"
         android:required="false" />
 
 </manifest>

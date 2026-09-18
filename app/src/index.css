@@ -48,3 +48,7 @@
 .dark * {
   scrollbar-color: #4b5563 transparent;
 }
+
+html, body {
+  overscroll-behavior-y: none;
+}

@@ -10,11 +10,15 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  KeyRound,
+  ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 import {
   useLoginMutation,
   useGoogleAuthMutation,
   useForgotPasswordMutation,
+  useResetPasswordMutation,
 } from "../features/userApiSlice";
 import { setCredentials } from "../features/auth/authSlice";
 
@@ -69,25 +73,42 @@ const getRedirectPath = (role) => {
   return "/dashboard";
 };
 
+// ─── Step constants ────────────────────────────────────────
+const STEP = {
+  LOGIN: "login",
+  FORGOT: "forgot",   // enter email → request OTP
+  RESET: "reset",     // enter OTP + new password + confirm → submit
+  DONE: "done",
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  // ─── Auth mutations (only the ones that actually exist) ──
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
   const [googleAuth, { isLoading: isGoogleLoading }] = useGoogleAuthMutation();
   const [forgotPassword, { isLoading: isForgotLoading }] =
     useForgotPasswordMutation();
+  const [resetPassword, { isLoading: isResetLoading }] =
+    useResetPasswordMutation();
 
+  // ─── Login form state ────────────────────────────────────
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [isForgotMode, setIsForgotMode] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotMessage, setForgotMessage] = useState({ text: "", type: "" });
+  // ─── Reset-password flow state ───────────────────────────
+  const [step, setStep] = useState(STEP.LOGIN);
+  const [resetEmail, setResetEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [flowMessage, setFlowMessage] = useState({ text: "", type: "" });
 
-  // ─── Redirect if already logged in ────────────────────────
+  // ─── Redirect if already logged in ───────────────────────
   useEffect(() => {
     const authData =
       localStorage.getItem("userInfo") || localStorage.getItem("flanorx_auth");
@@ -104,6 +125,18 @@ const Login = () => {
     }
   }, [navigate]);
 
+  // ─── Reset the entire forgot-password flow ───────────────
+  const resetForgotFlow = () => {
+    setStep(STEP.LOGIN);
+    setResetEmail("");
+    setOtp("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowNewPassword(false);
+    setFlowMessage({ text: "", type: "" });
+  };
+
+  // ─── Login submit ────────────────────────────────────────
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError("");
@@ -146,6 +179,7 @@ const Login = () => {
     }
   };
 
+  // ─── Google login ────────────────────────────────────────
   const handleGoogleLogin = () => {
     setError("");
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -189,33 +223,134 @@ const Login = () => {
     toast(`${provider} sign-in isn't available for now`);
   };
 
+  // ═══════════════════════════════════════════════════════════
+  // RESET PASSWORD FLOW
+  // ═══════════════════════════════════════════════════════════
+
+  // Step 1: request OTP
   const handleForgotSubmit = async (e) => {
     e.preventDefault();
-    setForgotMessage({ text: "", type: "" });
-    if (!forgotEmail) {
-      setForgotMessage({ text: "Please enter your email", type: "error" });
+    setFlowMessage({ text: "", type: "" });
+
+    if (!resetEmail.trim()) {
+      setFlowMessage({ text: "Please enter your email", type: "error" });
       return;
     }
+
     try {
-      await forgotPassword({ email: forgotEmail }).unwrap();
-      setForgotMessage({
-        text: "If that email exists, an OTP has been sent.",
+      await forgotPassword({ email: resetEmail.trim() }).unwrap();
+      // ✅ Move to reset step — NO setTimeout that kicks back to login
+      setStep(STEP.RESET);
+      setOtp("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setFlowMessage({
+        text: `We've sent a 6-digit code to ${resetEmail}. Enter it below with your new password.`,
         type: "success",
       });
-      setForgotEmail("");
-      setTimeout(() => {
-        setIsForgotMode(false);
-        setForgotMessage({ text: "", type: "" });
-      }, 5000);
     } catch (err) {
-      setForgotMessage({
+      setFlowMessage({
         text: err.data?.message || "Failed to send reset email",
         type: "error",
       });
     }
   };
 
+  // Step 2: submit OTP + new password TOGETHER (matches backend)
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    setFlowMessage({ text: "", type: "" });
+
+    const cleanOtp = otp.replace(/\D/g, "").slice(0, 6);
+    if (cleanOtp.length !== 6) {
+      setFlowMessage({
+        text: "Please enter the 6-digit code from your email",
+        type: "error",
+      });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setFlowMessage({
+        text: "Password must be at least 8 characters",
+        type: "error",
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setFlowMessage({ text: "Passwords don't match", type: "error" });
+      return;
+    }
+
+    try {
+      // 🎯 One call — backend verifies OTP AND sets password in one shot
+      await resetPassword({
+        email: resetEmail.trim(),
+        otp: cleanOtp,
+        newPassword,
+      }).unwrap();
+
+      setStep(STEP.DONE);
+      setFlowMessage({ text: "", type: "" });
+
+      // Pre-fill email on login form for convenience
+      setFormData((prev) => ({ ...prev, email: resetEmail.trim() }));
+
+      // Auto-return to login after 4s (user can also click the button)
+      setTimeout(() => {
+        resetForgotFlow();
+      }, 4000);
+    } catch (err) {
+      setFlowMessage({
+        text: err.data?.message || "Failed to reset password. Try again.",
+        type: "error",
+      });
+    }
+  };
+
+  // ─── Resend OTP (re-uses forgotPassword) ─────────────────
+  const handleResendOtp = async () => {
+    setFlowMessage({ text: "", type: "" });
+    try {
+      await forgotPassword({ email: resetEmail.trim() }).unwrap();
+      setFlowMessage({
+        text: `A new code was sent to ${resetEmail}.`,
+        type: "success",
+      });
+    } catch (err) {
+      setFlowMessage({
+        text: err.data?.message || "Couldn't resend code. Try again.",
+        type: "error",
+      });
+    }
+  };
+
   const isLoading = isLoginLoading || isGoogleLoading;
+
+  // ─── Reusable alert block ────────────────────────────────
+  const FlowAlert = () =>
+    flowMessage.text ? (
+      <div
+        className={`mb-5 p-3 rounded-lg text-sm border ${
+          flowMessage.type === "error"
+            ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
+            : "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+        }`}
+      >
+        {flowMessage.text}
+      </div>
+    ) : null;
+
+  // ─── Reusable input classes ──────────────────────────────
+  const inputCls =
+    "w-full pl-10 pr-4 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition";
+
+  const primaryBtnCls =
+    "w-full py-3.5 px-4 bg-[#13ec5b] hover:bg-[#10d04e] active:bg-[#0fbe47] text-gray-900 font-bold rounded-xl transition duration-150 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base";
+
+  // ─── Password strength hint ──────────────────────────────
+  const passwordOk = newPassword.length >= 8;
+  const passwordsMatch =
+    newPassword && confirmPassword && newPassword === confirmPassword;
 
   return (
     <div className="min-h-screen flex bg-white dark:bg-gray-950">
@@ -237,15 +372,22 @@ const Login = () => {
 
       {/* ═══ RIGHT — form panel ═══ */}
       <div className="w-full lg:w-1/2 min-h-screen overflow-y-auto flex flex-col justify-center bg-white dark:bg-gray-950">
-        <div className="w-full max-w-md mx-auto px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
+        {/* ⬇️ Width fix: mobile = max-w-md (unchanged), desktop widens up */}
+        <div className="w-full max-w-md lg:max-w-xl 2xl:max-w-2xl mx-auto px-5 py-8 sm:px-8 sm:py-12 lg:px-8 lg:py-16">
           {/* Logo */}
           <div className="flex justify-center lg:justify-start mb-8 lg:mb-10">
-            <img src="/flanorx.png" alt="Flanorx" className="h-7 sm:h-8 w-auto" />
+            <img
+              src="/flanorx.png"
+              alt="Flanorx"
+              className="h-7 sm:h-8 w-auto"
+            />
           </div>
 
-          {!isForgotMode ? (
+          {/* ═══════════════════════════════════════════════════
+              STEP: LOGIN
+              ═══════════════════════════════════════════════════ */}
+          {step === STEP.LOGIN && (
             <>
-              {/* Heading */}
               <div className="text-center lg:text-left mb-7 lg:mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                   Welcome back
@@ -255,7 +397,6 @@ const Login = () => {
                 </p>
               </div>
 
-              {/* Alerts */}
               {error && (
                 <div className="mb-5 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm border border-red-200 dark:border-red-800">
                   {error}
@@ -267,7 +408,6 @@ const Login = () => {
                 </div>
               )}
 
-              {/* ═══ Form ═══ */}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -283,7 +423,7 @@ const Login = () => {
                       placeholder="you@example.com"
                       autoComplete="email"
                       inputMode="email"
-                      className="w-full pl-10 pr-4 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
+                      className={inputCls}
                       disabled={isLoading}
                     />
                   </div>
@@ -296,7 +436,11 @@ const Login = () => {
                     </label>
                     <button
                       type="button"
-                      onClick={() => setIsForgotMode(true)}
+                      onClick={() => {
+                        setStep(STEP.FORGOT);
+                        setResetEmail(formData.email || "");
+                        setFlowMessage({ text: "", type: "" });
+                      }}
                       className="text-xs sm:text-sm font-medium text-[#0f9c46] dark:text-[#13ec5b] hover:underline"
                     >
                       Forgot?
@@ -318,7 +462,9 @@ const Login = () => {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showPassword ? (
                         <EyeOff className="h-4.5 w-4.5" />
@@ -343,7 +489,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3.5 px-4 bg-[#13ec5b] hover:bg-[#10d04e] active:bg-[#0fbe47] text-gray-900 font-bold rounded-xl transition duration-150 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base"
+                  className={primaryBtnCls}
                 >
                   {isLoginLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -353,7 +499,6 @@ const Login = () => {
                 </button>
               </form>
 
-              {/* ═══ Divider ═══ */}
               <div className="my-6 flex items-center gap-3">
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
                 <span className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -362,7 +507,6 @@ const Login = () => {
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
               </div>
 
-              {/* ═══ Social buttons ═══ */}
               <div className="space-y-2.5">
                 <button
                   type="button"
@@ -400,7 +544,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* ═══ Sign up link ═══ */}
               <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
                 Don't have an account?{" "}
                 <Link
@@ -411,16 +554,16 @@ const Login = () => {
                 </Link>
               </p>
             </>
-          ) : (
+          )}
+
+          {/* ═══════════════════════════════════════════════════
+              STEP: FORGOT (enter email)
+              ═══════════════════════════════════════════════════ */}
+          {step === STEP.FORGOT && (
             <>
-              {/* ═══ Forgot password mode ═══ */}
               <div className="mb-6">
                 <button
-                  onClick={() => {
-                    setIsForgotMode(false);
-                    setForgotMessage({ text: "", type: "" });
-                    setForgotEmail("");
-                  }}
+                  onClick={resetForgotFlow}
                   className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition mb-4"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -430,21 +573,11 @@ const Login = () => {
                   Reset password
                 </h1>
                 <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
-                  Enter your email and we'll send you an OTP.
+                  Enter your email and we'll send you a 6-digit code.
                 </p>
               </div>
 
-              {forgotMessage.text && (
-                <div
-                  className={`mb-5 p-3 rounded-lg text-sm border ${
-                    forgotMessage.type === "error"
-                      ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
-                      : "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-                  }`}
-                >
-                  {forgotMessage.text}
-                </div>
-              )}
+              <FlowAlert />
 
               <form onSubmit={handleForgotSubmit} className="space-y-4">
                 <div>
@@ -455,13 +588,14 @@ const Login = () => {
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
                     <input
                       type="email"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
                       placeholder="you@example.com"
                       autoComplete="email"
                       inputMode="email"
-                      className="w-full pl-10 pr-4 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
+                      className={inputCls}
                       disabled={isForgotLoading}
+                      autoFocus
                     />
                   </div>
                 </div>
@@ -469,30 +603,201 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isForgotLoading}
-                  className="w-full py-3.5 px-4 bg-[#13ec5b] hover:bg-[#10d04e] text-gray-900 font-bold rounded-xl transition duration-150 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base"
+                  className={primaryBtnCls}
                 >
                   {isForgotLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    "Send reset OTP"
+                    "Send reset code"
                   )}
                 </button>
               </form>
+            </>
+          )}
 
-              <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                Remember your password?{" "}
+          {/* ═══════════════════════════════════════════════════
+              STEP: RESET (OTP + new password on ONE screen)
+              ═══════════════════════════════════════════════════ */}
+          {step === STEP.RESET && (
+            <>
+              <div className="mb-6">
                 <button
                   onClick={() => {
-                    setIsForgotMode(false);
-                    setForgotMessage({ text: "", type: "" });
-                    setForgotEmail("");
+                    setStep(STEP.FORGOT);
+                    setFlowMessage({ text: "", type: "" });
                   }}
-                  className="font-semibold text-[#0f9c46] dark:text-[#13ec5b] hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition mb-4"
                 >
-                  Sign in
+                  <ArrowLeft className="h-4 w-4" />
+                  Change email
                 </button>
-              </p>
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="h-6 w-6 text-[#13ec5b]" />
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Enter code &amp; new password
+                  </h1>
+                </div>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
+                  We sent a code to{" "}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {resetEmail}
+                  </span>
+                  .
+                </p>
+              </div>
+
+              <FlowAlert />
+
+              <form onSubmit={handleResetSubmit} className="space-y-4">
+                {/* OTP */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Verification code
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={otp}
+                    onChange={(e) =>
+                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    placeholder="000000"
+                    maxLength={6}
+                    autoFocus
+                    className="w-full text-center text-2xl sm:text-3xl font-bold tracking-[0.6em] py-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
+                    disabled={isResetLoading}
+                  />
+                  <div className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">
+                    Didn't get it?{" "}
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={isForgotLoading}
+                      className="font-semibold text-[#0f9c46] dark:text-[#13ec5b] hover:underline disabled:opacity-50"
+                    >
+                      {isForgotLoading ? "Sending..." : "Resend code"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* New password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    New password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 8 characters"
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-12 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
+                      disabled={isResetLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition"
+                      aria-label={
+                        showNewPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-4.5 w-4.5" />
+                      ) : (
+                        <Eye className="h-4.5 w-4.5" />
+                      )}
+                    </button>
+                  </div>
+                  {/* Live validation hint */}
+                  {newPassword && (
+                    <p
+                      className={`text-xs mt-1.5 ${
+                        passwordOk
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-slate-500 dark:text-slate-400"
+                      }`}
+                    >
+                      {passwordOk
+                        ? "✓ Strong enough"
+                        : "Must be at least 8 characters"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Confirm password */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Confirm password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      autoComplete="new-password"
+                      className="w-full pl-10 pr-4 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
+                      disabled={isResetLoading}
+                    />
+                  </div>
+                  {confirmPassword && (
+                    <p
+                      className={`text-xs mt-1.5 ${
+                        passwordsMatch
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {passwordsMatch
+                        ? "✓ Passwords match"
+                        : "Passwords don't match"}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={
+                    isResetLoading ||
+                    otp.length !== 6 ||
+                    !passwordOk ||
+                    !passwordsMatch
+                  }
+                  className={primaryBtnCls}
+                >
+                  {isResetLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    "Reset password"
+                  )}
+                </button>
+              </form>
             </>
+          )}
+
+          {/* ═══════════════════════════════════════════════════
+              STEP: DONE
+              ═══════════════════════════════════════════════════ */}
+          {step === STEP.DONE && (
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-5">
+                <CheckCircle2 className="h-9 w-9 text-[#0f9c46] dark:text-[#13ec5b]" />
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
+                Password updated
+              </h1>
+              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-6">
+                You can now sign in with your new password.
+              </p>
+              <button onClick={resetForgotFlow} className={primaryBtnCls}>
+                Back to sign in
+              </button>
+            </div>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -11,6 +11,9 @@ import {
   AlertCircle,
   PlusCircle,
   ChevronRight,
+  ChevronDown,
+  ChevronLeft,
+  Calendar,
   Eye,
   EyeOff,
   X,
@@ -59,11 +62,122 @@ const greenIcon = new L.Icon({
 
 const RECENT_ORDERS_LIMIT = 6;
 
+// ─── Quick range presets ───────────────────────────────────
+const QUICK_FILTERS = [
+  { type: "all", label: "All Time" },
+  { type: "week", label: "This Week" },
+  { type: "lastWeek", label: "Last Week" },
+  { type: "month", label: "This Month" },
+  { type: "lastMonth", label: "Last Month" },
+  { type: "last2Months", label: "Last 2 Months" },
+];
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+// Compute weeks of a given month (1-7, 8-14, 15-21, ...)
+const getWeeksInMonth = (year, month) => {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const weeks = [];
+  for (let start = 1; start <= lastDay; start += 7) {
+    const end = Math.min(start + 6, lastDay);
+    weeks.push({ num: weeks.length + 1, start, end });
+  }
+  return weeks;
+};
+
+// Human-readable label for the filter button
+const formatFilterLabel = (filter) => {
+  switch (filter.type) {
+    case "all": return "All Time";
+    case "week": return "This Week";
+    case "lastWeek": return "Last Week";
+    case "month": return "This Month";
+    case "lastMonth": return "Last Month";
+    case "last2Months": return "Last 2 Months";
+    case "year": return String(filter.year);
+    case "yearMonth": {
+      const d = new Date(filter.year, filter.month, 1);
+      return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    }
+    case "yearMonthWeek": {
+      const d = new Date(filter.year, filter.month, 1);
+      return `${d.toLocaleDateString("en-US", { month: "short" })} W${filter.week}`;
+    }
+    default: return "All Time";
+  }
+};
+
+// Human-readable subtitle under chart title
+const formatFilterSubtitle = (filter) => {
+  switch (filter.type) {
+    case "all": return "All time";
+    case "week": return "Last 7 days";
+    case "lastWeek": return "Previous 7 days";
+    case "month": return "This month · daily";
+    case "lastMonth": return "Last month · daily";
+    case "last2Months": return "Last 2 months";
+    case "year": return `${filter.year} · monthly`;
+    case "yearMonth": {
+      const d = new Date(filter.year, filter.month, 1);
+      return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    }
+    case "yearMonthWeek": {
+      const d = new Date(filter.year, filter.month, 1);
+      const weeks = getWeeksInMonth(filter.year, filter.month);
+      const wk = weeks.find((w) => w.num === filter.week);
+      const range = wk ? ` · ${d.toLocaleDateString("en-US", { month: "short" })} ${wk.start}–${wk.end}` : "";
+      return `${d.toLocaleDateString("en-US", { month: "long", year: "numeric" })} · Week ${filter.week}${range}`;
+    }
+    default: return "All time";
+  }
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.auth);
   const [hideStats, setHideStats] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);
+
+  // ─── Chart filter state ───────────────────────────────────
+  // chartFilter.type: "all" | "week" | "lastWeek" | "month" |
+  //                   "lastMonth" | "last2Months" |
+  //                   "year" | "yearMonth" | "yearMonthWeek"
+  const [chartFilter, setChartFilter] = useState({ type: "all" });
+
+  // Dropdown navigation state
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropLevel, setDropLevel] = useState("root"); // "root" | "months" | "weeks"
+  const [dropYear, setDropYear] = useState(null);
+  const [dropMonth, setDropMonth] = useState(null);
+  const chartFilterRef = useRef(null);
+
+  // Open dropdown → always start at root
+  const openDropdown = () => {
+    setDropLevel("root");
+    setDropYear(null);
+    setDropMonth(null);
+    setDropdownOpen(true);
+  };
+
+  const closeDropdown = () => setDropdownOpen(false);
+
+  // Outside click closes dropdown
+  useEffect(() => {
+    const handler = (e) => {
+      if (chartFilterRef.current && !chartFilterRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, []);
 
   // ─── Queries ───────────────────────────────────────────────
   const {
@@ -76,41 +190,25 @@ const Dashboard = () => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
 
-  const {
-    data: orders = [],
-    isLoading: ordersLoading,
-  } = useGetMyOrdersQuery({
+  const { data: orders = [], isLoading: ordersLoading } = useGetMyOrdersQuery({
     month: currentMonth,
     year: currentYear,
   });
 
-  const {
-    data: totalSpentData,
-    isLoading: spentLoading,
-  } = useGetMyTotalSpentQuery({
+  const { data: totalSpentData, isLoading: spentLoading } = useGetMyTotalSpentQuery({
     month: currentMonth,
     year: currentYear,
     paid: true,
   });
 
-  const {
-    data: activeOrder,
-    isLoading: activeLoading,
-  } = useGetMyActiveOrderQuery();
+  const { data: activeOrder, isLoading: activeLoading } = useGetMyActiveOrderQuery();
 
-  const {
-    data: trackingData,
-    isLoading: trackingLoading,
-  } = useGetTrackingQuery(
+  const { data: trackingData, isLoading: trackingLoading } = useGetTrackingQuery(
     activeOrder?._id,
     { skip: !activeOrder }
   );
 
-  // ─── Gas Subscription (dedicated query) ──────────────────
-  const {
-    data: subscriptionData,
-    isLoading: subLoading,
-  } = useGetGasSubscriptionQuery();
+  const { data: subscriptionData, isLoading: subLoading } = useGetGasSubscriptionQuery();
 
   // ─── Derived data ──────────────────────────────────────────
   const totalOrders = orders.length;
@@ -118,14 +216,13 @@ const Dashboard = () => {
   const totalLiters = totalSpentData?.totalLiters || 0;
   const totalKg = totalSpentData?.totalKg || 0;
 
-  // 6 most recent orders (API already returns newest first, but sort defensively)
   const recentOrders = useMemo(() => {
     return [...orders]
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, RECENT_ORDERS_LIMIT);
   }, [orders]);
 
-  // Subscription status from dedicated query
+  // Subscription status
   const hasGasSubscription = subscriptionData?.isActive || false;
   const cylinderSize = subscriptionData?.cylinderSize || null;
   const daysRemaining = subscriptionData?.daysRemaining || 0;
@@ -141,24 +238,172 @@ const Dashboard = () => {
   else if (isExpired) subStatus = "expired";
   else subStatus = "none";
 
-  // ─── Chart data (only paid orders) ────────────────────────
-  const chartData = useMemo(() => {
-    const days = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      const dayTotal = orders
-        .filter((o) => o.createdAt && o.createdAt.startsWith(dateStr) && o.paid)
-        .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-      days.push({
-        date: d.toLocaleDateString("en-US", { weekday: "short" }),
-        amount: Math.round(dayTotal * 100) / 100,
-      });
-    }
-    return days;
+  // ─── Available years (from orders + current year) ─────────
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    years.add(new Date().getFullYear());
+    (orders || []).forEach((o) => {
+      if (o.createdAt) years.add(new Date(o.createdAt).getFullYear());
+    });
+    return Array.from(years).sort((a, b) => b - a); // newest first
   }, [orders]);
+
+  // ─── Chart data ────────────────────────────────────────────
+  const chartData = useMemo(() => {
+    const now = new Date();
+    const paidOrders = (orders || []).filter((o) => o.paid && o.createdAt);
+
+    const sumByDay = (yyyy, mm, dd) =>
+      paidOrders
+        .filter((o) => {
+          const d = new Date(o.createdAt);
+          return d.getFullYear() === yyyy && d.getMonth() === mm && d.getDate() === dd;
+        })
+        .reduce((s, o) => s + (o.totalAmount || 0), 0);
+
+    const sumByMonth = (yyyy, mm) =>
+      paidOrders
+        .filter((o) => {
+          const d = new Date(o.createdAt);
+          return d.getFullYear() === yyyy && d.getMonth() === mm;
+        })
+        .reduce((s, o) => s + (o.totalAmount || 0), 0);
+
+    const round = (n) => Math.round(n * 100) / 100;
+
+    // ─── This Week: last 7 days ────────────────────────────
+    if (chartFilter.type === "week") {
+      const out = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        out.push({
+          label: d.toLocaleDateString("en-US", { weekday: "short" }),
+          amount: round(sumByDay(d.getFullYear(), d.getMonth(), d.getDate())),
+        });
+      }
+      return out;
+    }
+
+    // ─── Last Week: 7–14 days ago ──────────────────────────
+    if (chartFilter.type === "lastWeek") {
+      const out = [];
+      for (let i = 13; i >= 7; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        out.push({
+          label: d.toLocaleDateString("en-US", { weekday: "short" }),
+          amount: round(sumByDay(d.getFullYear(), d.getMonth(), d.getDate())),
+        });
+      }
+      return out;
+    }
+
+    // ─── This Month: day by day up to today ────────────────
+    if (chartFilter.type === "month") {
+      const y = now.getFullYear();
+      const m = now.getMonth();
+      const today = now.getDate();
+      const out = [];
+      for (let d = 1; d <= today; d++) {
+        out.push({ label: String(d), amount: round(sumByDay(y, m, d)) });
+      }
+      return out;
+    }
+
+    // ─── Last Month: full previous calendar month ──────────
+    if (chartFilter.type === "lastMonth") {
+      const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const out = [];
+      for (let i = 1; i <= lastDay; i++) {
+        out.push({ label: String(i), amount: round(sumByDay(y, m, i)) });
+      }
+      return out;
+    }
+
+    // ─── Last 2 Months: previous + current, by month ───────
+    if (chartFilter.type === "last2Months") {
+      const out = [];
+      for (let i = 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        out.push({
+          label: d.toLocaleDateString("en-US", { month: "short" }),
+          amount: round(sumByMonth(d.getFullYear(), d.getMonth())),
+        });
+      }
+      return out;
+    }
+
+    // ─── Year: Jan → Dec of chosen year ────────────────────
+    if (chartFilter.type === "year") {
+      const y = chartFilter.year;
+      const out = [];
+      for (let m = 0; m < 12; m++) {
+        out.push({
+          label: MONTH_NAMES[m].slice(0, 3),
+          amount: round(sumByMonth(y, m)),
+        });
+      }
+      return out;
+    }
+
+    // ─── Year + Month: day-by-day of chosen month ──────────
+    if (chartFilter.type === "yearMonth") {
+      const { year, month } = chartFilter;
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      const out = [];
+      for (let d = 1; d <= lastDay; d++) {
+        out.push({ label: String(d), amount: round(sumByDay(year, month, d)) });
+      }
+      return out;
+    }
+
+    // ─── Year + Month + Week: days of that week ────────────
+    if (chartFilter.type === "yearMonthWeek") {
+      const { year, month, week } = chartFilter;
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      const startDay = (week - 1) * 7 + 1;
+      const endDay = Math.min(startDay + 6, lastDay);
+      const out = [];
+      for (let d = startDay; d <= endDay; d++) {
+        out.push({ label: String(d), amount: round(sumByDay(year, month, d)) });
+      }
+      return out;
+    }
+
+    // ─── All Time: monthly from first order → now ──────────
+    if (!paidOrders.length) {
+      const out = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        out.push({ label: d.toLocaleDateString("en-US", { month: "short" }), amount: 0 });
+      }
+      return out;
+    }
+
+    const sorted = [...paidOrders].sort(
+      (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+    );
+    const earliest = new Date(sorted[0].createdAt);
+    const start = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const spansMultipleYears = start.getFullYear() !== end.getFullYear();
+    const out = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const y = cursor.getFullYear();
+      const m = cursor.getMonth();
+      const monthAbbr = cursor.toLocaleDateString("en-US", { month: "short" });
+      const label = spansMultipleYears ? `${monthAbbr} '${String(y).slice(-2)}` : monthAbbr;
+      out.push({ label, amount: round(sumByMonth(y, m)) });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return out;
+  }, [orders, chartFilter]);
 
   // ─── Loading & errors ──────────────────────────────────────
   const isLoading = userLoading || ordersLoading || spentLoading || activeLoading || subLoading;
@@ -174,7 +419,7 @@ const Dashboard = () => {
     );
   }
 
-  // ─── Helper: status colors (shared with Orders page) ──────
+  // ─── Status color helpers ──────────────────────────────────
   const getStatusColor = (status) => {
     switch (status) {
       case "pending": return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20";
@@ -229,24 +474,17 @@ const Dashboard = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">Cylinder</span>
-              <span
-                className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[60%] text-right"
-                title={cylinderSize || ""}
-              >
+              <span className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[60%] text-right" title={cylinderSize || ""}>
                 {cylinderSize}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">Status</span>
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                  isExpired
-                    ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                    : isActive
-                    ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                    : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
-                }`}
-              >
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                isExpired ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                : isActive ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+              }`}>
                 {isExpired ? "Expired" : isActive ? "Active" : "Inactive"}
               </span>
             </div>
@@ -279,7 +517,7 @@ const Dashboard = () => {
     </div>
   );
 
-  // ─── Mobile Hero Card (with skeleton) ──────────────────────
+  // ─── Mobile Hero Card ──────────────────────────────────────
   const HeroCard = () => {
     if (isLoading) {
       return (
@@ -291,7 +529,6 @@ const Dashboard = () => {
             </div>
             <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
           </div>
-
           <div className="flex items-end justify-between mb-3 gap-2">
             <div className="min-w-0 space-y-2">
               <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -302,7 +539,6 @@ const Dashboard = () => {
               <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
             </div>
           </div>
-
           <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
             <div className="flex items-center gap-5 min-w-0">
               <div className="space-y-1.5">
@@ -325,10 +561,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-3 gap-2">
           <div className="min-w-0 flex-1">
             <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">Welcome back</span>
-            <h1
-              className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white"
-              title={user?.name || "User"}
-            >
+            <h1 className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white" title={user?.name || "User"}>
               {user?.name ? user.name.split(" ")[0] : "User"}!
             </h1>
           </div>
@@ -349,10 +582,7 @@ const Dashboard = () => {
           </div>
           <div className="text-right min-w-0">
             <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">This Month</span>
-            <p
-              className="text-xl font-bold text-gray-900 dark:text-white truncate"
-              title={hideStats ? "" : `₦${monthlySpent.toFixed(2)}`}
-            >
+            <p className="text-xl font-bold text-gray-900 dark:text-white truncate" title={hideStats ? "" : `₦${monthlySpent.toFixed(2)}`}>
               {hideStats ? "••••" : `₦${monthlySpent.toFixed(0)}`}
             </p>
           </div>
@@ -398,8 +628,6 @@ const Dashboard = () => {
       : defaultCenter;
 
     return (
-      // `isolate` creates its own stacking context so Leaflet's internal
-      // z-index (400–1000) can never escape above sidebar/header/floating button.
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm h-full flex flex-col isolate">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -409,21 +637,16 @@ const Dashboard = () => {
           {isLoadingState ? (
             <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse flex-shrink-0" />
           ) : (
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                hasTracking
-                  ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                  : hasActiveOrder
-                  ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
-                  : "bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
-              }`}
-            >
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+              hasTracking ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+              : hasActiveOrder ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+              : "bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
+            }`}>
               <span className="w-1.5 h-1.5 rounded-full mr-1.5 inline-block bg-current" />
               {hasTracking ? "Live" : hasActiveOrder ? "Waiting" : "Inactive"}
             </span>
           )}
         </div>
-        {/* `isolate z-0` on the map wrapper keeps Leaflet's panes contained */}
         <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 isolate z-0">
           {isLoadingState ? (
             <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />
@@ -443,9 +666,7 @@ const Dashboard = () => {
               {trackingData?.route?.polyline && (
                 <Polyline
                   positions={L.Polyline.fromEncoded(trackingData.route.polyline).getLatLngs()}
-                  color="#13ec5b"
-                  weight={3}
-                  opacity={0.8}
+                  color="#13ec5b" weight={3} opacity={0.8}
                 />
               )}
             </MapContainer>
@@ -477,19 +698,13 @@ const Dashboard = () => {
             <>
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2 min-w-0">
-                  <span
-                    className="text-sm text-gray-500 dark:text-gray-400 truncate"
-                    title={`Order #${activeOrder.orderId}`}
-                  >
+                  <span className="text-sm text-gray-500 dark:text-gray-400 truncate" title={`Order #${activeOrder.orderId}`}>
                     Order #{activeOrder.orderId}
                   </span>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                      hasTracking
-                        ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                        : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
-                    }`}
-                  >
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                    hasTracking ? "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                    : "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                  }`}>
                     {hasTracking ? "Active" : "Processing"}
                   </span>
                 </div>
@@ -543,10 +758,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">{label}</p>
-          <p
-            className="text-2xl font-bold text-gray-900 dark:text-white mt-1 truncate"
-            title={typeof value === "string" ? value : String(value)}
-          >
+          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1 truncate" title={typeof value === "string" ? value : String(value)}>
             {value}
           </p>
         </div>
@@ -556,6 +768,202 @@ const Dashboard = () => {
       </div>
     </div>
   );
+
+  // ─── Chart Filter Dropdown ────────────────────────────────
+  const ChartFilterDropdown = () => {
+    // Week options for the currently-picked month
+    const weeks = dropYear !== null && dropMonth !== null
+      ? getWeeksInMonth(dropYear, dropMonth)
+      : [];
+
+    const isActive = (type, extras = {}) => {
+      if (chartFilter.type !== type) return false;
+      if ("year" in extras && chartFilter.year !== extras.year) return false;
+      if ("month" in extras && chartFilter.month !== extras.month) return false;
+      if ("week" in extras && chartFilter.week !== extras.week) return false;
+      return true;
+    };
+
+    const Item = ({ onClick, children, active = false, indent = false }) => (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`w-full text-left px-3 py-2 text-xs transition flex items-center justify-between gap-2 ${
+          active
+            ? "bg-[#13ec5b]/10 text-[#13ec5b] font-medium"
+            : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+        } ${indent ? "pl-4" : ""}`}
+      >
+        <span className="truncate">{children}</span>
+        {active && <span className="w-1.5 h-1.5 rounded-full bg-[#13ec5b] flex-shrink-0" />}
+      </button>
+    );
+
+    const DrillItem = ({ onClick, label }) => (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full text-left px-3 py-2 text-xs transition flex items-center justify-between gap-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+      >
+        <span className="truncate">{label}</span>
+        <ChevronRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+      </button>
+    );
+
+    const SectionLabel = ({ children }) => (
+      <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">
+        {children}
+      </div>
+    );
+
+    const BackBtn = ({ onClick, children }) => (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-1.5 border-b border-gray-100 dark:border-gray-700"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+        {children}
+      </button>
+    );
+
+    return (
+      <div
+        ref={chartFilterRef}
+        className="relative flex-shrink-0"
+      >
+        <button
+          type="button"
+          onClick={() => (dropdownOpen ? closeDropdown() : openDropdown())}
+          className="flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 transition max-w-[180px]"
+        >
+          <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="truncate">{formatFilterLabel(chartFilter)}</span>
+          <ChevronDown className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-30 py-1 overflow-hidden max-h-[420px] overflow-y-auto">
+
+            {/* ─── LEVEL 1: ROOT ─────────────────────────── */}
+            {dropLevel === "root" && (
+              <>
+                <SectionLabel>Quick Ranges</SectionLabel>
+                {QUICK_FILTERS.map((f) => (
+                  <Item
+                    key={f.type}
+                    active={isActive(f.type)}
+                    onClick={() => {
+                      setChartFilter({ type: f.type });
+                      closeDropdown();
+                    }}
+                  >
+                    {f.label}
+                  </Item>
+                ))}
+
+                <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+                <SectionLabel>Browse by Year</SectionLabel>
+
+                {availableYears.map((y) => (
+                  <DrillItem
+                    key={y}
+                    label={y}
+                    onClick={() => {
+                      setDropYear(y);
+                      setDropLevel("months");
+                    }}
+                  />
+                ))}
+              </>
+            )}
+
+            {/* ─── LEVEL 2: MONTHS OF A YEAR ─────────────── */}
+            {dropLevel === "months" && (
+              <>
+                <BackBtn
+                  onClick={() => {
+                    setDropLevel("root");
+                    setDropYear(null);
+                    setDropMonth(null);
+                  }}
+                >
+                  {dropYear}
+                </BackBtn>
+
+                <Item
+                  active={isActive("year", { year: dropYear })}
+                  onClick={() => {
+                    setChartFilter({ type: "year", year: dropYear });
+                    closeDropdown();
+                  }}
+                >
+                  Full year of {dropYear}
+                </Item>
+
+                <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+
+                {MONTH_NAMES.map((name, idx) => (
+                  <DrillItem
+                    key={idx}
+                    label={name}
+                    onClick={() => {
+                      setDropMonth(idx);
+                      setDropLevel("weeks");
+                    }}
+                  />
+                ))}
+              </>
+            )}
+
+            {/* ─── LEVEL 3: WEEKS OF A MONTH ─────────────── */}
+            {dropLevel === "weeks" && (
+              <>
+                <BackBtn
+                  onClick={() => {
+                    setDropLevel("months");
+                    setDropMonth(null);
+                  }}
+                >
+                  {MONTH_NAMES[dropMonth]} {dropYear}
+                </BackBtn>
+
+                <Item
+                  active={isActive("yearMonth", { year: dropYear, month: dropMonth })}
+                  onClick={() => {
+                    setChartFilter({ type: "yearMonth", year: dropYear, month: dropMonth });
+                    closeDropdown();
+                  }}
+                >
+                  All days of {MONTH_NAMES[dropMonth]}
+                </Item>
+
+                <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+
+                {weeks.map((w) => (
+                  <Item
+                    key={w.num}
+                    active={isActive("yearMonthWeek", { year: dropYear, month: dropMonth, week: w.num })}
+                    onClick={() => {
+                      setChartFilter({
+                        type: "yearMonthWeek",
+                        year: dropYear,
+                        month: dropMonth,
+                        week: w.num,
+                      });
+                      closeDropdown();
+                    }}
+                  >
+                    Week {w.num} ({w.start}–{w.end})
+                  </Item>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // ─── Mobile Slim Order Item ───────────────────────────────
   const SlimOrderItem = ({ order }) => {
@@ -570,10 +978,7 @@ const Dashboard = () => {
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span
-              className="font-medium text-gray-900 dark:text-white text-sm truncate"
-              title={orderLabel}
-            >
+            <span className="font-medium text-gray-900 dark:text-white text-sm truncate" title={orderLabel}>
               {orderLabel}
             </span>
             <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${getOrderStatusColor(order.status)}`}>
@@ -598,7 +1003,7 @@ const Dashboard = () => {
     );
   };
 
-  // ─── Recent Orders (mirrors Orders page UI, 6 max) ─────────
+  // ─── Recent Orders ────────────────────────────────────────
   const RecentOrders = () => (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden lg:rounded-2xl rounded-2xl">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
@@ -610,7 +1015,6 @@ const Dashboard = () => {
 
       {isLoading ? (
         <>
-          {/* Desktop skeleton table */}
           <div className="hidden lg:block">
             <table className="w-full text-sm table-fixed">
               <colgroup>
@@ -636,34 +1040,19 @@ const Dashboard = () => {
               <tbody>
                 {[...Array(5)].map((_, i) => (
                   <tr key={i} className="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
-                    </td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-5 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
+                    <td className="py-2.5 px-3"><div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Mobile skeleton list */}
           <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="flex items-center justify-between px-4 py-3">
@@ -692,7 +1081,6 @@ const Dashboard = () => {
         </div>
       ) : (
         <>
-          {/* Desktop table — same as Orders page */}
           <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm table-fixed">
               <colgroup>
@@ -803,7 +1191,6 @@ const Dashboard = () => {
             </table>
           </div>
 
-          {/* Mobile slim list */}
           <div className="block lg:hidden divide-y divide-gray-100 dark:divide-gray-700">
             {recentOrders.map((order) => (
               <SlimOrderItem key={order._id} order={order} />
@@ -820,7 +1207,7 @@ const Dashboard = () => {
 
       <div className="lg:ml-64 pb-20 lg:pb-8">
         <header className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 py-3 lg:py-4 lg:px-6 flex items-center justify-between gap-2">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl truncate">Dashboard</h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white lg:text-xl truncate">Flanorx</h1>
           <div className="flex items-center gap-3 flex-shrink-0">
             {userLoading ? (
               <div className="flex items-center gap-2">
@@ -847,7 +1234,6 @@ const Dashboard = () => {
         <div className="w-full px-1 sm:px-4 lg:px-6 py-4">
           <HeroCard />
 
-          {/* Desktop stats */}
           <div className="hidden lg:block">
             <div className="flex items-center gap-3 mb-6 min-w-0">
               <div className="h-12 w-12 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -867,16 +1253,10 @@ const Dashboard = () => {
                   </>
                 ) : (
                   <>
-                    <h2
-                      className="text-2xl font-bold text-gray-900 dark:text-white truncate"
-                      title={`Welcome back, ${user?.name || "User"}!`}
-                    >
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white truncate" title={`Welcome back, ${user?.name || "User"}!`}>
                       Welcome back, {user?.name || "User"}!
                     </h2>
-                    <p
-                      className="text-gray-500 dark:text-gray-400 truncate"
-                      title={user?.email}
-                    >
+                    <p className="text-gray-500 dark:text-gray-400 truncate" title={user?.email}>
                       {user?.email}
                     </p>
                   </>
@@ -912,9 +1292,19 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm min-w-0">
               <div className="flex items-center justify-between mb-4 gap-2">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Weekly Spending</h3>
-                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">Last 7 days</span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">
+                    Spending Overview
+                  </h3>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 truncate block">
+                    {formatFilterSubtitle(chartFilter)}
+                  </span>
+                </div>
+
+                {/* Custom drill-down dropdown */}
+                <ChartFilterDropdown />
               </div>
+
               {isLoading ? (
                 <div className="h-48 animate-pulse bg-gray-200 dark:bg-gray-700 rounded" />
               ) : (
@@ -927,8 +1317,20 @@ const Dashboard = () => {
                           <stop offset="95%" stopColor="#13ec5b" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" tickMargin={5} />
-                      <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `₦${v}`} width={40} />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 12 }}
+                        stroke="#9ca3af"
+                        tickMargin={5}
+                        minTickGap={16}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        stroke="#9ca3af"
+                        tickFormatter={(v) => `₦${v}`}
+                        width={40}
+                      />
                       <Tooltip
                         formatter={(value) => [`₦${value}`, "Spent"]}
                         contentStyle={{
@@ -938,14 +1340,20 @@ const Dashboard = () => {
                           boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
                         }}
                       />
-                      <Area type="monotone" dataKey="amount" stroke="#13ec5b" strokeWidth={2} fill="url(#spendingGradient)" dot={{ r: 2, fill: "#13ec5b" }} />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="#13ec5b"
+                        strokeWidth={2}
+                        fill="url(#spendingGradient)"
+                        dot={{ r: 2, fill: "#13ec5b" }}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               )}
             </div>
 
-            {/* Quick actions — compact on mobile, original on desktop */}
             <div className="grid grid-cols-2 gap-2 lg:gap-3">
               <button
                 onClick={() => navigate("/order/fuel")}
@@ -971,7 +1379,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* 2‑column layout: Live Tracking + Gas Subscription */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
             <div className="hidden lg:block lg:col-span-2 h-full min-w-0">
               <LiveTracking />
@@ -989,21 +1396,14 @@ const Dashboard = () => {
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div className="min-w-0">
                       <div className="flex items-center justify-between gap-2 min-w-0">
-                        <span
-                          className="text-sm text-gray-500 dark:text-gray-400 truncate"
-                          title={`Cylinder: ${cylinderSize}`}
-                        >
+                        <span className="text-sm text-gray-500 dark:text-gray-400 truncate" title={`Cylinder: ${cylinderSize}`}>
                           Cylinder: {cylinderSize}
                         </span>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                            isExpired
-                              ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                              : isActive && isNearExpiry
-                              ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
-                              : "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                          }`}
-                        >
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                          isExpired ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                          : isActive && isNearExpiry ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                          : "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                        }`}>
                           {isExpired ? "Expired" : isActive && isNearExpiry ? "Expiring Soon" : "Active"}
                         </span>
                       </div>
@@ -1043,7 +1443,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Mobile: Live Tracking + Gas Subscription (stacked) */}
           <div className="lg:hidden space-y-6 mb-6">
             <LiveTracking />
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm min-w-0">
@@ -1057,21 +1456,14 @@ const Dashboard = () => {
               ) : isActive ? (
                 <div className="min-w-0">
                   <div className="flex items-center justify-between gap-2 min-w-0">
-                    <span
-                      className="text-sm text-gray-500 dark:text-gray-400 truncate"
-                      title={`Cylinder: ${cylinderSize}`}
-                    >
+                    <span className="text-sm text-gray-500 dark:text-gray-400 truncate" title={`Cylinder: ${cylinderSize}`}>
                       Cylinder: {cylinderSize}
                     </span>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                        isExpired
-                          ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-                          : isActive && isNearExpiry
-                          ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
-                          : "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-                      }`}
-                    >
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                      isExpired ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+                      : isActive && isNearExpiry ? "bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400"
+                      : "bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+                    }`}>
                       {isExpired ? "Expired" : isActive && isNearExpiry ? "Expiring Soon" : "Active"}
                     </span>
                   </div>
@@ -1109,32 +1501,26 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Recent Orders — same UI as Orders page, max 6 */}
           <RecentOrders />
         </div>
       </div>
 
-      {/* Floating Subscription Button (mobile only) */}
       {!isLoading && (
         <div className="lg:hidden fixed bottom-24 right-4 z-40">
           <button onClick={() => setShowSubModal(true)} className="relative group">
             <div
               className={`absolute inset-0 rounded-full animate-ping ${
-                subStatus === "active"
-                  ? "bg-green-500/40"
-                  : subStatus === "near"
-                  ? "bg-orange-500/40"
-                  : "bg-red-500/40"
+                subStatus === "active" ? "bg-green-500/40"
+                : subStatus === "near" ? "bg-orange-500/40"
+                : "bg-red-500/40"
               }`}
               style={{ animationDuration: "1.5s" }}
             />
             <div
               className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-2 transition-all ${
-                subStatus === "active"
-                  ? "bg-green-500 border-green-400"
-                  : subStatus === "near"
-                  ? "bg-orange-500 border-orange-400"
-                  : "bg-red-500 border-red-400"
+                subStatus === "active" ? "bg-green-500 border-green-400"
+                : subStatus === "near" ? "bg-orange-500 border-orange-400"
+                : "bg-red-500 border-red-400"
               }`}
             >
               <Package className="h-6 w-6 text-white" />

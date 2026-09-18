@@ -26,6 +26,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Geolocation } from "@capacitor/geolocation";
 import { useCreateOrderMutation } from "../features/orderApiSlice";
 import { useGetProfileQuery } from "../features/userApiSlice";
 import Sidebar from "../components/Sidebar";
@@ -74,6 +75,196 @@ const reverseGeocode = async (lat, lng) => {
   } catch {
     return null;
   }
+};
+
+// ─── Detect if running inside Capacitor native shell ──────
+const isNativePlatform = () => {
+  if (typeof window === "undefined") return false;
+  const cap = window.Capacitor;
+  if (!cap) return false;
+
+  // Preferred: official API
+  if (typeof cap.isNativePlatform === "function") {
+    return cap.isNativePlatform();
+  }
+
+  // Fallback: platform string
+  return cap.platform === "android" || cap.platform === "ios";
+};
+
+// ─── Custom error helper ──────────────────────────────────
+const makeError = (message, code) => {
+  const err = new Error(message);
+  err.code = code;
+  return err;
+};
+
+// ─── Safely detect if we're in a Safari/WebKit browser ────
+const isSafariBrowser = () => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+  const isWebKitOnly = !/CriOS|FxiOS|EdgiOS/.test(ua);
+  return isSafari && isWebKitOnly;
+  // Note: Chrome/Firefox/Edge on iOS are just wrappers around WebKit
+  // and behave the same as Safari for geolocation.
+};
+
+// ─── Native: get position with low-accuracy fallback ─────
+const getNativePosition = async () => {
+  try {
+    return await Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    });
+  } catch (err) {
+    const msg = (err?.message || "").toLowerCase();
+
+    // Android: GPS / Location Services turned off
+    if (
+      msg.includes("location services") ||
+      msg.includes("disabled") ||
+      msg.includes("gps")
+    ) {
+      throw makeError(
+        "Location Services (GPS) is turned off. Please enable it in your device settings or notification shade, then try again.",
+        "LOCATION_SERVICES_OFF"
+      );
+    }
+
+    // Cheap Android device failed high-accuracy — retry with network location
+    try {
+      return await Geolocation.getCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 60000,
+      });
+    } catch (fallbackErr) {
+      throw fallbackErr;
+    }
+  }
+};
+
+// ─── Web: Safari-friendly geolocation ─────────────────────
+/**
+ * Safari (and all iOS browsers, since they use WebKit) is very strict:
+ *  1. Must be HTTPS
+ *  2. Must be triggered by a user gesture (button click)
+ *  3. System-level Location Services must be ON
+ *  4. If denied once, Safari "remembers" the decision
+ *
+ * On failure we throw with a descriptive code so the UI can guide the user.
+ */
+const getWebPosition = () => {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(
+        makeError(
+          "Geolocation is not supported by your browser.",
+          "UNSUPPORTED"
+        )
+      );
+      return;
+    }
+
+    // HTTPS guard — Safari blocks geolocation on insecure origins
+    if (
+      typeof window !== "undefined" &&
+      window.location.protocol !== "https:" &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1"
+    ) {
+      reject(
+        makeError(
+          "Location requires a secure (HTTPS) connection. Please access this site over HTTPS.",
+          "INSECURE_CONTEXT"
+        )
+      );
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }),
+      (err) => {
+        // Code 1 = PERMISSION_DENIED (covers both "denied" and "remembered deny")
+        if (err.code === 1) {
+          const safari = isSafariBrowser();
+          const message = safari
+            ? "Location access is blocked. To enable it:\n" +
+              "1. Tap the 'aA' or lock icon in the address bar.\n" +
+              "2. Open 'Website Settings'.\n" +
+              "3. Set 'Location' to 'Allow' or 'Ask'.\n" +
+              "4. Reload the page and try again.\n" +
+              "Also make sure Settings → Privacy → Location Services is ON for Safari."
+            : "Location permission was denied. Please allow location access in your browser settings, then try again.";
+          reject(makeError(message, "PERMISSION_DENIED"));
+          return;
+        }
+
+        if (err.code === 2) {
+          reject(
+            makeError(
+              "Location information is unavailable. Please check that Location Services (GPS) is turned on and try again.",
+              "POSITION_UNAVAILABLE"
+            )
+          );
+          return;
+        }
+
+        if (err.code === 3) {
+          reject(
+            makeError(
+              "Location request timed out. Please move to an area with better signal and try again.",
+              "TIMEOUT"
+            )
+          );
+          return;
+        }
+
+        reject(makeError(err.message || "Unable to get location", "UNKNOWN"));
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+  });
+};
+
+// ─── Unified geolocation helper (Capacitor + Web) ─────────
+const getCurrentPositionSafe = async () => {
+  if (isNativePlatform()) {
+    // 1. Check permission state
+    let status = await Geolocation.checkPermissions();
+
+    // 2. Ask for it if not granted (shows the native OS dialog)
+    if (status.location !== "granted") {
+      status = await Geolocation.requestPermissions();
+    }
+
+    if (status.location === "denied") {
+      throw makeError(
+        "Location permission was denied. Please enable it in your device settings (Settings → Apps → Permissions → Location).",
+        "PERMISSION_DENIED"
+      );
+    }
+
+    // 3. Get the actual position (with low-accuracy fallback)
+    const position = await getNativePosition();
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    };
+  }
+
+  // ── Web / Safari fallback ─────────────────────────────
+  return getWebPosition();
 };
 
 // ─── Draggable marker ─────────────────────────────────────
@@ -218,34 +409,30 @@ const Fuel = () => {
     }
   };
 
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser");
-      return;
-    }
+  // ─── Get current location ─────────────────────────────────
+  const getCurrentLocation = async () => {
+    setError("");
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const newPos = [latitude, longitude];
-        setMapPosition(newPos);
-        setMarkerPosition(newPos);
-        setUserLocation(newPos);
-        reverseGeocode(latitude, longitude).then((addr) => {
-          if (addr) {
-            setDeliveryAddress(addr);
-            setUseSavedAddress(false);
-          }
-        });
-        setIsLocating(false);
-        if (!showMap) setShowMap(true);
-      },
-      (err) => {
-        setError("Unable to fetch location: " + err.message);
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true }
-    );
+    try {
+      const { latitude, longitude } = await getCurrentPositionSafe();
+
+      const newPos = [latitude, longitude];
+      setMapPosition(newPos);
+      setMarkerPosition(newPos);
+      setUserLocation(newPos);
+
+      const addr = await reverseGeocode(latitude, longitude);
+      if (addr) {
+        setDeliveryAddress(addr);
+        setUseSavedAddress(false);
+      }
+
+      if (!showMap) setShowMap(true);
+    } catch (err) {
+      setError(err.message || "Unable to fetch location");
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   // ─── Submit ───────────────────────────────────────────────
@@ -273,6 +460,10 @@ const Fuel = () => {
         fuelType,
         quantity: Number(quantity),
         deliveryAddress: deliveryAddress.trim(),
+        deliveryCoordinates: {
+          lat: markerPosition[0],
+          lng: markerPosition[1],
+        },
         scheduleType,
         scheduledDate: scheduleType === "scheduled" ? scheduledDate : undefined,
         scheduledTime: scheduleType === "scheduled" ? scheduledTime : undefined,
@@ -332,11 +523,16 @@ const Fuel = () => {
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+                <form
+                  onSubmit={handleSubmit}
+                  className="p-4 sm:p-6 space-y-4 sm:space-y-5"
+                >
                   {error && (
                     <div className="p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-xs sm:text-sm border border-red-200 dark:border-red-800 flex items-start gap-2">
                       <span className="flex-shrink-0">⚠️</span>
-                      <span className="min-w-0 break-words">{error}</span>
+                      <span className="min-w-0 break-words whitespace-pre-line">
+                        {error}
+                      </span>
                     </div>
                   )}
                   {success && (
@@ -368,7 +564,9 @@ const Fuel = () => {
                             }`}
                           >
                             <div className="font-semibold leading-tight">
-                              {type === "Petrol (95 Octane)" ? "95 Octane" : type}
+                              {type === "Petrol (95 Octane)"
+                                ? "95 Octane"
+                                : type}
                             </div>
                           </button>
                         );
@@ -489,7 +687,11 @@ const Fuel = () => {
                         disabled={isLocating}
                         className="text-xs sm:text-sm text-[#13ec5b] hover:underline flex items-center gap-1 disabled:opacity-50"
                       >
-                        <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        {isLocating ? (
+                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                        ) : (
+                          <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        )}
                         {isLocating ? "Locating..." : "Current location"}
                       </button>
                     </div>

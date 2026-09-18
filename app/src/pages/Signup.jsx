@@ -284,7 +284,7 @@ const Signup = () => {
 
       {/* ═══ RIGHT — form panel ═══ */}
       <div className="w-full lg:w-1/2 min-h-screen overflow-y-auto flex flex-col justify-center bg-white dark:bg-gray-950">
-        <div className="w-full max-w-md mx-auto px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
+        <div className="w-full max-w-md lg:max-w-xl 2xl:max-w-2xl mx-auto px-5 py-8 sm:px-8 sm:py-12 lg:px-8 lg:py-16">
           {/* Logo */}
           <div className="flex justify-center lg:justify-start mb-8 lg:mb-10">
             <img src="/flanorx.png" alt="Flanorx" className="h-7 sm:h-8 w-auto" />
@@ -313,7 +313,6 @@ const Signup = () => {
                 </div>
               )}
 
-              {/* ═══ Form ═══ */}
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -420,7 +419,6 @@ const Signup = () => {
                 </button>
               </form>
 
-              {/* ═══ Divider ═══ */}
               <div className="my-6 flex items-center gap-3">
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
                 <span className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -429,7 +427,6 @@ const Signup = () => {
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
               </div>
 
-              {/* ═══ Social buttons ═══ */}
               <div className="space-y-2.5">
                 <button
                   type="button"
@@ -467,7 +464,6 @@ const Signup = () => {
                 </div>
               </div>
 
-              {/* ═══ Sign in link ═══ */}
               <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
                 Already have an account?{" "}
                 <Link
@@ -516,7 +512,6 @@ const Signup = () => {
                 </div>
               )}
 
-              {/* OTP inputs */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Enter the 6-digit code
