@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Signing you in…</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, sans-serif; background:#0b0f14; color:#fff;
+             display:flex; align-items:center; justify-content:center;
+             height:100vh; margin:0; }
+      .box { text-align:center; }
+      a { color:#13ec5b; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <p>Returning to Flanorx…</p>
+      <p style="font-size:14px;opacity:.7;">
+        If nothing happens, <a id="link">tap here</a>.
+      </p>
+    </div>
+    <script>
+      (function () {
+        // Keep whatever Google sent — query AND fragment
+        var target = "com.flanorx.app://oauth_callback"
+          + window.location.search
+          + window.location.hash;
+
+        document.getElementById("link").href = target;
+
+        // Two attempts covers most WebView / Custom Tab quirks
+        window.location.replace(target);
+        setTimeout(function () { window.location.href = target; }, 100);
+      })();
+    </script>
+  </body>
+</html>

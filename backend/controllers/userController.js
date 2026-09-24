@@ -315,6 +315,46 @@ const forgotPassword = asyncHandler(async (req, res) => {
   });
 });
 
+// ─── Verify Reset OTP ─────────────────────────────────────────
+// Step 1 of the password reset flow: confirm the OTP is valid BEFORE
+// letting the user pick a new password. The OTP is intentionally NOT
+// cleared here — resetPassword will consume it in the next step.
+const verifyResetOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    res.status(400);
+    throw new Error("Email and OTP are required");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  if (!user.resetOtp || !user.resetOtpExpires) {
+    res.status(400);
+    throw new Error("No password reset request found. Please request a new code.");
+  }
+
+  if (user.resetOtpExpires < new Date()) {
+    res.status(400);
+    throw new Error("Code has expired. Please request a new one.");
+  }
+
+  if (user.resetOtp !== otp) {
+    res.status(400);
+    throw new Error("Invalid code. Please check and try again.");
+  }
+
+  // Verified — the OTP stays on the user so resetPassword can consume it.
+  res.status(200).json({
+    message: "Code verified. You can now set a new password.",
+    verified: true,
+  });
+});
+
 // ─── Reset Password ───────────────────────────────────────────
 const resetPassword = asyncHandler(async (req, res) => {
   const { email, otp, newPassword } = req.body;
@@ -521,6 +561,7 @@ export {
   resendOtp,
   loginUser,
   forgotPassword,
+  verifyResetOtp,
   resetPassword,
   getProfile,
   updateProfile,

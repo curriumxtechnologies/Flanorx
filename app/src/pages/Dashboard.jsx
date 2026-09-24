@@ -19,6 +19,7 @@ import {
   X,
   MapPin,
   Navigation,
+  Droplet,
 } from "lucide-react";
 import {
   AreaChart,
@@ -77,7 +78,6 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-// Compute weeks of a given month (1-7, 8-14, 15-21, ...)
 const getWeeksInMonth = (year, month) => {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const weeks = [];
@@ -88,7 +88,6 @@ const getWeeksInMonth = (year, month) => {
   return weeks;
 };
 
-// Human-readable label for the filter button
 const formatFilterLabel = (filter) => {
   switch (filter.type) {
     case "all": return "All Time";
@@ -106,11 +105,10 @@ const formatFilterLabel = (filter) => {
       const d = new Date(filter.year, filter.month, 1);
       return `${d.toLocaleDateString("en-US", { month: "short" })} W${filter.week}`;
     }
-    default: return "All Time";
+    default: return "This Week";
   }
 };
 
-// Human-readable subtitle under chart title
 const formatFilterSubtitle = (filter) => {
   switch (filter.type) {
     case "all": return "All time";
@@ -131,7 +129,7 @@ const formatFilterSubtitle = (filter) => {
       const range = wk ? ` · ${d.toLocaleDateString("en-US", { month: "short" })} ${wk.start}–${wk.end}` : "";
       return `${d.toLocaleDateString("en-US", { month: "long", year: "numeric" })} · Week ${filter.week}${range}`;
     }
-    default: return "All time";
+    default: return "Last 7 days";
   }
 };
 
@@ -142,19 +140,13 @@ const Dashboard = () => {
   const [showSubModal, setShowSubModal] = useState(false);
 
   // ─── Chart filter state ───────────────────────────────────
-  // chartFilter.type: "all" | "week" | "lastWeek" | "month" |
-  //                   "lastMonth" | "last2Months" |
-  //                   "year" | "yearMonth" | "yearMonthWeek"
-  const [chartFilter, setChartFilter] = useState({ type: "all" });
-
-  // Dropdown navigation state
+  const [chartFilter, setChartFilter] = useState({ type: "week" });
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [dropLevel, setDropLevel] = useState("root"); // "root" | "months" | "weeks"
+  const [dropLevel, setDropLevel] = useState("root");
   const [dropYear, setDropYear] = useState(null);
   const [dropMonth, setDropMonth] = useState(null);
   const chartFilterRef = useRef(null);
 
-  // Open dropdown → always start at root
   const openDropdown = () => {
     setDropLevel("root");
     setDropYear(null);
@@ -164,7 +156,16 @@ const Dashboard = () => {
 
   const closeDropdown = () => setDropdownOpen(false);
 
-  // Outside click closes dropdown
+  // ─── Mount: scroll to top ──────────────────────────────────
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    }
+  }, []);
+
+  // Outside click closes chart dropdown
   useEffect(() => {
     const handler = (e) => {
       if (chartFilterRef.current && !chartFilterRef.current.contains(e.target)) {
@@ -222,7 +223,6 @@ const Dashboard = () => {
       .slice(0, RECENT_ORDERS_LIMIT);
   }, [orders]);
 
-  // Subscription status
   const hasGasSubscription = subscriptionData?.isActive || false;
   const cylinderSize = subscriptionData?.cylinderSize || null;
   const daysRemaining = subscriptionData?.daysRemaining || 0;
@@ -238,14 +238,13 @@ const Dashboard = () => {
   else if (isExpired) subStatus = "expired";
   else subStatus = "none";
 
-  // ─── Available years (from orders + current year) ─────────
   const availableYears = useMemo(() => {
     const years = new Set();
     years.add(new Date().getFullYear());
     (orders || []).forEach((o) => {
       if (o.createdAt) years.add(new Date(o.createdAt).getFullYear());
     });
-    return Array.from(years).sort((a, b) => b - a); // newest first
+    return Array.from(years).sort((a, b) => b - a);
   }, [orders]);
 
   // ─── Chart data ────────────────────────────────────────────
@@ -271,7 +270,6 @@ const Dashboard = () => {
 
     const round = (n) => Math.round(n * 100) / 100;
 
-    // ─── This Week: last 7 days ────────────────────────────
     if (chartFilter.type === "week") {
       const out = [];
       for (let i = 6; i >= 0; i--) {
@@ -285,7 +283,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── Last Week: 7–14 days ago ──────────────────────────
     if (chartFilter.type === "lastWeek") {
       const out = [];
       for (let i = 13; i >= 7; i--) {
@@ -299,7 +296,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── This Month: day by day up to today ────────────────
     if (chartFilter.type === "month") {
       const y = now.getFullYear();
       const m = now.getMonth();
@@ -311,7 +307,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── Last Month: full previous calendar month ──────────
     if (chartFilter.type === "lastMonth") {
       const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const y = d.getFullYear();
@@ -324,7 +319,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── Last 2 Months: previous + current, by month ───────
     if (chartFilter.type === "last2Months") {
       const out = [];
       for (let i = 1; i >= 0; i--) {
@@ -337,7 +331,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── Year: Jan → Dec of chosen year ────────────────────
     if (chartFilter.type === "year") {
       const y = chartFilter.year;
       const out = [];
@@ -350,7 +343,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── Year + Month: day-by-day of chosen month ──────────
     if (chartFilter.type === "yearMonth") {
       const { year, month } = chartFilter;
       const lastDay = new Date(year, month + 1, 0).getDate();
@@ -361,7 +353,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── Year + Month + Week: days of that week ────────────
     if (chartFilter.type === "yearMonthWeek") {
       const { year, month, week } = chartFilter;
       const lastDay = new Date(year, month + 1, 0).getDate();
@@ -374,7 +365,6 @@ const Dashboard = () => {
       return out;
     }
 
-    // ─── All Time: monthly from first order → now ──────────
     if (!paidOrders.length) {
       const out = [];
       for (let i = 5; i >= 0; i--) {
@@ -771,7 +761,6 @@ const Dashboard = () => {
 
   // ─── Chart Filter Dropdown ────────────────────────────────
   const ChartFilterDropdown = () => {
-    // Week options for the currently-picked month
     const weeks = dropYear !== null && dropMonth !== null
       ? getWeeksInMonth(dropYear, dropMonth)
       : [];
@@ -828,10 +817,7 @@ const Dashboard = () => {
     );
 
     return (
-      <div
-        ref={chartFilterRef}
-        className="relative flex-shrink-0"
-      >
+      <div ref={chartFilterRef} className="relative flex-shrink-0">
         <button
           type="button"
           onClick={() => (dropdownOpen ? closeDropdown() : openDropdown())}
@@ -844,8 +830,6 @@ const Dashboard = () => {
 
         {dropdownOpen && (
           <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-30 py-1 overflow-hidden max-h-[420px] overflow-y-auto">
-
-            {/* ─── LEVEL 1: ROOT ─────────────────────────── */}
             {dropLevel === "root" && (
               <>
                 <SectionLabel>Quick Ranges</SectionLabel>
@@ -878,7 +862,6 @@ const Dashboard = () => {
               </>
             )}
 
-            {/* ─── LEVEL 2: MONTHS OF A YEAR ─────────────── */}
             {dropLevel === "months" && (
               <>
                 <BackBtn
@@ -916,7 +899,6 @@ const Dashboard = () => {
               </>
             )}
 
-            {/* ─── LEVEL 3: WEEKS OF A MONTH ─────────────── */}
             {dropLevel === "weeks" && (
               <>
                 <BackBtn
@@ -1215,18 +1197,27 @@ const Dashboard = () => {
                 <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
               </div>
             ) : user ? (
-              <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => navigate("/profile")}
+                aria-label="Open profile"
+                className="flex items-center gap-2 min-w-0 rounded-full pl-2 pr-0.5 py-0.5 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700 transition-colors"
+              >
                 <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:inline truncate max-w-[120px]">
                   {user.name?.split(" ")[0]}
                 </span>
-                <div className="h-8 w-8 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <span className="h-8 w-8 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {user.profilePhoto ? (
-                    <img src={user.profilePhoto} alt={user.name} className="h-full w-full object-cover" />
+                    <img
+                      src={user.profilePhoto}
+                      alt={user.name}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <User className="h-4 w-4 text-[#13ec5b]" />
                   )}
-                </div>
-              </div>
+                </span>
+              </button>
             ) : null}
           </div>
         </header>
@@ -1288,7 +1279,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Chart + quick actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm min-w-0">
               <div className="flex items-center justify-between mb-4 gap-2">
@@ -1301,7 +1291,6 @@ const Dashboard = () => {
                   </span>
                 </div>
 
-                {/* Custom drill-down dropdown */}
                 <ChartFilterDropdown />
               </div>
 
@@ -1533,6 +1522,7 @@ const Dashboard = () => {
       )}
 
       {showSubModal && <SubscriptionModal />}
+
       <Bottombar />
     </div>
   );

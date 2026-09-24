@@ -1,8 +1,7 @@
 // Login.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router";
 import { useDispatch } from "react-redux";
-import toast from "react-hot-toast";
 import {
   Mail,
   Lock,
@@ -10,41 +9,22 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  KeyRound,
   ShieldCheck,
   CheckCircle2,
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+import { App } from "@capacitor/app";
 import {
   useLoginMutation,
   useGoogleAuthMutation,
   useForgotPasswordMutation,
+  useVerifyResetOtpMutation,
   useResetPasswordMutation,
 } from "../features/userApiSlice";
 import { setCredentials } from "../features/auth/authSlice";
 
 // ─── Brand icons ────────────────────────────────────────────
-const AppleIcon = ({ className }) => (
-  <svg
-    viewBox="0 0 384 512"
-    fill="currentColor"
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76-19.7C63.3 141 0 184.8 0 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-57.7-90-57.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-  </svg>
-);
-
-const FacebookIcon = ({ className }) => (
-  <svg
-    viewBox="0 0 320 512"
-    fill="currentColor"
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z" />
-  </svg>
-);
-
 const GoogleIcon = ({ className }) => (
   <svg viewBox="0 0 48 48" className={className}>
     <path
@@ -73,28 +53,76 @@ const getRedirectPath = (role) => {
   return "/dashboard";
 };
 
+// ─── OAuth bridge ──────────────────────────────────────────
+// Google's Web client ONLY accepts http(s) redirect URIs.
+// Native apps must bounce through a hosted HTTPS page that
+// forwards the OAuth params into a custom scheme, which the
+// app's appUrlOpen listener then picks up.
+//
+// Flow:
+//   Google → https://flanorx.com/oauth/mobile-callback.html#access_token=…
+//          → com.flanorx.app://oauth_callback#access_token=…
+//          → appUrlOpen listener → handleGoogleTokenExchange()
+const NATIVE_REDIRECT_URI = "https://flanorx.com/oauth/mobile-callback.html";
+const APP_DEEP_LINK = "com.flanorx.app://oauth_callback";
+
 // ─── Step constants ────────────────────────────────────────
 const STEP = {
   LOGIN: "login",
-  FORGOT: "forgot",   // enter email → request OTP
-  RESET: "reset",     // enter OTP + new password + confirm → submit
+  FORGOT: "forgot",
+  OTP: "otp",
+  RESET: "reset",
   DONE: "done",
 };
+
+// ─── Modern "Remember me" chip ─────────────────────────────
+const RememberChip = ({ checked, onChange, label }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    onClick={() => onChange(!checked)}
+    className={`group inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-1.5 text-xs font-medium tracking-tight transition-all duration-200 ease-out select-none ${
+      checked
+        ? "bg-[#13ec5b]/12 text-[#0f9c46] dark:bg-[#13ec5b]/15 dark:text-[#13ec5b] shadow-[inset_0_0_0_1px_rgba(19,236,91,0.25)]"
+        : "bg-slate-100/70 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.15)] hover:bg-slate-100 dark:hover:bg-slate-800"
+    }`}
+  >
+    <span className="relative flex items-center justify-center h-3.5 w-3.5">
+      <span
+        className={`absolute inset-0 rounded-full transition-opacity duration-300 ${
+          checked ? "opacity-100 bg-[#13ec5b]/25" : "opacity-0"
+        }`}
+      />
+      <span
+        className={`relative h-2 w-2 rounded-full transition-all duration-300 ease-out ${
+          checked
+            ? "bg-[#13ec5b] shadow-[0_0_8px_rgba(19,236,91,0.7)]"
+            : "bg-slate-400 dark:bg-slate-500"
+        }`}
+      />
+    </span>
+    <span className="transition-colors duration-200">{label}</span>
+  </button>
+);
 
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // ─── Auth mutations (only the ones that actually exist) ──
+  // ─── Auth mutations ──────────────────────────────────────
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
   const [googleAuth, { isLoading: isGoogleLoading }] = useGoogleAuthMutation();
   const [forgotPassword, { isLoading: isForgotLoading }] =
     useForgotPasswordMutation();
+  const [verifyResetOtp, { isLoading: isVerifyOtpLoading }] =
+    useVerifyResetOtpMutation();
   const [resetPassword, { isLoading: isResetLoading }] =
     useResetPasswordMutation();
 
   // ─── Login form state ────────────────────────────────────
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -103,10 +131,13 @@ const Login = () => {
   const [step, setStep] = useState(STEP.LOGIN);
   const [resetEmail, setResetEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [verifiedOtp, setVerifiedOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [flowMessage, setFlowMessage] = useState({ text: "", type: "" });
+
+  const appUrlListenerRef = useRef(null);
 
   // ─── Redirect if already logged in ───────────────────────
   useEffect(() => {
@@ -125,11 +156,80 @@ const Login = () => {
     }
   }, [navigate]);
 
+  // ─── Deep link listener (native only) ───────────────────
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let removed = false;
+
+    const setupListener = async () => {
+      const listener = await App.addListener("appUrlOpen", async (event) => {
+        try {
+          const url = new URL(event.url);
+
+          const isOAuthCallback =
+            url.hostname === "oauth_callback" ||
+            url.pathname.includes("oauth_callback") ||
+            url.href.includes("oauth_callback");
+
+          if (!isOAuthCallback) return;
+
+          // Google's implicit flow returns the token in the URL FRAGMENT
+          // (after '#'), not the query string. Merge both so we handle
+          // implicit ("#access_token=…") and code flow ("?code=…").
+          const params = new URLSearchParams(url.search);
+          if (url.hash && url.hash.length > 1) {
+            const hashParams = new URLSearchParams(url.hash.substring(1));
+            hashParams.forEach((value, key) => params.set(key, value));
+          }
+
+          const accessToken = params.get("access_token");
+          const authError = params.get("error");
+
+          try {
+            await Browser.close();
+          } catch {
+            // ignore if already closed
+          }
+
+          if (authError) {
+            setError("Google sign-in was cancelled or failed");
+            return;
+          }
+
+          if (accessToken) {
+            await handleGoogleTokenExchange(accessToken);
+          }
+        } catch {
+          // Malformed URL — ignore
+        }
+      });
+
+      if (removed) {
+        listener.remove();
+      } else {
+        appUrlListenerRef.current = listener;
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      removed = true;
+      if (appUrlListenerRef.current) {
+        appUrlListenerRef.current.remove();
+        appUrlListenerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ─── Reset the entire forgot-password flow ───────────────
   const resetForgotFlow = () => {
     setStep(STEP.LOGIN);
     setResetEmail("");
     setOtp("");
+    setVerifiedOtp("");
     setNewPassword("");
     setConfirmPassword("");
     setShowNewPassword(false);
@@ -154,7 +254,37 @@ const Login = () => {
     }
 
     try {
-      const result = await login({ email, password }).unwrap();
+      const result = await login({ email, password, rememberMe }).unwrap();
+      dispatch(setCredentials(result));
+      localStorage.setItem(
+        "flanorx_auth",
+        JSON.stringify({
+          token: result.token,
+          _id: result._id,
+          name: result.name,
+          email: result.email,
+          role: result.role,
+          profile: result.profile,
+          authMethod: result.authMethod,
+          userType: "customer",
+          rememberMe,
+          loggedInAt: Date.now(),
+        })
+      );
+      setSuccess("Login successful! Redirecting...");
+      setTimeout(() => {
+        navigate(getRedirectPath(result.role), { replace: true });
+      }, 1000);
+    } catch (err) {
+      setError(err.data?.message || err.message || "Login failed");
+    }
+  };
+
+  // ─── Shared: exchange Google token with backend ──────────
+  const handleGoogleTokenExchange = async (accessToken) => {
+    try {
+      const result = await googleAuth({ token: accessToken }).unwrap();
+
       dispatch(setCredentials(result));
       localStorage.setItem(
         "flanorx_auth",
@@ -170,57 +300,64 @@ const Login = () => {
           loggedInAt: Date.now(),
         })
       );
-      setSuccess("Login successful! Redirecting...");
+
+      setSuccess("Google login successful!");
       setTimeout(() => {
         navigate(getRedirectPath(result.role), { replace: true });
       }, 1000);
     } catch (err) {
-      setError(err.data?.message || err.message || "Login failed");
+      setError(err.data?.message || err.message || "Google login failed");
     }
   };
 
-  // ─── Google login ────────────────────────────────────────
+  // ─── Platform-aware Google login ─────────────────────────
   const handleGoogleLogin = () => {
     setError("");
+
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (Capacitor.isNativePlatform()) {
+      // Web client IDs only accept http(s) redirect URIs, so we bounce
+      // through a hosted HTTPS bridge that forwards to our app scheme.
+      const params = new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        redirect_uri: NATIVE_REDIRECT_URI,
+        response_type: "token",
+        scope: "openid email profile",
+        prompt: "select_account",
+      });
+
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+      Browser.open({
+        url: authUrl,
+        presentationStyle: "popover",
+      });
+      return;
+    }
+
+    // ── Web path: Google Identity Services popup flow ──
     const tokenClient = window.google?.accounts?.oauth2?.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: "openid email profile",
       callback: async (resp) => {
         try {
           if (!resp?.access_token) throw new Error("No access token");
-          const result = await googleAuth({
-            token: resp.access_token,
-          }).unwrap();
-          dispatch(setCredentials(result));
-          localStorage.setItem(
-            "flanorx_auth",
-            JSON.stringify({
-              token: result.token,
-              _id: result._id,
-              name: result.name,
-              email: result.email,
-              role: result.role,
-              profile: result.profile,
-              authMethod: result.authMethod,
-              userType: "customer",
-              loggedInAt: Date.now(),
-            })
-          );
-          setSuccess("Google login successful!");
-          setTimeout(() => {
-            navigate(getRedirectPath(result.role), { replace: true });
-          }, 1000);
+          await handleGoogleTokenExchange(resp.access_token);
         } catch (err) {
           setError(err.data?.message || err.message || "Google login failed");
         }
       },
     });
-    tokenClient.requestAccessToken({ prompt: "select_account" });
-  };
 
-  const handleSocialUnavailable = (provider) => {
-    toast(`${provider} sign-in isn't available for now`);
+    if (!tokenClient) {
+      setError(
+        "Google sign-in is not ready yet. Please refresh and try again."
+      );
+      return;
+    }
+
+    tokenClient.requestAccessToken({ prompt: "select_account" });
   };
 
   // ═══════════════════════════════════════════════════════════
@@ -239,13 +376,11 @@ const Login = () => {
 
     try {
       await forgotPassword({ email: resetEmail.trim() }).unwrap();
-      // ✅ Move to reset step — NO setTimeout that kicks back to login
-      setStep(STEP.RESET);
+      setStep(STEP.OTP);
       setOtp("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setVerifiedOtp("");
       setFlowMessage({
-        text: `We've sent a 6-digit code to ${resetEmail}. Enter it below with your new password.`,
+        text: `We've sent a 6-digit code to ${resetEmail}.`,
         type: "success",
       });
     } catch (err) {
@@ -256,8 +391,8 @@ const Login = () => {
     }
   };
 
-  // Step 2: submit OTP + new password TOGETHER (matches backend)
-  const handleResetSubmit = async (e) => {
+  // Step 2: verify OTP BEFORE showing password form
+  const handleVerifyOtpSubmit = async (e) => {
     e.preventDefault();
     setFlowMessage({ text: "", type: "" });
 
@@ -269,6 +404,34 @@ const Login = () => {
       });
       return;
     }
+
+    try {
+      await verifyResetOtp({
+        email: resetEmail.trim(),
+        otp: cleanOtp,
+      }).unwrap();
+
+      setVerifiedOtp(cleanOtp);
+      setStep(STEP.RESET);
+      setNewPassword("");
+      setConfirmPassword("");
+      setFlowMessage({
+        text: "Code verified. Now choose your new password.",
+        type: "success",
+      });
+    } catch (err) {
+      setFlowMessage({
+        text: err.data?.message || "Invalid or expired code. Try again.",
+        type: "error",
+      });
+    }
+  };
+
+  // Step 3: submit new password (OTP is already verified)
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    setFlowMessage({ text: "", type: "" });
+
     if (newPassword.length < 8) {
       setFlowMessage({
         text: "Password must be at least 8 characters",
@@ -282,20 +445,17 @@ const Login = () => {
     }
 
     try {
-      // 🎯 One call — backend verifies OTP AND sets password in one shot
       await resetPassword({
         email: resetEmail.trim(),
-        otp: cleanOtp,
+        otp: verifiedOtp,
         newPassword,
       }).unwrap();
 
       setStep(STEP.DONE);
       setFlowMessage({ text: "", type: "" });
 
-      // Pre-fill email on login form for convenience
       setFormData((prev) => ({ ...prev, email: resetEmail.trim() }));
 
-      // Auto-return to login after 4s (user can also click the button)
       setTimeout(() => {
         resetForgotFlow();
       }, 4000);
@@ -307,11 +467,12 @@ const Login = () => {
     }
   };
 
-  // ─── Resend OTP (re-uses forgotPassword) ─────────────────
+  // ─── Resend OTP ──────────────────────────────────────────
   const handleResendOtp = async () => {
     setFlowMessage({ text: "", type: "" });
     try {
       await forgotPassword({ email: resetEmail.trim() }).unwrap();
+      setOtp("");
       setFlowMessage({
         text: `A new code was sent to ${resetEmail}.`,
         type: "success",
@@ -347,7 +508,7 @@ const Login = () => {
   const primaryBtnCls =
     "w-full py-3.5 px-4 bg-[#13ec5b] hover:bg-[#10d04e] active:bg-[#0fbe47] text-gray-900 font-bold rounded-xl transition duration-150 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base";
 
-  // ─── Password strength hint ──────────────────────────────
+  // ─── Password strength hints ─────────────────────────────
   const passwordOk = newPassword.length >= 8;
   const passwordsMatch =
     newPassword && confirmPassword && newPassword === confirmPassword;
@@ -372,7 +533,6 @@ const Login = () => {
 
       {/* ═══ RIGHT — form panel ═══ */}
       <div className="w-full lg:w-1/2 min-h-screen overflow-y-auto flex flex-col justify-center bg-white dark:bg-gray-950">
-        {/* ⬇️ Width fix: mobile = max-w-md (unchanged), desktop widens up */}
         <div className="w-full max-w-md lg:max-w-xl 2xl:max-w-2xl mx-auto px-5 py-8 sm:px-8 sm:py-12 lg:px-8 lg:py-16">
           {/* Logo */}
           <div className="flex justify-center lg:justify-start mb-8 lg:mb-10">
@@ -475,16 +635,11 @@ const Login = () => {
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[#13ec5b] focus:ring-[#13ec5b]/50"
-                  />
-                  <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                    Keep me signed in
-                  </span>
-                </label>
+                <RememberChip
+                  checked={rememberMe}
+                  onChange={setRememberMe}
+                  label="Remember me"
+                />
 
                 <button
                   type="submit"
@@ -507,42 +662,19 @@ const Login = () => {
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
               </div>
 
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2.5 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
-                >
-                  {isGoogleLoading ? (
-                    <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                  ) : (
-                    <GoogleIcon className="h-4.5 w-4.5" />
-                  )}
-                  <span>Continue with Google</span>
-                </button>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSocialUnavailable("Apple")}
-                    disabled={isLoading}
-                    className="flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
-                  >
-                    <AppleIcon className="h-4 w-4" />
-                    <span>Apple</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSocialUnavailable("Facebook")}
-                    disabled={isLoading}
-                    className="flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
-                  >
-                    <FacebookIcon className="h-4 w-4 text-[#1877F2]" />
-                    <span>Facebook</span>
-                  </button>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2.5 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
+              >
+                {isGoogleLoading ? (
+                  <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                ) : (
+                  <GoogleIcon className="h-4.5 w-4.5" />
+                )}
+                <span>Continue with Google</span>
+              </button>
 
               <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
                 Don't have an account?{" "}
@@ -616,9 +748,9 @@ const Login = () => {
           )}
 
           {/* ═══════════════════════════════════════════════════
-              STEP: RESET (OTP + new password on ONE screen)
+              STEP: OTP (verify code before showing password form)
               ═══════════════════════════════════════════════════ */}
-          {step === STEP.RESET && (
+          {step === STEP.OTP && (
             <>
               <div className="mb-6">
                 <button
@@ -634,11 +766,11 @@ const Login = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <ShieldCheck className="h-6 w-6 text-[#13ec5b]" />
                   <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    Enter code &amp; new password
+                    Verify your code
                   </h1>
                 </div>
                 <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
-                  We sent a code to{" "}
+                  Enter the 6-digit code sent to{" "}
                   <span className="font-semibold text-slate-700 dark:text-slate-200">
                     {resetEmail}
                   </span>
@@ -648,8 +780,7 @@ const Login = () => {
 
               <FlowAlert />
 
-              <form onSubmit={handleResetSubmit} className="space-y-4">
-                {/* OTP */}
+              <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Verification code
@@ -666,7 +797,7 @@ const Login = () => {
                     maxLength={6}
                     autoFocus
                     className="w-full text-center text-2xl sm:text-3xl font-bold tracking-[0.6em] py-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
-                    disabled={isResetLoading}
+                    disabled={isVerifyOtpLoading}
                   />
                   <div className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">
                     Didn't get it?{" "}
@@ -681,6 +812,55 @@ const Login = () => {
                   </div>
                 </div>
 
+                <button
+                  type="submit"
+                  disabled={isVerifyOtpLoading || otp.length !== 6}
+                  className={primaryBtnCls}
+                >
+                  {isVerifyOtpLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    "Verify code"
+                  )}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* ═══════════════════════════════════════════════════
+              STEP: RESET (new password — OTP already verified)
+              ═══════════════════════════════════════════════════ */}
+          {step === STEP.RESET && (
+            <>
+              <div className="mb-6">
+                <button
+                  onClick={() => {
+                    setStep(STEP.OTP);
+                    setFlowMessage({ text: "", type: "" });
+                  }}
+                  className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition mb-4"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to code
+                </button>
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="h-6 w-6 text-[#13ec5b]" />
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Choose a new password
+                  </h1>
+                </div>
+                <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
+                  Your code was verified. Set a new password for{" "}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {resetEmail}
+                  </span>
+                  .
+                </p>
+              </div>
+
+              <FlowAlert />
+
+              <form onSubmit={handleResetSubmit} className="space-y-4">
                 {/* New password */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -696,6 +876,7 @@ const Login = () => {
                       autoComplete="new-password"
                       className="w-full pl-10 pr-12 py-3 sm:py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#13ec5b]/40 focus:border-[#13ec5b] transition"
                       disabled={isResetLoading}
+                      autoFocus
                     />
                     <button
                       type="button"
@@ -712,7 +893,6 @@ const Login = () => {
                       )}
                     </button>
                   </div>
-                  {/* Live validation hint */}
                   {newPassword && (
                     <p
                       className={`text-xs mt-1.5 ${
@@ -762,12 +942,7 @@ const Login = () => {
 
                 <button
                   type="submit"
-                  disabled={
-                    isResetLoading ||
-                    otp.length !== 6 ||
-                    !passwordOk ||
-                    !passwordsMatch
-                  }
+                  disabled={isResetLoading || !passwordOk || !passwordsMatch}
                   className={primaryBtnCls}
                 >
                   {isResetLoading ? (

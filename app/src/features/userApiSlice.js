@@ -47,6 +47,13 @@ export const userApiSlice = apiSlice.injectEndpoints({
         body: data,
       }),
     }),
+    verifyResetOtp: builder.mutation({
+      query: (data) => ({
+        url: `${USER_URL}/verify-reset-otp`,
+        method: "POST",
+        body: data,
+      }),
+    }),
     resetPassword: builder.mutation({
       query: (data) => ({
         url: `${USER_URL}/reset-password`,
@@ -110,6 +117,7 @@ export const {
   useLoginMutation,
   useGoogleAuthMutation,
   useForgotPasswordMutation,
+  useVerifyResetOtpMutation,
   useResetPasswordMutation,
   useLogoutMutation,
   useGetProfileQuery,

@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router";
 import { useDispatch } from "react-redux";
-import toast from "react-hot-toast";
 import {
   Mail,
   Lock,
@@ -12,6 +11,9 @@ import {
   EyeOff,
   ArrowLeft,
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+import { App } from "@capacitor/app";
 import {
   useRegisterMutation,
   useVerifyOtpMutation,
@@ -21,28 +23,6 @@ import {
 import { setCredentials } from "../features/auth/authSlice";
 
 // ─── Brand icons ────────────────────────────────────────────
-const AppleIcon = ({ className }) => (
-  <svg
-    viewBox="0 0 384 512"
-    fill="currentColor"
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76-19.7C63.3 141 0 184.8 0 273.5c0 26.2 4.8 53.3 14.4 81.2 12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-57.7-90-57.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-  </svg>
-);
-
-const FacebookIcon = ({ className }) => (
-  <svg
-    viewBox="0 0 320 512"
-    fill="currentColor"
-    className={className}
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z" />
-  </svg>
-);
-
 const GoogleIcon = ({ className }) => (
   <svg viewBox="0 0 48 48" className={className}>
     <path
@@ -63,6 +43,13 @@ const GoogleIcon = ({ className }) => (
     />
   </svg>
 );
+
+// ─── OAuth bridge ──────────────────────────────────────────
+// Google's Web client ONLY accepts http(s) redirect URIs.
+// Native apps bounce through a hosted HTTPS page that forwards
+// the OAuth params into a custom scheme, which the app's
+// appUrlOpen listener then picks up.
+const NATIVE_REDIRECT_URI = "https://flanorx.com/oauth/mobile-callback.html";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -89,6 +76,7 @@ const Signup = () => {
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const timerRef = useRef(null);
+  const appUrlListenerRef = useRef(null);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -113,6 +101,77 @@ const Signup = () => {
     }
     return () => clearTimeout(timerRef.current);
   }, [step, timer]);
+
+  // ─── Deep link listener (native only) ───
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let removed = false;
+
+    const setupListener = async () => {
+      const listener = await App.addListener("appUrlOpen", async (event) => {
+        try {
+          const url = new URL(event.url);
+
+          // Match our OAuth callback
+          const isOAuthCallback =
+            url.hostname === "oauth_callback" ||
+            url.pathname.includes("oauth_callback") ||
+            url.href.includes("oauth_callback");
+
+          if (!isOAuthCallback) return;
+
+          // Google's implicit flow returns the token in the URL FRAGMENT
+          // (after '#'), not the query string. Merge both so we handle
+          // implicit ("#access_token=…") and code flow ("?code=…").
+          const params = new URLSearchParams(url.search);
+          if (url.hash && url.hash.length > 1) {
+            const hashParams = new URLSearchParams(url.hash.substring(1));
+            hashParams.forEach((value, key) => params.set(key, value));
+          }
+
+          const accessToken = params.get("access_token");
+          const authError = params.get("error");
+
+          // Close the in-app browser sheet
+          try {
+            await Browser.close();
+          } catch {
+            // ignore if already closed
+          }
+
+          if (authError) {
+            setError("Google signup was cancelled or failed");
+            return;
+          }
+
+          if (accessToken) {
+            await handleGoogleTokenExchange(accessToken);
+          }
+        } catch {
+          // Malformed URL — ignore
+        }
+      });
+
+      if (removed) {
+        // Component unmounted before we could store the ref — clean up now
+        listener.remove();
+      } else {
+        appUrlListenerRef.current = listener;
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      removed = true;
+      if (appUrlListenerRef.current) {
+        appUrlListenerRef.current.remove();
+        appUrlListenerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -220,45 +279,83 @@ const Signup = () => {
     }
   };
 
+  // ─── Shared: exchange Google token with backend ───
+  const handleGoogleTokenExchange = async (accessToken) => {
+    try {
+      const result = await googleAuth({ token: accessToken }).unwrap();
+
+      dispatch(setCredentials(result));
+      localStorage.setItem(
+        "flanorx_auth",
+        JSON.stringify({
+          token: result.token,
+          _id: result._id,
+          name: result.name,
+          email: result.email,
+          role: result.role,
+          profile: result.profile,
+          authMethod: result.authMethod,
+          userType: "customer",
+          loggedInAt: Date.now(),
+        })
+      );
+
+      setSuccess("Account created with Google!");
+      setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
+    } catch (err) {
+      setError(err.data?.message || err.message || "Google signup failed");
+    }
+  };
+
+  // ─── Platform-aware Google signup ───
   const handleGoogleSignup = () => {
     setError("");
+
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (Capacitor.isNativePlatform()) {
+      // ─── NATIVE: Google → HTTPS bridge → app scheme ───
+      // Web client IDs reject custom schemes, so we redirect to a hosted
+      // page that forwards the OAuth params into com.flanorx.app://…
+      const params = new URLSearchParams({
+        client_id: GOOGLE_CLIENT_ID,
+        redirect_uri: NATIVE_REDIRECT_URI,
+        response_type: "token",
+        scope: "openid email profile",
+        prompt: "select_account",
+      });
+
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+      Browser.open({
+        url: authUrl,
+        presentationStyle: "popover", // iOS presentation style
+      });
+      return;
+    }
+
+    // ─── WEB: use Google Identity Services popup ───
     const tokenClient = window.google?.accounts?.oauth2?.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: "openid email profile",
       callback: async (resp) => {
         try {
           if (!resp?.access_token) throw new Error("No access token");
-          const result = await googleAuth({
-            token: resp.access_token,
-          }).unwrap();
-          dispatch(setCredentials(result));
-          localStorage.setItem(
-            "flanorx_auth",
-            JSON.stringify({
-              token: result.token,
-              _id: result._id,
-              name: result.name,
-              email: result.email,
-              role: result.role,
-              profile: result.profile,
-              authMethod: result.authMethod,
-              userType: "customer",
-              loggedInAt: Date.now(),
-            })
-          );
-          setSuccess("Account created with Google!");
-          setTimeout(() => navigate("/dashboard", { replace: true }), 1500);
+          await handleGoogleTokenExchange(resp.access_token);
         } catch (err) {
           setError(err.data?.message || err.message || "Google signup failed");
         }
       },
     });
-    tokenClient.requestAccessToken({ prompt: "select_account" });
-  };
 
-  const handleSocialUnavailable = (provider) => {
-    toast(`${provider} sign-up isn't available for now`);
+    if (!tokenClient) {
+      setError(
+        "Google sign-in is not ready yet. Please refresh and try again."
+      );
+      return;
+    }
+
+    tokenClient.requestAccessToken({ prompt: "select_account" });
   };
 
   const isLoading =
@@ -287,7 +384,11 @@ const Signup = () => {
         <div className="w-full max-w-md lg:max-w-xl 2xl:max-w-2xl mx-auto px-5 py-8 sm:px-8 sm:py-12 lg:px-8 lg:py-16">
           {/* Logo */}
           <div className="flex justify-center lg:justify-start mb-8 lg:mb-10">
-            <img src="/flanorx.png" alt="Flanorx" className="h-7 sm:h-8 w-auto" />
+            <img
+              src="/flanorx.png"
+              alt="Flanorx"
+              className="h-7 sm:h-8 w-auto"
+            />
           </div>
 
           {step === 1 ? (
@@ -316,7 +417,8 @@ const Signup = () => {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Full name <span className="text-red-500 dark:text-red-400">*</span>
+                    Full name{" "}
+                    <span className="text-red-500 dark:text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
@@ -335,7 +437,8 @@ const Signup = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Email <span className="text-red-500 dark:text-red-400">*</span>
+                    Email{" "}
+                    <span className="text-red-500 dark:text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
@@ -355,7 +458,8 @@ const Signup = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                    Password <span className="text-red-500 dark:text-red-400">*</span>
+                    Password{" "}
+                    <span className="text-red-500 dark:text-red-400">*</span>
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 dark:text-slate-500" />
@@ -373,7 +477,9 @@ const Signup = () => {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showPassword ? (
                         <EyeOff className="h-4.5 w-4.5" />
@@ -427,42 +533,19 @@ const Signup = () => {
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
               </div>
 
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={handleGoogleSignup}
-                  disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2.5 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
-                >
-                  {isGoogleLoading ? (
-                    <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                  ) : (
-                    <GoogleIcon className="h-4.5 w-4.5" />
-                  )}
-                  <span>Continue with Google</span>
-                </button>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSocialUnavailable("Apple")}
-                    disabled={isLoading}
-                    className="flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
-                  >
-                    <AppleIcon className="h-4 w-4" />
-                    <span>Apple</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSocialUnavailable("Facebook")}
-                    disabled={isLoading}
-                    className="flex items-center justify-center gap-2 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
-                  >
-                    <FacebookIcon className="h-4 w-4 text-[#1877F2]" />
-                    <span>Facebook</span>
-                  </button>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={handleGoogleSignup}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2.5 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
+              >
+                {isGoogleLoading ? (
+                  <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                ) : (
+                  <GoogleIcon className="h-4.5 w-4.5" />
+                )}
+                <span>Continue with Google</span>
+              </button>
 
               <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
                 Already have an account?{" "}

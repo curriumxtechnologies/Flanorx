@@ -22,6 +22,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- ═══════════════════════════════════════════════════════
+                 OAuth callback deep link
+                 Handles:  com.flanorx.app://oauth_callback?access_token=...
+                 Triggered by Google redirecting back after sign-in in
+                 the system browser. Capacitor's App.addListener("appUrlOpen")
+                 receives this URL.
+                 ═══════════════════════════════════════════════════════ -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="com.flanorx.app"
+                    android:host="oauth_callback" />
+            </intent-filter>
+
         </activity>
 
         <provider

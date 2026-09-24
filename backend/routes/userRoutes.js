@@ -10,6 +10,7 @@ import {
   resendOtp,
   loginUser,
   forgotPassword,
+  verifyResetOtp,
   resetPassword,
   getProfile,
   updateProfile,
@@ -79,6 +80,11 @@ router.post("/google", googleAuth);
 // @desc    Request password reset OTP
 // @access  Public
 router.post("/forgot-password", forgotPassword);
+
+// @route   POST /api/users/verify-reset-otp
+// @desc    Verify the password reset OTP before allowing password change
+// @access  Public
+router.post("/verify-reset-otp", verifyResetOtp);
 
 // @route   POST /api/users/reset-password
 // @desc    Reset password using OTP
