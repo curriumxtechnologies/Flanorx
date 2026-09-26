@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   ClipboardList,
   Store,
+  FileText,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import LogoutButton from "../../utils/logoutBtn";
@@ -61,6 +62,14 @@ const AdminMoreDrawer = ({ isOpen, onClose }) => {
       icon: BarChart3,
       onClick: () => {
         navigate("/superuser/analytics");
+        onClose();
+      },
+    },
+    {
+      label: "Terms & Privacy",
+      icon: FileText,
+      onClick: () => {
+        navigate("/superuser/terms");
         onClose();
       },
     },

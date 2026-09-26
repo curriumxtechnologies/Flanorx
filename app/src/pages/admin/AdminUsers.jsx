@@ -213,6 +213,60 @@ The Flanorx Team`,
   },
 };
 
+// ═══════════════════════════════════════════════════════════
+//  Role-change notification templates
+//  Fires automatically after an admin updates someone's role.
+// ═══════════════════════════════════════════════════════════
+const ROLE_CHANGE_TEMPLATES = {
+  user: {
+    subject: "Your Flanorx account has been updated",
+    body: `Hi there,
+
+Quick heads-up — your Flanorx account role has been updated to Customer.
+
+You can continue to place orders, track deliveries, and manage everything from your dashboard.
+
+If you have any questions, just reply to this email or reach us at ${CONTACT_EMAIL}.
+
+Warm regards,
+The Flanorx Team`,
+    ctaLabel: "Open Flanorx",
+    ctaUrl: `${BASE_URL}/dashboard`,
+  },
+
+  rider: {
+    subject: "You're now a rider on Flanorx 🎉",
+    body: `Hi there,
+
+Great news — your Flanorx account has been upgraded to Rider.
+
+You can now view available deliveries, track your earnings, and manage your rider profile from your rider dashboard.
+
+If anything's unclear or you need help, just reply to this email or reach us at ${CONTACT_EMAIL}.
+
+Ride safe,
+The Flanorx Team`,
+    ctaLabel: "Rider Dashboard",
+    ctaUrl: `${BASE_URL}/rider/dashboard`,
+  },
+
+  admin: {
+    subject: "You've been granted admin access on Flanorx",
+    body: `Hi there,
+
+Your Flanorx account has been upgraded to Admin.
+
+You now have access to the admin dashboard where you can manage orders, users, riders, and stations.
+
+If you need anything, just reply to this email or reach us at ${CONTACT_EMAIL}.
+
+Best,
+The Flanorx Team`,
+    ctaLabel: "Admin Dashboard",
+    ctaUrl: `${BASE_URL}/superuser/dashboard`,
+  },
+};
+
 // Fallback for mixed-role selections
 const GENERIC_TEMPLATE = {
   subject: "An update from Flanorx",
@@ -437,6 +491,10 @@ const AdminUsers = () => {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [showMessageModal, setShowMessageModal] = useState(false);
 
+  // ─── Message context (for modal header) ──────────────────
+  // "role-change" | "bulk" | "user" | null
+  const [messageContext, setMessageContext] = useState(null);
+
   // ─── Long-press refs ──────────────────────────────────────
   const longPressTimer = useRef(null);
   const suppressClick = useRef(false);
@@ -492,6 +550,7 @@ const AdminUsers = () => {
   const exitSelectionMode = () => {
     setSelectionMode(false);
     setSelectedIds(new Set());
+    setMessageContext(null);
   };
 
   const toggleSelection = (userId) => {
@@ -583,12 +642,30 @@ const AdminUsers = () => {
     setFilters({ role: "", isVerified: "", search: "" });
   };
 
-  // ─── Role update handler ──────────────────────────────────
+  // ─── Role update handler (auto-opens role-change email) ──
   const handleRoleUpdate = async (userId, newRole) => {
+    // Skip if nothing actually changed (dropdown reselected same value)
+    const current = users.find((u) => u._id === userId);
+    if (current?.role === newRole) return;
+
     try {
       await updateUserRole({ id: userId, role: newRole }).unwrap();
       refetch();
       toast.success("Role updated");
+
+      // ── Auto-open the message modal with a prefilled role-change
+      //    email. Admin can edit or just hit Send. Closing the
+      //    modal skips the email — role update is already done.
+      setSelectedIds(new Set([userId]));
+      setSelectionMode(true);
+      setMessageContext("role-change");
+
+      const template = ROLE_CHANGE_TEMPLATES[newRole] || GENERIC_TEMPLATE;
+      prefillFromTemplate(template);
+      setShowMessageModal(true);
+
+      // Close the detail modal if it was open
+      setSelectedUser(null);
     } catch (err) {
       toast.error(err?.data?.message || "Failed to update user role");
     }
@@ -639,6 +716,7 @@ const AdminUsers = () => {
       toast.error("Select at least one recipient");
       return;
     }
+    setMessageContext("bulk");
     prefillFromTemplate(pickTemplateForSelection());
     setShowMessageModal(true);
   };
@@ -647,6 +725,7 @@ const AdminUsers = () => {
   const openMessageForUser = (user) => {
     setSelectedIds(new Set([user._id]));
     setSelectionMode(true);
+    setMessageContext("user");
     const template = USER_TEMPLATES[user.role || "user"] || GENERIC_TEMPLATE;
     prefillFromTemplate(template);
     setShowMessageModal(true);
@@ -662,6 +741,7 @@ const AdminUsers = () => {
     }
     setSelectedIds(new Set(matching.map((u) => u._id)));
     setSelectionMode(true);
+    setMessageContext("bulk");
     const template = USER_TEMPLATES[role] || GENERIC_TEMPLATE;
     prefillFromTemplate(template);
     setShowMessageModal(true);
@@ -913,199 +993,214 @@ const AdminUsers = () => {
     </div>
   );
 
-  const renderMessageModal = () => (
-    <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={() => !sendingMessage && setShowMessageModal(false)}
-    >
+  const renderMessageModal = () => {
+    const headerTitle =
+      messageContext === "role-change"
+        ? "Notify user of role change"
+        : messageContext === "user"
+        ? "Send Message"
+        : "Send Message";
+
+    const headerSubtitle =
+      messageContext === "role-change"
+        ? `Role updated — ${selectedIds.size} recipient. Email is prefilled below.`
+        : `${selectedIds.size} ${
+            selectedIds.size === 1 ? "recipient" : "recipients"
+          }`;
+
+    return (
       <div
-        className="bg-white dark:bg-gray-900 w-full max-w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+        onClick={() => !sendingMessage && setShowMessageModal(false)}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <div className="min-w-0">
-            <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">
-              Send Message
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {selectedIds.size}{" "}
-              {selectedIds.size === 1 ? "recipient" : "recipients"}
-            </p>
-          </div>
-          <button
-            onClick={() => !sendingMessage && setShowMessageModal(false)}
-            disabled={sendingMessage}
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 disabled:opacity-50"
-          >
-            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-              Subject
-            </label>
-            <input
-              type="text"
-              value={messageForm.subject}
-              onChange={(e) =>
-                setMessageForm((f) => ({ ...f, subject: e.target.value }))
-              }
-              placeholder="e.g. Welcome to Flanorx"
-              disabled={sendingMessage}
-              autoComplete="off"
-              className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-              Message
-            </label>
-            <textarea
-              value={messageForm.body}
-              onChange={(e) =>
-                setMessageForm((f) => ({ ...f, body: e.target.value }))
-              }
-              placeholder="Write your message..."
-              rows={11}
-              disabled={sendingMessage}
-              className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none resize-none disabled:opacity-60"
-            />
-          </div>
-
-          {/* CTA (prefilled, editable) */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                Button label
-              </label>
-              <input
-                type="text"
-                value={messageForm.ctaLabel}
-                onChange={(e) =>
-                  setMessageForm((f) => ({ ...f, ctaLabel: e.target.value }))
-                }
-                placeholder="Optional"
-                disabled={sendingMessage}
-                autoComplete="off"
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
-              />
+        <div
+          className="bg-white dark:bg-gray-900 w-full max-w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">
+                {headerTitle}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {headerSubtitle}
+              </p>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                Button URL
-              </label>
-              <input
-                type="url"
-                value={messageForm.ctaUrl}
-                onChange={(e) =>
-                  setMessageForm((f) => ({ ...f, ctaUrl: e.target.value }))
-                }
-                placeholder="https://..."
-                disabled={sendingMessage}
-                autoComplete="off"
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5 gap-2">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                Attachments
-              </label>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                {messageForm.attachments.length}/5
-              </span>
-            </div>
-
-            {messageForm.attachments.length > 0 && (
-              <div className="space-y-1.5 mb-2">
-                {messageForm.attachments.map((file, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-2 px-2.5 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg min-w-0"
-                  >
-                    <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-xs font-medium text-gray-900 dark:text-white truncate"
-                        title={file.name}
-                      >
-                        {file.name}
-                      </p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                        {formatFileSize(file.size)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => removeAttachment(idx)}
-                      disabled={sendingMessage}
-                      className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 disabled:opacity-50"
-                    >
-                      <X className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {messageForm.attachments.length < 5 && (
-              <label className="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer">
-                <Paperclip className="h-3.5 w-3.5" />
-                Attach files
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleAttachmentAdd}
-                  disabled={sendingMessage}
-                  className="hidden"
-                />
-              </label>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <div className="flex gap-2">
             <button
               onClick={() => !sendingMessage && setShowMessageModal(false)}
               disabled={sendingMessage}
-              className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium disabled:opacity-60"
+              className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 disabled:opacity-50"
             >
-              Cancel
+              <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
             </button>
-            <button
-              onClick={handleSendMessage}
-              disabled={
-                sendingMessage ||
-                !messageForm.subject.trim() ||
-                !messageForm.body.trim()
-              }
-              className="flex-1 py-2.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {sendingMessage ? (
-                <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Send
-                </>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Subject
+              </label>
+              <input
+                type="text"
+                value={messageForm.subject}
+                onChange={(e) =>
+                  setMessageForm((f) => ({ ...f, subject: e.target.value }))
+                }
+                placeholder="e.g. Welcome to Flanorx"
+                disabled={sendingMessage}
+                autoComplete="off"
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                Message
+              </label>
+              <textarea
+                value={messageForm.body}
+                onChange={(e) =>
+                  setMessageForm((f) => ({ ...f, body: e.target.value }))
+                }
+                placeholder="Write your message..."
+                rows={11}
+                disabled={sendingMessage}
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none resize-none disabled:opacity-60"
+              />
+            </div>
+
+            {/* CTA (prefilled, editable) */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                  Button label
+                </label>
+                <input
+                  type="text"
+                  value={messageForm.ctaLabel}
+                  onChange={(e) =>
+                    setMessageForm((f) => ({ ...f, ctaLabel: e.target.value }))
+                  }
+                  placeholder="Optional"
+                  disabled={sendingMessage}
+                  autoComplete="off"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                  Button URL
+                </label>
+                <input
+                  type="url"
+                  value={messageForm.ctaUrl}
+                  onChange={(e) =>
+                    setMessageForm((f) => ({ ...f, ctaUrl: e.target.value }))
+                  }
+                  placeholder="https://..."
+                  disabled={sendingMessage}
+                  autoComplete="off"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[#13ec5b]/50 focus:border-[#13ec5b] outline-none disabled:opacity-60"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5 gap-2">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Attachments
+                </label>
+                <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                  {messageForm.attachments.length}/5
+                </span>
+              </div>
+
+              {messageForm.attachments.length > 0 && (
+                <div className="space-y-1.5 mb-2">
+                  {messageForm.attachments.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-2.5 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg min-w-0"
+                    >
+                      <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-xs font-medium text-gray-900 dark:text-white truncate"
+                          title={file.name}
+                        >
+                          {file.name}
+                        </p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                          {formatFileSize(file.size)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeAttachment(idx)}
+                        disabled={sendingMessage}
+                        className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 disabled:opacity-50"
+                      >
+                        <X className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
-            </button>
+
+              {messageForm.attachments.length < 5 && (
+                <label className="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Attach files
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleAttachmentAdd}
+                    disabled={sendingMessage}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex gap-2">
+              <button
+                onClick={() => !sendingMessage && setShowMessageModal(false)}
+                disabled={sendingMessage}
+                className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={
+                  sendingMessage ||
+                  !messageForm.subject.trim() ||
+                  !messageForm.body.trim()
+                }
+                className="flex-1 py-2.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {sendingMessage ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Send
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSelectionBar = () => {
     if (!selectionMode || showMessageModal) return null;
