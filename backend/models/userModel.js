@@ -26,6 +26,24 @@ const addressSchema = mongoose.Schema(
   { timestamps: true }
 );
 
+// ─── Terms / Privacy acceptance sub‑document ─────────────────
+// One entry per document type. Stores exactly which version was
+// accepted, when, and from where — this is the audit trail.
+const termsAcceptanceSchema = mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["terms", "privacy"],
+      required: true,
+    },
+    version: { type: String, required: true },
+    acceptedAt: { type: Date, default: Date.now },
+    ip: { type: String, default: null },
+    userAgent: { type: String, default: null },
+  },
+  { _id: false }
+);
+
 const userSchema = mongoose.Schema(
   {
     // ─── Basic info ──────────────────────────────────────────
@@ -128,6 +146,23 @@ const userSchema = mongoose.Schema(
       updatedAt: { type: Date, default: null },
     },
 
+    // ─── Terms / Privacy acceptance ─────────────────────────
+    // True only when the user has accepted EVERY currently active
+    // document (terms + privacy) at its CURRENT version.
+    termsAccepted: { type: Boolean, default: false },
+    termsAcceptedAt: { type: Date, default: null },
+
+    // While this date is in the future, the frontend modal may be
+    // dismissed. Once it passes, acceptance is mandatory.
+    // Set whenever an admin publishes a new version of any document.
+    termsGraceEndsAt: { type: Date, default: null },
+
+    // Audit trail: one entry per accepted document per version.
+    termsAcceptances: {
+      type: [termsAcceptanceSchema],
+      default: [],
+    },
+
     // ─── Auto‑delete unverified accounts after 6 minutes ───
     deleteAfter: {
       type: Date,
@@ -153,6 +188,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 // ─── Indexes ────────────────────────────────────────────────
 userSchema.index({ role: 1, riderType: 1 });
 userSchema.index({ station: 1, stationRole: 1 });
+// Cheap "who still hasn't accepted?" queries for the admin side
+// and the terms publish job.
+userSchema.index({ termsAccepted: 1, termsGraceEndsAt: 1 });
 
 const User = mongoose.model("User", userSchema);
 export default User;

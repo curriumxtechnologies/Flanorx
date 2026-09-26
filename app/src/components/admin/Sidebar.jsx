@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   ClipboardList,
   Store,
+  FileText,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import {
@@ -61,6 +62,8 @@ const Sidebar = () => {
     { to: "/superuser/stations", icon: Store, label: "Pickup Stations" },
     { to: "/superuser/waitlist", icon: ClipboardList, label: "Waitlist" },
     { to: "/superuser/analytics", icon: BarChart3, label: "Analytics" },
+    // ⭐ new
+    { to: "/superuser/terms", icon: FileText, label: "Terms & Privacy" },
     { to: "/superuser/settings", icon: Settings, label: "Settings" },
   ];
 

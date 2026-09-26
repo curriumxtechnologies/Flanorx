@@ -220,6 +220,38 @@ export const adminApiSlice = apiSlice.injectEndpoints({
             ]
           : [{ type: "Delivery", id: "ACTIVE" }],
     }),
+
+    // ─── Terms & Privacy ────────────────────────────────────
+
+    // Publish a new version of terms or privacy policy.
+    // Publishing flips EVERY user's termsAccepted back to false and
+    // starts a fresh 10-day grace window — so we invalidate the user
+    // list too (their acceptance flags all just changed).
+    publishTerms: builder.mutation({
+      query: ({ type, content, title, version, updateNotice }) => ({
+        url: `${ADMIN_URL}/terms/${type}`,
+        method: "PUT",
+        body: { content, title, version, updateNotice },
+      }),
+      invalidatesTags: [
+        "Terms",
+        "TermsStatus",
+        "TermsHistory",
+        { type: "User", id: "ADMIN_LIST" },
+      ],
+    }),
+
+    // Full version history + audit trail for one document.
+    // pass type = "terms" | "privacy"
+    getTermsHistory: builder.query({
+      query: (type) => ({
+        url: `${ADMIN_URL}/terms/${type}/history`,
+        method: "GET",
+      }),
+      providesTags: (result, error, type) => [
+        { type: "TermsHistory", id: type },
+      ],
+    }),
   }),
 });
 
@@ -236,4 +268,7 @@ export const {
   useRejectRiderMutation,
   useGetAllRidersQuery,
   useGetActiveDeliveriesQuery,
+  // Terms & Privacy
+  usePublishTermsMutation,
+  useGetTermsHistoryQuery,
 } = adminApiSlice;

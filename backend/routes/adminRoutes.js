@@ -39,6 +39,11 @@ import {
   adminGetStationLogs,
 } from "../controllers/stationController.js";
 
+import {
+  updateTerms,
+  getTermsHistory,
+} from "../controllers/termsController.js";
+
 const router = express.Router();
 
 // ─── Middleware: admin only for every route in this file ───
@@ -97,5 +102,36 @@ router.delete("/stations/:id/riders/:userId", adminRemoveStationRider);
 // Stock override + audit log
 router.post("/stations/:id/adjust-stock", adminAdjustStock);
 router.get("/stations/:id/logs", adminGetStationLogs);
+
+// ═══════════════════════════════════════════════════════════
+//  TERMS & PRIVACY MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+
+// @route   PUT /api/admin/terms/:type
+// @desc    Publish a new version of the terms or privacy document.
+//          Archives the old copy into history, auto-bumps the version
+//          (unless you pass an explicit `version`), then flips EVERY
+//          user's termsAccepted back to false with a fresh 10-day
+//          grace window — which re-triggers the acceptance modal
+//          on the frontend for everyone.
+//
+//          Body: {
+//            title?,          // optional, defaults to existing / DEFAULT_TITLES
+//            content,         // required — markdown / HTML / plain text
+//            version?,        // optional, auto-bumped if omitted
+//            updateNotice?,   // optional "we updated X" banner text
+//            effectiveFrom?,  // optional Date
+//            isActive?        // optional boolean
+//          }
+//
+//          :type = "terms" | "privacy"
+// @access  Private/Admin
+router.put("/terms/:type", updateTerms);
+
+// @route   GET /api/admin/terms/:type/history
+// @desc    Full version history + audit trail for a policy document.
+//          Returns the current live version plus every archived copy.
+// @access  Private/Admin
+router.get("/terms/:type/history", getTermsHistory);
 
 export default router;

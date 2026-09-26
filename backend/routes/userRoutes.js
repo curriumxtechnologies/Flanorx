@@ -1,3 +1,4 @@
+// routes/userRoutes.js
 import express from "express";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -19,6 +20,11 @@ import {
   deleteAccount,
   logoutUser,
 } from "../controllers/userController.js";
+import {
+  getTerms,
+  getTermsStatus,
+  acceptTerms,
+} from "../controllers/termsController.js";
 
 const router = express.Router();
 
@@ -52,7 +58,10 @@ cloudinary.api
 // =============================================
 
 // @route   POST /api/users/register
-// @desc    Register a new user (sends OTP)
+// @desc    Register a new user (sends OTP).
+//          Body must include `acceptedTerms: true` — the server rejects
+//          registration otherwise and records which policy versions
+//          the user accepted (terms + privacy).
 // @access  Public
 router.post("/register", registerUser);
 
@@ -96,6 +105,13 @@ router.post("/reset-password", resetPassword);
 // @access  Public (or Protected – either works)
 router.post("/logout", logoutUser);
 
+// @route   GET /api/users/terms
+// @desc    Read the current Terms of Service + Privacy Policy write-ups.
+//          Fully DB-driven — nothing hard-coded on the frontend.
+//          Optional ?type=terms | ?type=privacy to fetch one document.
+// @access  Public
+router.get("/terms", getTerms);
+
 // =============================================
 //           PROTECTED ROUTES
 // =============================================
@@ -123,5 +139,20 @@ router.put("/change-password", protect, changePassword);
 // @desc    Delete user account
 // @access  Private
 router.delete("/account", protect, deleteAccount);
+
+// @route   GET /api/users/terms-status
+// @desc    Does THIS user owe us a terms acceptance?
+//          Returns: { requiresAcceptance, isMandatory, canDismiss,
+//                     daysLeft, graceEndsAt, pendingDocuments[], ... }
+//          The modal drives itself entirely from this response.
+// @access  Private
+router.get("/terms-status", protect, getTermsStatus);
+
+// @route   POST /api/users/accept-terms
+// @desc    Record acceptance of the current terms + privacy versions.
+//          Body: { accepted: true, versions: { terms, privacy } }
+//          Returns 409 if the docs changed mid-read.
+// @access  Private
+router.post("/accept-terms", protect, acceptTerms);
 
 export default router;

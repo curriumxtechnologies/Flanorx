@@ -10,6 +10,10 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  Check,
+  X,
+  FileText,
+  Shield,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
@@ -19,6 +23,7 @@ import {
   useVerifyOtpMutation,
   useResendOtpMutation,
   useGoogleAuthMutation,
+  useGetTermsQuery,
 } from "../features/userApiSlice";
 import { setCredentials } from "../features/auth/authSlice";
 
@@ -45,12 +50,70 @@ const GoogleIcon = ({ className }) => (
 );
 
 // ─── OAuth bridge ──────────────────────────────────────────
-// Google's Web client ONLY accepts http(s) redirect URIs.
-// Native apps bounce through a hosted HTTPS page that forwards
-// the OAuth params into a custom scheme, which the app's
-// appUrlOpen listener then picks up.
 const NATIVE_REDIRECT_URI = "https://flanorx.com/oauth/mobile-callback.html";
 
+// ═══════════════════════════════════════════════════════════
+//  Terms Preview Modal — opens when the user taps a policy link
+// ═══════════════════════════════════════════════════════════
+const TermsPreviewModal = ({ isOpen, onClose, document }) => {
+  if (!isOpen || !document) return null;
+  const Icon = document.type === "terms" ? FileText : Shield;
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#13ec5b]/10 text-[#13ec5b] flex-shrink-0">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">
+              {document.title}
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Version {document.version}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition flex-shrink-0"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+            {document.content}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 px-5 py-3 border-t border-gray-200 dark:border-gray-800">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium text-sm transition"
+          >
+            Done reading
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+//  Signup
+// ═══════════════════════════════════════════════════════════
 const Signup = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -59,6 +122,9 @@ const Signup = () => {
   const [verifyOtp, { isLoading: isVerifyLoading }] = useVerifyOtpMutation();
   const [resendOtp, { isLoading: isResendLoading }] = useResendOtpMutation();
   const [googleAuth, { isLoading: isGoogleLoading }] = useGoogleAuthMutation();
+
+  // Pull the live policy documents from the backend
+  const { data: termsData, isLoading: termsLoading } = useGetTermsQuery();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -70,6 +136,10 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // ── Terms acceptance state ────────────────────────────────
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
+
   const [step, setStep] = useState(1);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [registeredEmail, setRegisteredEmail] = useState("");
@@ -77,6 +147,11 @@ const Signup = () => {
   const [canResend, setCanResend] = useState(false);
   const timerRef = useRef(null);
   const appUrlListenerRef = useRef(null);
+
+  // Lookup helpers
+  const documents = termsData?.documents || [];
+  const termsDoc = documents.find((d) => d.type === "terms");
+  const privacyDoc = documents.find((d) => d.type === "privacy");
 
   // Redirect if already logged in
   useEffect(() => {
@@ -102,7 +177,7 @@ const Signup = () => {
     return () => clearTimeout(timerRef.current);
   }, [step, timer]);
 
-  // ─── Deep link listener (native only) ───
+  // Deep link listener (native only)
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
@@ -112,18 +187,12 @@ const Signup = () => {
       const listener = await App.addListener("appUrlOpen", async (event) => {
         try {
           const url = new URL(event.url);
-
-          // Match our OAuth callback
           const isOAuthCallback =
             url.hostname === "oauth_callback" ||
             url.pathname.includes("oauth_callback") ||
             url.href.includes("oauth_callback");
-
           if (!isOAuthCallback) return;
 
-          // Google's implicit flow returns the token in the URL FRAGMENT
-          // (after '#'), not the query string. Merge both so we handle
-          // implicit ("#access_token=…") and code flow ("?code=…").
           const params = new URLSearchParams(url.search);
           if (url.hash && url.hash.length > 1) {
             const hashParams = new URLSearchParams(url.hash.substring(1));
@@ -133,11 +202,10 @@ const Signup = () => {
           const accessToken = params.get("access_token");
           const authError = params.get("error");
 
-          // Close the in-app browser sheet
           try {
             await Browser.close();
           } catch {
-            // ignore if already closed
+            /* ignore */
           }
 
           if (authError) {
@@ -149,16 +217,12 @@ const Signup = () => {
             await handleGoogleTokenExchange(accessToken);
           }
         } catch {
-          // Malformed URL — ignore
+          /* ignore */
         }
       });
 
-      if (removed) {
-        // Component unmounted before we could store the ref — clean up now
-        listener.remove();
-      } else {
-        appUrlListenerRef.current = listener;
-      }
+      if (removed) listener.remove();
+      else appUrlListenerRef.current = listener;
     };
 
     setupListener();
@@ -192,6 +256,12 @@ const Signup = () => {
       setError("Password must be at least 8 characters");
       return;
     }
+    if (!acceptedTerms) {
+      setError(
+        "You must read and accept the Terms of Service and Privacy Policy to continue."
+      );
+      return;
+    }
 
     try {
       await register({
@@ -199,6 +269,7 @@ const Signup = () => {
         email,
         password,
         username: formData.username || undefined,
+        acceptedTerms: true,
       }).unwrap();
 
       setRegisteredEmail(email);
@@ -279,7 +350,6 @@ const Signup = () => {
     }
   };
 
-  // ─── Shared: exchange Google token with backend ───
   const handleGoogleTokenExchange = async (accessToken) => {
     try {
       const result = await googleAuth({ token: accessToken }).unwrap();
@@ -307,16 +377,20 @@ const Signup = () => {
     }
   };
 
-  // ─── Platform-aware Google signup ───
   const handleGoogleSignup = () => {
     setError("");
+
+    // Same gate as the checkbox — no Google signup without prior acceptance.
+    if (!acceptedTerms) {
+      setError(
+        "You must read and accept the Terms of Service and Privacy Policy to continue."
+      );
+      return;
+    }
 
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
     if (Capacitor.isNativePlatform()) {
-      // ─── NATIVE: Google → HTTPS bridge → app scheme ───
-      // Web client IDs reject custom schemes, so we redirect to a hosted
-      // page that forwards the OAuth params into com.flanorx.app://…
       const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
         redirect_uri: NATIVE_REDIRECT_URI,
@@ -329,12 +403,11 @@ const Signup = () => {
 
       Browser.open({
         url: authUrl,
-        presentationStyle: "popover", // iOS presentation style
+        presentationStyle: "popover",
       });
       return;
     }
 
-    // ─── WEB: use Google Identity Services popup ───
     const tokenClient = window.google?.accounts?.oauth2?.initTokenClient({
       client_id: GOOGLE_CLIENT_ID,
       scope: "openid email profile",
@@ -363,7 +436,7 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex bg-white dark:bg-gray-950">
-      {/* ═══ LEFT — image panel (desktop only) ═══ */}
+      {/* ═══ LEFT — image panel ═══ */}
       <div className="hidden lg:flex lg:w-1/2 min-h-screen sticky top-0 h-screen overflow-hidden">
         <img
           src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
@@ -392,7 +465,6 @@ const Signup = () => {
           </div>
 
           {step === 1 ? (
-            // ═══ SIGNUP FORM ═══
             <>
               <div className="text-center lg:text-left mb-7 lg:mb-8">
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -415,6 +487,7 @@ const Signup = () => {
               )}
 
               <form onSubmit={handleRegister} className="space-y-4">
+                {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Full name{" "}
@@ -435,6 +508,7 @@ const Signup = () => {
                   </div>
                 </div>
 
+                {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Email{" "}
@@ -456,6 +530,7 @@ const Signup = () => {
                   </div>
                 </div>
 
+                {/* Password */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Password{" "}
@@ -490,6 +565,7 @@ const Signup = () => {
                   </div>
                 </div>
 
+                {/* Username */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                     Username{" "}
@@ -512,9 +588,72 @@ const Signup = () => {
                   </div>
                 </div>
 
+                {/* ═══ Terms Acceptance ═══ */}
+                <div className="pt-1">
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <div className="relative flex-shrink-0 mt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={(e) => {
+                          setAcceptedTerms(e.target.checked);
+                          if (e.target.checked) setError("");
+                        }}
+                        disabled={isLoading || termsLoading}
+                        className="peer sr-only"
+                      />
+                      <div
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
+                          acceptedTerms
+                            ? "bg-[#13ec5b] border-[#13ec5b]"
+                            : "bg-white dark:bg-gray-900 border-slate-300 dark:border-slate-600"
+                        } ${
+                          isLoading || termsLoading
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
+                      >
+                        {acceptedTerms && (
+                          <Check
+                            className="h-3.5 w-3.5 text-white"
+                            strokeWidth={3}
+                          />
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                      I have read and accept the{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (termsDoc) setPreviewDoc(termsDoc);
+                        }}
+                        disabled={!termsDoc}
+                        className="font-semibold text-[#0f9c46] dark:text-[#13ec5b] hover:underline disabled:opacity-50"
+                      >
+                        {termsDoc?.title || "Terms of Service"}
+                      </button>{" "}
+                      and{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (privacyDoc) setPreviewDoc(privacyDoc);
+                        }}
+                        disabled={!privacyDoc}
+                        className="font-semibold text-[#0f9c46] dark:text-[#13ec5b] hover:underline disabled:opacity-50"
+                      >
+                        {privacyDoc?.title || "Privacy Policy"}
+                      </button>
+                      .
+                    </span>
+                  </label>
+                </div>
+
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !acceptedTerms}
                   className="w-full py-3.5 px-4 bg-[#13ec5b] hover:bg-[#10d04e] active:bg-[#0fbe47] text-gray-900 font-bold rounded-xl transition duration-150 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center text-sm sm:text-base"
                 >
                   {isRegisterLoading ? (
@@ -536,7 +675,7 @@ const Signup = () => {
               <button
                 type="button"
                 onClick={handleGoogleSignup}
-                disabled={isLoading}
+                disabled={isLoading || !acceptedTerms}
                 className="w-full flex items-center justify-center gap-2.5 py-3 px-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-gray-900 hover:bg-slate-50 dark:hover:bg-gray-800 active:bg-slate-100 dark:active:bg-gray-700 transition font-medium text-sm text-slate-700 dark:text-slate-300 disabled:opacity-60"
               >
                 {isGoogleLoading ? (
@@ -558,7 +697,6 @@ const Signup = () => {
               </p>
             </>
           ) : (
-            // ═══ OTP VERIFICATION ═══
             <>
               <div className="mb-6">
                 <button
@@ -667,6 +805,13 @@ const Signup = () => {
           )}
         </div>
       </div>
+
+      {/* ═══ Terms Preview Modal ═══ */}
+      <TermsPreviewModal
+        isOpen={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        document={previewDoc}
+      />
     </div>
   );
 };

@@ -23,10 +23,13 @@ import {
   Image as ImageIcon,
   Key,
   UserCheck,
+  AlertTriangle,
+  FileText,
 } from "lucide-react";
 import {
   useGetProfileQuery,
   useUpdateProfileMutation,
+  useGetTermsStatusQuery,
 } from "../features/userApiSlice";
 import {
   useGetGasSubscriptionQuery,
@@ -35,6 +38,7 @@ import {
   useUpgradeGasSubscriptionMutation,
 } from "../features/gasApiSlice";
 import { useGetRiderApplicationStatusQuery } from "../features/riderApiSlice";
+import { useTermsModal } from "../components/TermsModalProvider";
 import { pickMedia } from "../utils/mediaPicker";
 import Sidebar from "../components/Sidebar";
 import Bottombar from "../components/Bottombar";
@@ -140,24 +144,14 @@ const AddressItem = ({ address, isDefault, onSetDefault, onDelete }) => (
 );
 
 // ═══════════════════════════════════════════════════════════
-//  Media Source Modal — our own picker, not the system sheet
+//  Media Source Modal
 // ═══════════════════════════════════════════════════════════
 const MediaSourceModal = ({ isOpen, onClose, onPick }) => {
   if (!isOpen) return null;
 
   const options = [
-    {
-      key: "camera",
-      label: "Take a photo",
-      description: "Use your camera",
-      icon: Camera,
-    },
-    {
-      key: "gallery",
-      label: "Choose from gallery",
-      description: "Pick an existing image",
-      icon: ImageIcon,
-    },
+    { key: "camera", label: "Take a photo", description: "Use your camera", icon: Camera },
+    { key: "gallery", label: "Choose from gallery", description: "Pick an existing image", icon: ImageIcon },
   ];
 
   return (
@@ -169,7 +163,6 @@ const MediaSourceModal = ({ isOpen, onClose, onPick }) => {
         className="bg-white dark:bg-gray-900 w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             Update profile photo
@@ -181,8 +174,6 @@ const MediaSourceModal = ({ isOpen, onClose, onPick }) => {
             <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
-
-        {/* Options */}
         <div className="p-2">
           {options.map((opt) => {
             const Icon = opt.icon;
@@ -207,8 +198,6 @@ const MediaSourceModal = ({ isOpen, onClose, onPick }) => {
             );
           })}
         </div>
-
-        {/* Cancel */}
         <div className="p-2 pt-0 border-t border-gray-100 dark:border-gray-700">
           <button
             onClick={onClose}
@@ -333,6 +322,13 @@ const CancelModal = ({ isOpen, onClose, onConfirm, isLoading }) => {
 const Profile = () => {
   const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.auth);
+  const { openTermsModal } = useTermsModal();
+
+  // ─── Terms status (drives the red banner) ──────────────────
+  const { data: termsStatus } = useGetTermsStatusQuery(undefined, {
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
 
   // ─── Queries ──────────────────────────────────────────────
   const {
@@ -352,7 +348,6 @@ const Profile = () => {
   const [upgradeGas, { isLoading: upgradeLoading }] =
     useUpgradeGasSubscriptionMutation();
 
-  // ─── Rider application status ──────────────────────────────
   const {
     data: riderStatusData,
     isLoading: riderStatusLoading,
@@ -379,7 +374,6 @@ const Profile = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showMediaModal, setShowMediaModal] = useState(false);
 
-  // ─── Init ──────────────────────────────────────────────────
   useEffect(() => {
     if (user) {
       setEditName(user.name || "");
@@ -399,13 +393,11 @@ const Profile = () => {
     }
   };
 
-  // ─── Media pick (camera / gallery) ────────────────────────
   const handleMediaPick = async (source) => {
     setShowMediaModal(false);
     try {
       const result = await pickMedia({ source });
-      if (!result?.dataUrl) return; // user cancelled
-
+      if (!result?.dataUrl) return;
       setIsUploading(true);
       await updateProfile({ profilePhoto: result.dataUrl }).unwrap();
       toast.success("Photo updated");
@@ -486,7 +478,6 @@ const Profile = () => {
   const isActive = subscriptionData?.isActive || false;
   const daysRemaining = subscriptionData?.daysRemaining || 0;
 
-  // ─── Rider status ──────────────────────────────────────────
   const riderStatus = riderStatusData?.verificationStatus;
   const riderRole = user?.role === "rider";
 
@@ -565,13 +556,45 @@ const Profile = () => {
 
         <div className="w-full px-0 sm:px-4 lg:px-6 py-4">
           <div className="max-w-4xl mx-auto space-y-5">
+            {/* ─── Terms & Privacy Alert (red banner) ───────── */}
+            {termsStatus?.requiresAcceptance && (
+              <div className="bg-red-50 dark:bg-red-900/20 border-y sm:border sm:rounded-2xl border-red-200 dark:border-red-800/50 overflow-hidden">
+                <div className="p-4 flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/40 flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+                      {termsStatus.isMandatory
+                        ? "Action Required"
+                        : "We've updated our policies"}
+                    </p>
+                    <p className="text-xs text-red-700 dark:text-red-300 mt-1 leading-relaxed">
+                      {termsStatus.pendingDocuments
+                        ?.map((d) => d.title)
+                        .join(" and ")}{" "}
+                      {termsStatus.isMandatory
+                        ? "must be accepted to continue using Flanorx."
+                        : `— you have ${termsStatus.daysLeft} day${
+                            termsStatus.daysLeft === 1 ? "" : "s"
+                          } to review before acceptance becomes mandatory.`}
+                    </p>
+                    <button
+                      onClick={openTermsModal}
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Read & Accept
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ─── Profile Card ─────────────────────────────── */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
               <div className="p-5">
-                {/* Mobile: photo RIGHT, info LEFT, vertically centred */}
-                {/* Desktop: photo LEFT, info middle, role badge RIGHT */}
                 <div className="flex flex-row-reverse items-center gap-4 sm:flex-row sm:items-start sm:gap-5">
-                  {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#13ec5b]/10 flex items-center justify-center overflow-hidden border-2 border-[#13ec5b]/30">
                       {user?.profilePhoto ? (
@@ -598,7 +621,6 @@ const Profile = () => {
                     </button>
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     {isEditing ? (
                       <div className="space-y-3">
@@ -682,7 +704,6 @@ const Profile = () => {
                     )}
                   </div>
 
-                  {/* Role badge — desktop only */}
                   <div className="hidden sm:block flex-shrink-0 self-center">
                     {user?.role && (
                       <span className="text-xs font-medium px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 capitalize">

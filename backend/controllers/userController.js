@@ -4,6 +4,12 @@ import { OAuth2Client } from "google-auth-library";
 import User from "../models/userModel.js";
 import generateToken from "../utils/generateToken.js";
 import { sendOtpEmail } from "../utils/resendOTP.js";
+import {
+  GRACE_PERIOD_DAYS,
+  getActiveTermsDocuments,
+  buildTermsAcceptances,
+  getGraceDeadline,
+} from "../utils/terms.js";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -26,6 +32,12 @@ const buildAuthResponse = (user, token) => ({
   riderType: user.riderType || null,
   station: user.station || null,
   stationRole: user.stationRole || null,
+  // Lets the frontend decide immediately whether to open the terms modal
+  // (and whether the "Remind me later" button is still allowed) without
+  // waiting on /api/terms/status.
+  termsAccepted: user.termsAccepted ?? true,
+  termsGraceEndsAt: user.termsGraceEndsAt || null,
+  termsGracePeriodDays: GRACE_PERIOD_DAYS,
   token,
 });
 
@@ -88,6 +100,12 @@ const googleAuth = asyncHandler(async (req, res) => {
       username = `${baseUsername}${counter++}`;
     }
 
+    // Google sign-in never has a checkbox to tick, so a brand new Google
+    // user starts un-accepted with a fresh 10-day grace window. The modal
+    // picks them up on first load.
+    const termsDocuments = await getActiveTermsDocuments();
+    const nothingToAccept = termsDocuments.length === 0;
+
     user = await User.create({
       googleId,
       name: name || "",
@@ -97,6 +115,10 @@ const googleAuth = asyncHandler(async (req, res) => {
       password: `google-auth-${googleId}`,
       isVerified: true,
       authMethod: "google",
+      termsAccepted: nothingToAccept,
+      termsAcceptedAt: nothingToAccept ? new Date() : null,
+      termsGraceEndsAt: nothingToAccept ? null : getGraceDeadline(),
+      termsAcceptances: [],
     });
   } else if (!user.googleId) {
     user.googleId = googleId;
@@ -111,7 +133,7 @@ const googleAuth = asyncHandler(async (req, res) => {
 
 // ─── Register ──────────────────────────────────────────────────
 const registerUser = asyncHandler(async (req, res) => {
-  const { email, password, name, username } = req.body;
+  const { email, password, name, username, acceptedTerms } = req.body;
 
   if (!email || !password || !name) {
     res.status(400);
@@ -120,6 +142,15 @@ const registerUser = asyncHandler(async (req, res) => {
   if (password.length < 8) {
     res.status(400);
     throw new Error("Password must be at least 8 characters");
+  }
+
+  // ── Terms gate ───────────────────────────────────────────────
+  // The "I have read and accepted" checkbox. No acceptance, no account.
+  if (acceptedTerms !== true) {
+    res.status(400);
+    throw new Error(
+      "You must read and accept the Terms of Service and Privacy Policy to create an account."
+    );
   }
 
   const existingUser = await User.findOne({ email });
@@ -156,6 +187,10 @@ const registerUser = asyncHandler(async (req, res) => {
   const otp = generateOtp();
   const otpExpires = getOtpExpiry();
 
+  // Snapshot the exact versions the user saw on screen.
+  const termsDocuments = await getActiveTermsDocuments();
+  const acceptedAt = new Date();
+
   const user = await User.create({
     email,
     password,
@@ -166,6 +201,11 @@ const registerUser = asyncHandler(async (req, res) => {
     otp,
     otpExpires,
     deleteAfter: new Date(Date.now() + 6 * 60 * 1000),
+    // ── Terms acceptance recorded at signup ──
+    termsAccepted: true,
+    termsAcceptedAt: acceptedAt,
+    termsGraceEndsAt: null,
+    termsAcceptances: buildTermsAcceptances(termsDocuments, req, acceptedAt),
   });
 
   await sendOtpEmail(email, otp);

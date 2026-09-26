@@ -68,6 +68,19 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
+    // ---- Terms / Privacy (public read) ----
+    // Renders the register-page checkbox text AND the modal body.
+    // Pass { type: "terms" | "privacy" } to fetch just one, or nothing
+    // to get both documents in a single response.
+    getTerms: builder.query({
+      query: (params) => ({
+        url: `${USER_URL}/terms`,
+        method: "GET",
+        params, // e.g. { type: "privacy" }
+      }),
+      providesTags: ["Terms"],
+    }),
+
     // ---- Protected ----
     getProfile: builder.query({
       query: () => ({
@@ -106,6 +119,33 @@ export const userApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
+
+    // ---- Terms / Privacy (authenticated user) ----
+
+    // Drives the modal: returns { requiresAcceptance, isMandatory,
+    // canDismiss, daysLeft, graceEndsAt, pendingDocuments[], ... }.
+    // Call this on app boot / after login to decide whether to show
+    // the modal.
+    getTermsStatus: builder.query({
+      query: () => ({
+        url: `${USER_URL}/terms-status`,
+        method: "GET",
+      }),
+      providesTags: ["TermsStatus"],
+    }),
+
+    // Records acceptance of the current versions.
+    // Body: { accepted: true, versions: { terms, privacy } }
+    // Invalidates both the user profile (termsAccepted flips to true)
+    // and the status query so the modal re-evaluates immediately.
+    acceptTerms: builder.mutation({
+      query: (data) => ({
+        url: `${USER_URL}/accept-terms`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["TermsStatus", "User"],
+    }),
   }),
 });
 
@@ -125,4 +165,8 @@ export const {
   useUploadAvatarMutation,
   useChangePasswordMutation,
   useDeleteAccountMutation,
+  // Terms
+  useGetTermsQuery,
+  useGetTermsStatusQuery,
+  useAcceptTermsMutation,
 } = userApiSlice;
