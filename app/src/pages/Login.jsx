@@ -518,7 +518,7 @@ const Login = () => {
       {/* ═══ LEFT — image panel (desktop only) ═══ */}
       <div className="hidden lg:flex lg:w-1/2 min-h-screen sticky top-0 h-screen overflow-hidden">
         <img
-          src="https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg"
+          src="flanorx-people.jfif"
           alt="Fuel and gas delivery"
           className="w-full h-full object-cover"
         />
