@@ -1,5 +1,5 @@
 // pages/Welcome.jsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -12,7 +12,11 @@ import {
   Flame,
   ShieldCheck,
   ArrowRight,
+  FileText,
+  Shield,
+  X,
 } from "lucide-react";
+import { useGetTermsQuery } from "../features/userApiSlice";
 
 // ─── Role-based redirect helper ────────────────────────────
 const getRedirectPath = (role) => {
@@ -22,13 +26,80 @@ const getRedirectPath = (role) => {
 };
 
 const HERO_IMAGE =
-  "https://i.pinimg.com/1200x/ce/1c/4f/ce1c4f2e9b5bc5f27cdc3a92289d3b25.jpg";
+  "/flanorx-people.jfif";
+
+// ═══════════════════════════════════════════════════════════
+//  Public Terms / Privacy Preview Modal
+// ═══════════════════════════════════════════════════════════
+const PublicTermsModal = ({ isOpen, onClose, document }) => {
+  if (!isOpen || !document) return null;
+  const Icon = document.type === "terms" ? FileText : Shield;
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[#13ec5b]/10 text-[#13ec5b] flex-shrink-0">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">
+              {document.title}
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Version {document.version}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition flex-shrink-0"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+            {document.content}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 px-5 py-3 border-t border-gray-200 dark:border-gray-800">
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-lg font-medium text-sm transition"
+          >
+            Done reading
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Welcome = () => {
   const navigate = useNavigate();
   const heroRef = useRef(null);
 
   const { userInfo } = useSelector((state) => state.auth);
+
+  // Live policy documents from the backend
+  const { data: termsData } = useGetTermsQuery();
+  const [previewDoc, setPreviewDoc] = useState(null);
+
+  const documents = termsData?.documents || [];
+  const termsDoc = documents.find((d) => d.type === "terms");
+  const privacyDoc = documents.find((d) => d.type === "privacy");
 
   // ─── Redirect if already logged in ────────────────────────
   useEffect(() => {
@@ -52,7 +123,7 @@ const Welcome = () => {
     }
   }, [userInfo, navigate]);
 
-  // ─── Fade-in animation (desktop only) ─────────────────────
+  // ─── Fade-in animation ────────────────────────────────────
   useEffect(() => {
     if (heroRef.current) {
       heroRef.current.style.opacity = "0";
@@ -76,7 +147,7 @@ const Welcome = () => {
   return (
     <>
       {/* ═══════════════════════════════════════════════════════
-          MOBILE — app-style onboarding (unchanged)
+          MOBILE
           ═══════════════════════════════════════════════════════ */}
       <div className="lg:hidden relative w-full min-h-screen min-h-[100svh] bg-black overflow-hidden flex flex-col">
         <img
@@ -105,7 +176,7 @@ const Welcome = () => {
           </Link>
         </div>
 
-        {/* Content (bottom-anchored) */}
+        {/* Content */}
         <div className="relative flex-1 flex flex-col justify-end px-5">
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/15 px-3 py-1.5 rounded-full mb-5 self-start">
             <span className="relative flex h-2 w-2">
@@ -128,7 +199,6 @@ const Welcome = () => {
             where you need it.
           </p>
 
-          {/* Honest value props — no fake stats */}
           <div className="mt-6 flex items-center gap-5 text-white/85">
             <div>
               <p className="text-lg font-bold leading-none">Fast</p>
@@ -177,14 +247,35 @@ const Welcome = () => {
             </Link>
           </div>
 
-          <p className="mt-4 text-center text-[10px] text-white/45 tracking-wide">
+          {/* ─── Legal links (mobile) ─── */}
+          <div className="mt-4 flex items-center justify-center gap-3 text-[10px] text-white/55">
+            <button
+              type="button"
+              onClick={() => termsDoc && setPreviewDoc(termsDoc)}
+              disabled={!termsDoc}
+              className="hover:text-white/80 transition disabled:opacity-50"
+            >
+              Terms of Service
+            </button>
+            <span className="w-px h-3 bg-white/20" />
+            <button
+              type="button"
+              onClick={() => privacyDoc && setPreviewDoc(privacyDoc)}
+              disabled={!privacyDoc}
+              className="hover:text-white/80 transition disabled:opacity-50"
+            >
+              Privacy Policy
+            </button>
+          </div>
+
+          <p className="mt-2 text-center text-[10px] text-white/45 tracking-wide">
             © {new Date().getFullYear()} Flanorx · All rights reserved
           </p>
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════
-          DESKTOP — one-screen layout
+          DESKTOP
           ═══════════════════════════════════════════════════════ */}
       <div className="hidden lg:grid h-screen overflow-hidden grid-rows-[auto_1fr_auto] bg-gradient-to-b from-white via-slate-50 to-slate-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 font-sans">
         {/* Header */}
@@ -222,7 +313,6 @@ const Welcome = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
 
-              {/* Live badge */}
               <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#13ec5b] opacity-75" />
@@ -233,7 +323,6 @@ const Welcome = () => {
                 </span>
               </div>
 
-              {/* Value props overlay — replaces fake stats */}
               <div className="absolute bottom-4 left-4 right-4">
                 <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -314,10 +403,40 @@ const Welcome = () => {
         </main>
 
         {/* Footer */}
-        <footer className="py-4 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/60 dark:border-slate-800/60">
-          <p>© {new Date().getFullYear()} Flanorx. All rights reserved.</p>
+        <footer className="py-4 border-t border-slate-200/60 dark:border-slate-800/60">
+          <div className="max-w-[1400px] mx-auto px-8 xl:px-12 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-xs text-slate-400 dark:text-slate-600">
+              © {new Date().getFullYear()} Flanorx. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => termsDoc && setPreviewDoc(termsDoc)}
+                disabled={!termsDoc}
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-[#0f9c46] dark:hover:text-[#13ec5b] transition disabled:opacity-50"
+              >
+                Terms of Service
+              </button>
+              <span className="w-px h-3 bg-slate-300 dark:bg-slate-700" />
+              <button
+                type="button"
+                onClick={() => privacyDoc && setPreviewDoc(privacyDoc)}
+                disabled={!privacyDoc}
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-[#0f9c46] dark:hover:text-[#13ec5b] transition disabled:opacity-50"
+              >
+                Privacy Policy
+              </button>
+            </div>
+          </div>
         </footer>
       </div>
+
+      {/* ═══ Terms / Privacy Preview Modal ═══ */}
+      <PublicTermsModal
+        isOpen={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        document={previewDoc}
+      />
     </>
   );
 };
