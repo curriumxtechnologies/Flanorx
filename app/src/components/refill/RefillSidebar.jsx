@@ -4,11 +4,9 @@ import { NavLink, useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import {
   Store,
-  MapPin,
   Package,
   Users,
   Receipt,
-  User,
   Settings,
   Sun,
   Moon,
@@ -18,13 +16,13 @@ import {
   Clock,
   ClipboardList,
   Truck,
+  ArrowLeft,
 } from "lucide-react";
 
 // ─── Corrected Paths ─────────────────────────────────────
 import { useTheme } from "../../context/ThemeContext";
 import { useGetProfileQuery } from "../../features/userApiSlice";
 import {
-  useGetMyRefillOrdersQuery,
   useGetMyRefillApplicationQuery,
   useGetRefillStationOrdersQuery,
   useAdminGetRefillStationsQuery,
@@ -58,16 +56,6 @@ const RefillSidebar = () => {
   const hasPendingApplication = appStatus === "pending";
   const hasRejectedApplication = appStatus === "rejected";
 
-  const { data: myOrders = [] } = useGetMyRefillOrdersQuery(undefined, {
-    skip: !hasStation && hasPendingApplication,
-    pollingInterval: 30000,
-    refetchOnFocus: true,
-    refetchOnReconnect: true,
-  });
-  const activeMyOrdersCount = myOrders.filter((o) =>
-    ["paid", "accepted", "ready", "delivered"].includes(o.status)
-  ).length;
-
   const { data: stationAwaiting = [] } = useGetRefillStationOrdersQuery(
     { status: "paid" },
     {
@@ -90,16 +78,8 @@ const RefillSidebar = () => {
   );
   const pendingRefillAppsCount = pendingRefillStations.length;
 
-  const customerLinks = [
-    { to: "/refill", icon: MapPin, label: "Find Stations", end: true },
-    {
-      to: "/refill/orders",
-      icon: Package,
-      label: "My Refill Orders",
-      badge: activeMyOrdersCount,
-    },
-  ];
-
+  // Only show apply/pending links if they don't have a station yet
+  const customerLinks = [];
   if (!hasStation && !hasPendingApplication && !isMainAdmin) {
     customerLinks.push({
       to: "/refill/apply",
@@ -201,14 +181,22 @@ const RefillSidebar = () => {
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 fixed top-0 left-0 z-40">
+      {/* Header - Refill badge removed */}
       <div className="flex items-center gap-2 px-6 h-16 flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
         <img src="/flanorx.png" alt="Flanorx" className="h-8 w-auto" />
-        <span className="ml-auto px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#13ec5b] bg-[#13ec5b]/10 rounded">
-          Refill
-        </span>
       </div>
 
       <nav className="flex-1 min-h-0 px-4 py-6 space-y-1 overflow-y-auto">
+        
+        {/* Back to User Dashboard */}
+        <NavLink
+          to="/dashboard"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mb-4"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span>User Dashboard</span>
+        </NavLink>
+
         {customerLinks.map((item) => renderLink(item))}
 
         {isRefillStaff && (
@@ -255,13 +243,7 @@ const RefillSidebar = () => {
           )}
         </button>
 
-        <button
-          onClick={() => navigate("/refill/profile")}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
-          <User className="h-5 w-5" />
-          <span>Profile</span>
-        </button>
+        {/* Profile button removed */}
 
         <LogoutButton className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" />
       </div>

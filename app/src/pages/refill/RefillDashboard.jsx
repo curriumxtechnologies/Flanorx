@@ -1,5 +1,5 @@
 // src/pages/refill/RefillDashboard.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import {
@@ -14,7 +14,8 @@ import {
   FileText,
   Settings,
   ShieldAlert,
-  ArrowRight,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { useGetProfileQuery } from "../../features/userApiSlice";
@@ -49,6 +50,7 @@ const getOrderStatusColor = (status) => {
 const RefillDashboard = () => {
   const navigate = useNavigate();
   const { userInfo } = useSelector((state) => state.auth);
+  const [hideStats, setHideStats] = useState(false);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -129,6 +131,111 @@ const RefillDashboard = () => {
   const isOverdue = openInvoice?.status === "overdue";
 
   // ─── Components ────────────────────────────────────────────
+  
+  // Mobile Summary Card
+  const HeroCard = () => {
+    if (isLoading) {
+      return (
+        <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-2.5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
+          </div>
+          <div className="flex items-end justify-between mb-3 gap-2">
+            <div className="min-w-0 space-y-2">
+              <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="text-right min-w-0 space-y-2">
+              <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+              <div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
+            <div className="flex items-center gap-5 min-w-0">
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-3.5 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-3.5 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            </div>
+            <div className="h-7 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0" />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="lg:hidden relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+              Station Dashboard
+            </span>
+            <h1 className="text-lg font-bold leading-tight truncate text-gray-900 dark:text-white">
+              {station.businessName || "My Station"}
+            </h1>
+          </div>
+          <button
+            onClick={() => setHideStats((v) => !v)}
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition flex-shrink-0"
+          >
+            {hideStats ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <div className="flex items-end justify-between mb-3 gap-2">
+          <div className="min-w-0">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Today's Revenue
+            </span>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white truncate">
+              {hideStats ? "••••" : formatNaira(revenueToday)}
+            </p>
+          </div>
+          <div className="text-right min-w-0">
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Awaiting Action
+            </span>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400 truncate">
+              {hideStats ? "••" : awaitingAcceptance}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700/30 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 gap-2">
+          <div className="flex items-center gap-5 min-w-0">
+            <div className="min-w-0">
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">In Progress</span>
+              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                {hideStats ? "••" : inProgress}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">Month Rev.</span>
+              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                {hideStats ? "••" : formatNaira(revenueMonth)}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/refill/station/orders")}
+            className="flex items-center gap-1 text-xs font-medium text-white bg-[#13ec5b] hover:bg-[#10d04e] px-3 py-1.5 rounded-lg border border-[#13ec5b] transition shadow-sm flex-shrink-0"
+          >
+            Orders <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Desktop Stat Card
   const StatCard = ({ icon: Icon, label, value, subValue, danger }) => (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm min-w-0">
       <div className="flex items-center justify-between gap-2 min-w-0">
@@ -207,8 +314,11 @@ const RefillDashboard = () => {
             </div>
           )}
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+          {/* Mobile Summary Card */}
+          <HeroCard />
+
+          {/* Desktop Stats Grid */}
+          <div className="hidden lg:grid grid-cols-4 gap-4 mb-6">
             {isLoading ? (
               [...Array(4)].map((_, i) => (
                 <div
@@ -275,7 +385,7 @@ const RefillDashboard = () => {
               </span>
             </button>
             <button
-              onClick={() => navigate("/refill/station/settings")}
+              onClick={() => navigate("/refill/station/profile")}
               className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-3 lg:p-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl lg:rounded-2xl transition min-w-0"
             >
               <Settings className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />

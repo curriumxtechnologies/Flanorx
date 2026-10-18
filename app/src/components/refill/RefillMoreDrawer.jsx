@@ -1,15 +1,4 @@
 // components/refill/RefillMoreDrawer.jsx
-//
-// Slide-in drawer for the RefillBottombar's "More" button.
-//
-// Contents:
-//   • Theme switcher (Light / Dark / System)
-//   • Role-specific extras not shown in the bottom bar
-//   • "Personal" section (customer links) when the user also has a
-//     station role — lets owners/staff still shop
-//   • Switch back to the main app (customer / admin dashboard)
-//   • Logout
-
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
@@ -18,16 +7,10 @@ import {
   Sun,
   Moon,
   Monitor,
-  MapPin,
-  Package,
   PlusCircle,
-  Clock,
-  Users,
   Receipt,
   Settings,
-  User,
-  Building2,
-  ClipboardList,
+  Package,
   ArrowLeft,
 } from "lucide-react";
 
@@ -48,14 +31,10 @@ const RefillMoreDrawer = ({ isOpen, onClose }) => {
   const isMainAdmin = role === "admin";
 
   const refillStationId = profile?.refillStation || userInfo?.refillStation;
-  const refillRole =
-    profile?.refillStationRole || userInfo?.refillStationRole;
+  const refillRole = profile?.refillStationRole || userInfo?.refillStationRole;
   const hasStation = !!refillStationId;
 
   const isRefillOwner = hasStation && refillRole === "owner";
-  const isRefillStaff = hasStation && ["owner", "staff"].includes(refillRole);
-  const isRefillRider = hasStation && refillRole === "rider";
-  const isCustomerOnly = !hasStation && !isMainAdmin;
 
   const { data: myApplication } = useGetMyRefillApplicationQuery(undefined, {
     skip: hasStation || isMainAdmin,
@@ -65,6 +44,7 @@ const RefillMoreDrawer = ({ isOpen, onClose }) => {
   const appStatus = myApplication?.station?.status || null;
   const hasPendingApplication = appStatus === "pending";
   const hasRejectedApplication = appStatus === "rejected";
+  const isCustomerOnly = !hasStation && !isMainAdmin;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -122,29 +102,7 @@ const RefillMoreDrawer = ({ isOpen, onClose }) => {
     );
   }
 
-  // ─── "Personal" links (customer experience) ─────────────
-  // Shown only if the user also has a station/admin role — a pure
-  // customer already has these in the bottom bar.
-  const customerExtras = [];
-  if (hasStation || isMainAdmin) {
-    customerExtras.push(
-      {
-        label: "Find Refill Stations",
-        icon: MapPin,
-        onClick: () => go("/refill"),
-      },
-      {
-        label: "My Refill Orders",
-        icon: Package,
-        onClick: () => go("/refill/orders"),
-      }
-    );
-  }
-
-  // ─── "Apply as Station" for pure customers who can't apply ─
-  // (the bottom bar hides the Apply link when an application is
-  // pending, so the drawer is where the "status" link lives for
-  // pure customers who already submitted.)
+  // ─── "Apply as Station" link for customers ───────────────
   const applicationLink =
     isCustomerOnly && !hasPendingApplication
       ? {
@@ -174,7 +132,7 @@ const RefillMoreDrawer = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            Refill · More
+            Menu
           </span>
           <button
             onClick={onClose}
@@ -268,44 +226,19 @@ const RefillMoreDrawer = ({ isOpen, onClose }) => {
             </>
           )}
 
-          {/* ─── Personal / customer view ──────────────── */}
-          {(customerExtras.length > 0 || applicationLink) && (
+          {/* ─── Customer Application Link ─────────────── */}
+          {applicationLink && (
             <>
               <hr className="my-3 border-gray-200 dark:border-gray-800" />
-              <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider px-1">
-                Personal
-              </p>
-              {customerExtras.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={item.onClick}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-              {applicationLink && (
-                <button
-                  onClick={applicationLink.onClick}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-[#13ec5b] bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 transition-colors"
-                >
-                  <applicationLink.icon className="h-5 w-5" />
-                  <span>{applicationLink.label}</span>
-                </button>
-              )}
+              <button
+                onClick={applicationLink.onClick}
+                className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-[#13ec5b] bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 transition-colors"
+              >
+                <applicationLink.icon className="h-5 w-5" />
+                <span>{applicationLink.label}</span>
+              </button>
             </>
           )}
-
-          {/* ─── Profile ──────────────────────────────── */}
-          <hr className="my-3 border-gray-200 dark:border-gray-800" />
-          <button
-            onClick={() => go("/refill/profile")}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <User className="h-5 w-5" />
-            <span>Profile</span>
-          </button>
 
           {/* ─── Switch back to main app ──────────────── */}
           <hr className="my-3 border-gray-200 dark:border-gray-800" />
@@ -317,7 +250,7 @@ const RefillMoreDrawer = ({ isOpen, onClose }) => {
           >
             <ArrowLeft className="h-5 w-5" />
             <span>
-              {isMainAdmin ? "Admin Dashboard" : "Back to App"}
+              {isMainAdmin ? "Admin Dashboard" : "User Dashboard"}
             </span>
           </button>
 
