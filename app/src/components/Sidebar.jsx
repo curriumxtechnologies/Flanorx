@@ -17,6 +17,7 @@ import {
   Repeat,
   Shield,
   Store,
+  Droplet, // 👈 Added for Refill Station
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useGetMyOrdersQuery } from "../features/orderApiSlice";
@@ -41,6 +42,10 @@ const Sidebar = () => {
   const stationId = profile?.station || userInfo?.station;
   const stationRole = profile?.stationRole || userInfo?.stationRole;
   const isStationAdmin = !!stationId && stationRole === "admin";
+
+  // ─── Refill Station membership ────────────────────────────
+  const refillStationId = profile?.refillStation || userInfo?.refillStation;
+  const isRefillStation = !!refillStationId;
 
   // ─── Polling counts ───────────────────────────────────────
   const { data: myOrders = [] } = useGetMyOrdersQuery(
@@ -134,6 +139,25 @@ const Sidebar = () => {
             )}
           </NavLink>
         ))}
+
+        {/* Refill Station section */}
+        {isRefillStation && (
+          <>
+            <div className="pt-3 mt-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="px-4 text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                Refill Station
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/refill/station")}
+              className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+            >
+              <Droplet className="h-5 w-5" />
+              <span>Refill Dashboard</span>
+            </button>
+          </>
+        )}
 
         {/* Station Admin section */}
         {isStationAdmin && (

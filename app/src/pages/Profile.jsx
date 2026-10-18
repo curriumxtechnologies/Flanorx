@@ -25,6 +25,9 @@ import {
   UserCheck,
   AlertTriangle,
   FileText,
+  Store,
+  PlusCircle,
+  XCircle,
 } from "lucide-react";
 import {
   useGetProfileQuery,
@@ -38,6 +41,7 @@ import {
   useUpgradeGasSubscriptionMutation,
 } from "../features/gasApiSlice";
 import { useGetRiderApplicationStatusQuery } from "../features/riderApiSlice";
+import { useGetMyRefillApplicationQuery } from "../features/refillApiSlice"; // ⭐ NEW IMPORT
 import { useTermsModal } from "../components/TermsModalProvider";
 import { pickMedia } from "../utils/mediaPicker";
 import Sidebar from "../components/Sidebar";
@@ -354,6 +358,12 @@ const Profile = () => {
     refetch: refetchRiderStatus,
   } = useGetRiderApplicationStatusQuery();
 
+  // ⭐ NEW: Refill Station Application Query
+  const { data: refillAppData, isLoading: refillAppLoading } =
+    useGetMyRefillApplicationQuery(undefined, {
+      refetchOnFocus: true,
+    });
+
   // ─── State ─────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -481,6 +491,10 @@ const Profile = () => {
   const riderStatus = riderStatusData?.verificationStatus;
   const riderRole = user?.role === "rider";
 
+  // ⭐ NEW: Refill App Logic
+  const refillApp = refillAppData?.station || null;
+  const refillStatus = refillApp?.status;
+
   const renderRiderButton = () => {
     if (riderRole) {
       return (
@@ -522,6 +536,67 @@ const Profile = () => {
       >
         <UserCheck className="h-4 w-4" />
         Become a Rider
+      </button>
+    );
+  };
+
+  // ⭐ NEW: Refill Button Renderer
+  const renderRefillButton = () => {
+    if (refillAppLoading) {
+      return <div className="h-9 w-28 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />;
+    }
+    if (refillStatus === "approved") {
+      return (
+        <button
+          onClick={() => navigate("/refill/station")}
+          className="px-4 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition flex items-center gap-2 text-sm"
+        >
+          <Store className="h-4 w-4" />
+          Station Dashboard
+        </button>
+      );
+    }
+    if (refillStatus === "pending") {
+      return (
+        <button
+          disabled
+          className="px-4 py-2 bg-yellow-500 text-white rounded-lg opacity-70 cursor-not-allowed flex items-center gap-2 text-sm"
+        >
+          <Clock className="h-4 w-4" />
+          Pending Review
+        </button>
+      );
+    }
+    if (refillStatus === "rejected") {
+      return (
+        <button
+          onClick={() => navigate("/refill/apply")}
+          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition flex items-center gap-2 text-sm"
+        >
+          <PlusCircle className="h-4 w-4" />
+          Re-apply
+        </button>
+      );
+    }
+    if (refillStatus === "banned") {
+      return (
+        <button
+          disabled
+          className="px-4 py-2 bg-red-500 text-white rounded-lg opacity-70 cursor-not-allowed flex items-center gap-2 text-sm"
+        >
+          <XCircle className="h-4 w-4" />
+          Suspended
+        </button>
+      );
+    }
+    // Default: No application
+    return (
+      <button
+        onClick={() => navigate("/refill/apply")}
+        className="px-4 py-2 bg-[#13ec5b] text-white rounded-lg hover:bg-[#10d04e] transition flex items-center gap-2 text-sm"
+      >
+        <Store className="h-4 w-4" />
+        Apply as Station
       </button>
     );
   };
@@ -755,6 +830,64 @@ const Profile = () => {
                       Rejection reason: {riderStatusData.rejectionReason}
                     </div>
                   )}
+              </div>
+            </div>
+
+            {/* ⭐ NEW: Refill Station Partner Card ────────────── */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl">
+              <div className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Store className="h-5 w-5 text-[#13ec5b] flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Refill Station Partner
+                    </span>
+                    {refillStatus === "approved" ? (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                        Approved
+                      </span>
+                    ) : refillStatus === "pending" ? (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                        Pending
+                      </span>
+                    ) : refillStatus === "rejected" ? (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        Rejected
+                      </span>
+                    ) : refillStatus === "banned" ? (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        Suspended
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-md bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                        Not applied
+                      </span>
+                    )}
+                  </div>
+                  {renderRefillButton()}
+                </div>
+
+                {refillApp?.businessName && (
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Business: <span className="font-medium text-gray-900 dark:text-white">{refillApp.businessName}</span>
+                  </div>
+                )}
+
+                {refillStatus === "pending" && (
+                  <div className="mt-2 text-sm text-yellow-600 dark:text-yellow-400">
+                    Your application is currently under review. We will notify you once it's processed.
+                  </div>
+                )}
+                {refillStatus === "rejected" && refillApp?.rejectionReason && (
+                  <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    Rejection reason: {refillApp.rejectionReason}
+                  </div>
+                )}
+                {refillStatus === "banned" && refillApp?.banReason && (
+                  <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    Ban reason: {refillApp.banReason}
+                  </div>
+                )}
               </div>
             </div>
 

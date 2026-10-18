@@ -1,3 +1,4 @@
+// src/features/userApiSlice.js
 import { apiSlice } from "./apiSlice.js";
 
 const USER_URL = "/users";
@@ -161,6 +162,7 @@ export const {
   useResetPasswordMutation,
   useLogoutMutation,
   useGetProfileQuery,
+  useLazyGetProfileQuery, // ← added: Login.jsx needs this
   useUpdateProfileMutation,
   useUploadAvatarMutation,
   useChangePasswordMutation,

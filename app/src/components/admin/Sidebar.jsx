@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Store,
   FileText,
+  Droplet, // 👈 Added for Refill Stations
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import {
@@ -60,9 +61,10 @@ const Sidebar = () => {
       badge: pendingAppsCount,
     },
     { to: "/superuser/stations", icon: Store, label: "Pickup Stations" },
+    // ⭐ New Refill Stations Link
+    { to: "/superuser/refill-stations", icon: Droplet, label: "Refill Stations" },
     { to: "/superuser/waitlist", icon: ClipboardList, label: "Waitlist" },
     { to: "/superuser/analytics", icon: BarChart3, label: "Analytics" },
-    // ⭐ new
     { to: "/superuser/terms", icon: FileText, label: "Terms & Privacy" },
     { to: "/superuser/settings", icon: Settings, label: "Settings" },
   ];

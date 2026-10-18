@@ -22,6 +22,13 @@ import {
   stationRouter as stationScopedRoutes,
 } from "./routes/stationRoutes.js";
 
+// ⭐ Refill system (3rd-party refill stations)
+import {
+  refillRoutes,
+  refillAdminRoutes,
+} from "./routes/refillRoutes.js";
+import { protect } from "./middleware/authMiddleware.js";
+
 import {
   startEmailScheduler,
   stopEmailScheduler,
@@ -87,7 +94,14 @@ app.get("/api/health", (req, res) => {
 // ✅ Routes
 app.use("/api/users", userRoutes);
 app.use("/api/riders", riderRoutes);
+
+// ⭐ Refill admin router MUST be mounted BEFORE the general /api/admin
+// router, otherwise Express may let adminRoutes swallow /refill/* paths.
+// Each refill admin controller re-checks `req.user.role === "admin"`, so
+// `protect` alone is enough — `adminOnly` is optional defence-in-depth.
+app.use("/api/admin/refill", protect, refillAdminRoutes);
 app.use("/api/admin", adminRoutes);
+
 app.use("/api/order", orderRoutes);
 app.use("/api/delivery", deliveryRoutes);
 app.use("/api/tracking", trackingRoutes);
@@ -98,6 +112,9 @@ app.use("/api/email", emailRoutes); // email status / debug / manual trigger
 app.use("/api/notifications", notificationRoutes); // push tokens + send + broadcast
 app.use("/api/stations", stationPublicRoutes); // GET /api/stations/nearby
 app.use("/api/station", stationScopedRoutes); // everything else under /api/station
+
+// ⭐ Refill system (customer + station-facing endpoints)
+app.use("/api/refill", refillRoutes);
 
 // ✅ Error middleware order (notFound first)
 app.use(notFound);
@@ -117,6 +134,53 @@ mongoose
     // Sweeps for pending/unpaid orders every 60s and sends reminder emails.
     // Silently skips if RESEND_API_KEY is not set.
     startEmailScheduler();
+
+    // ─────────────────────────────────────────────────────────
+    // ⭐ Refill commission cron jobs
+    // ─────────────────────────────────────────────────────────
+    // The two admin endpoints below are idempotent and can also be
+    // triggered manually from the dashboard:
+    //   • POST /api/admin/refill/invoices/generate   (monthly billing)
+    //   • POST /api/admin/refill/invoices/run-aging  (daily overdue sweep
+    //                                                 + auto-ban past grace)
+    //
+    // To automate them, install `node-cron` (`npm i node-cron`) and
+    // uncomment the block below. The service functions they call are the
+    // same handlers the admin endpoints use, so no extra controller code
+    // is needed.
+    //
+    // import cron from "node-cron";
+    // import {
+    //   adminGenerateInvoicesForPeriod,
+    //   adminRunAgingAndAutoBan,
+    // } from "./controllers/refillController.js";
+    //
+    // // 1st of every month @ 01:00 — generate last month's invoices
+    // cron.schedule("0 1 1 * *", async () => {
+    //   try {
+    //     const fakeReq = { user: { role: "admin", _id: null }, body: {} };
+    //     const fakeRes = {
+    //       status: () => ({ json: (d) => console.log("[refill invoice cron]", d) }),
+    //     };
+    //     await adminGenerateInvoicesForPeriod(fakeReq, fakeRes, () => {});
+    //   } catch (err) {
+    //     console.error("[refill invoice cron] failed:", err.message);
+    //   }
+    // });
+    //
+    // // Every day @ 02:00 — mark overdue + auto-ban past grace
+    // cron.schedule("0 2 * * *", async () => {
+    //   try {
+    //     const fakeReq = { user: { role: "admin", _id: null }, body: {} };
+    //     const fakeRes = {
+    //       status: () => ({ json: (d) => console.log("[refill aging cron]", d) }),
+    //     };
+    //     await adminRunAgingAndAutoBan(fakeReq, fakeRes, () => {});
+    //   } catch (err) {
+    //     console.error("[refill aging cron] failed:", err.message);
+    //   }
+    // });
+    // ─────────────────────────────────────────────────────────
 
     // Graceful shutdown so intervals don't keep the process alive
     const shutdown = (signal) => {

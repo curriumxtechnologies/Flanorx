@@ -102,6 +102,25 @@ const userSchema = mongoose.Schema(
       index: true,
     },
 
+    // ─── Refill station membership (3rd-party refill stations) ───
+    // Completely independent of `station` / `stationRole` above, which
+    // are exclusively for Flanorx-owned Station documents. A user can be
+    // a Flanorx station rider AND a refill station rider at the same time.
+    //   refillStation     → the RefillStation this user belongs to
+    //   refillStationRole → "owner" | "staff" | "rider" | null
+    refillStation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "RefillStation",
+      default: null,
+      index: true,
+    },
+    refillStationRole: {
+      type: String,
+      enum: ["owner", "staff", "rider", null],
+      default: null,
+      index: true,
+    },
+
     // ─── Rider‑specific fields ──────────────────────────────
     nin: { type: String, default: null },
     fuelingStation: { type: String, default: null },
@@ -188,6 +207,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 // ─── Indexes ────────────────────────────────────────────────
 userSchema.index({ role: 1, riderType: 1 });
 userSchema.index({ station: 1, stationRole: 1 });
+userSchema.index({ refillStation: 1, refillStationRole: 1 });
 // Cheap "who still hasn't accepted?" queries for the admin side
 // and the terms publish job.
 userSchema.index({ termsAccepted: 1, termsGraceEndsAt: 1 });

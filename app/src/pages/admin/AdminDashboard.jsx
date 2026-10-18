@@ -80,7 +80,7 @@ const AdminDashboard = () => {
 
   const activeRidersCount = useMemo(
     () => ridersData.filter((r) => r.verificationStatus === "approved").length,
-    [ridersData]
+    [ridersData],
   );
 
   const stats = useMemo(() => {
@@ -301,10 +301,10 @@ const AdminDashboard = () => {
 
     const order = selectedOrder;
     const [localOrderStatus, setLocalOrderStatus] = useState(
-      order.status || "pending"
+      order.status || "pending",
     );
     const [localDeliveryStatus, setLocalDeliveryStatus] = useState(
-      order.deliveryStatus || "pending"
+      order.deliveryStatus || "pending",
     );
 
     const handleOrderChange = (val) => {
@@ -375,7 +375,9 @@ const AdminDashboard = () => {
                 </span>
               </div>
               <div className="min-w-0">
-                <p className="text-gray-500 dark:text-gray-400 text-xs">Total</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">
+                  Total
+                </p>
                 <p className="font-bold text-gray-900 dark:text-white truncate">
                   ₦{order.totalAmount?.toFixed(2) || "0.00"}
                 </p>
@@ -409,8 +411,13 @@ const AdminDashboard = () => {
             <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
               <p className="text-gray-500 dark:text-gray-400 text-xs">Items</p>
               {order.items?.map((item, idx) => (
-                <div key={idx} className="flex justify-between text-sm py-1 gap-3">
-                  <span className="truncate">{item.name || `Item ${idx + 1}`}</span>
+                <div
+                  key={idx}
+                  className="flex justify-between text-sm py-1 gap-3"
+                >
+                  <span className="truncate">
+                    {item.name || `Item ${idx + 1}`}
+                  </span>
                   <span className="flex-shrink-0">
                     ₦{item.price?.toFixed(2) || "0.00"} x {item.quantity || 1}
                   </span>
@@ -462,14 +469,14 @@ const AdminDashboard = () => {
             </span>
             <span
               className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${getOrderStatusColor(
-                order.status
+                order.status,
               )}`}
             >
               {order.status || "pending"}
             </span>
             <span
               className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${getDeliveryStatusColor(
-                order.deliveryStatus || "pending"
+                order.deliveryStatus || "pending",
               )}`}
             >
               {order.deliveryStatus || "pending"}
@@ -739,7 +746,9 @@ const AdminDashboard = () => {
           className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b] hover:bg-[#10d04e] text-white rounded-xl lg:rounded-2xl transition shadow-sm hover:shadow-md min-w-0"
         >
           <Package className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
-          <span className="text-xs lg:text-sm font-medium truncate">Orders</span>
+          <span className="text-xs lg:text-sm font-medium truncate">
+            Orders
+          </span>
         </button>
         <button
           onClick={() => navigate("/superuser/users")}
@@ -753,14 +762,18 @@ const AdminDashboard = () => {
           className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-[#13ec5b]/10 hover:bg-[#13ec5b]/20 text-[#13ec5b] rounded-xl lg:rounded-2xl transition border border-[#13ec5b]/20 min-w-0"
         >
           <Truck className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
-          <span className="text-xs lg:text-sm font-medium truncate">Riders</span>
+          <span className="text-xs lg:text-sm font-medium truncate">
+            Riders
+          </span>
         </button>
         <button
           onClick={() => navigate("/superuser/analytics")}
           className="flex flex-row lg:flex-col items-center justify-center gap-1.5 lg:gap-0 px-2.5 py-2.5 lg:p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl lg:rounded-2xl transition min-w-0"
         >
           <TrendingUp className="h-4 w-4 lg:h-8 lg:w-8 lg:mb-1 flex-shrink-0" />
-          <span className="text-xs lg:text-sm font-medium truncate">Analytics</span>
+          <span className="text-xs lg:text-sm font-medium truncate">
+            Analytics
+          </span>
         </button>
       </div>
     </div>
@@ -944,7 +957,7 @@ const AdminDashboard = () => {
                       <td className="py-2.5 px-3">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium max-w-full ${getOrderStatusColor(
-                            order.status
+                            order.status,
                           )}`}
                         >
                           <span className="truncate">
@@ -955,7 +968,7 @@ const AdminDashboard = () => {
                       <td className="py-2.5 px-3">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium max-w-full ${getDeliveryStatusColor(
-                            order.deliveryStatus || "pending"
+                            order.deliveryStatus || "pending",
                           )}`}
                         >
                           <span className="truncate">
