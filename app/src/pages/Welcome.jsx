@@ -26,7 +26,7 @@ const getRedirectPath = (role) => {
 };
 
 const HERO_IMAGE =
-  "/flanorx-people.png";
+  "/flanorx-people.avif";
 
 // ═══════════════════════════════════════════════════════════
 //  Public Terms / Privacy Preview Modal
