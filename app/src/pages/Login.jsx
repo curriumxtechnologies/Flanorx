@@ -114,7 +114,6 @@ const Login = () => {
   });
 
   const goTo = (destination) => {
-    console.log("[login-route] navigating to:", destination);
     setTimeout(() => navigate(destination, { replace: true }), 600);
   };
 
@@ -136,7 +135,6 @@ const Login = () => {
 
     // 3. Exact same check that works in Profile.jsx
     const refillStatus = refillAppData?.station?.status;
-    console.log("[login-route] refill response:", refillAppData, "status:", refillStatus);
 
     if (refillStatus === "approved" || authUser.refillStation) {
       goTo("/refill/station");
@@ -148,7 +146,6 @@ const Login = () => {
       let destination = authUser.role === "rider" ? "/rider/dashboard" : "/dashboard";
       try {
         const profile = await triggerProfile(undefined, false).unwrap();
-        console.log("[login-route] profile response:", profile);
         if (profile?.refillStation) destination = "/refill/station";
         else if (profile?.role === "rider") destination = "/rider/dashboard";
       } catch (err) {
@@ -266,7 +263,6 @@ const Login = () => {
 
     try {
       const result = await login({ email, password, rememberMe }).unwrap();
-      console.log("[login-route] login result:", result);
 
       const authPayload = persistAuth(result, { rememberMe });
       setSuccess("Login successful! Redirecting...");
@@ -281,7 +277,6 @@ const Login = () => {
   const handleGoogleTokenExchange = async (accessToken) => {
     try {
       const result = await googleAuth({ token: accessToken }).unwrap();
-      console.log("[login-route] google login result:", result);
 
       const authPayload = persistAuth(result);
       setSuccess("Google login successful!");
