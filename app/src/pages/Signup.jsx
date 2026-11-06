@@ -390,6 +390,7 @@ const Signup = () => {
 
     const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+
     if (Capacitor.isNativePlatform()) {
       const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
