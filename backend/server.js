@@ -65,6 +65,7 @@ const allowedOrigins = [
   "https://staging.flanorx.com",
   "https://flanorx-kduo.onrender.com",
   "https://web.flanorx.com",
+  "https://flanorx-app.onrender.com"
 ];
 
 app.use(
