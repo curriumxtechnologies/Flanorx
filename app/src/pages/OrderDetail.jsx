@@ -837,16 +837,16 @@ const OrderDetail = () => {
                         </span>
                       )}
                     </div>
-                    {order.paymentMethod && (
-                      <div className="flex justify-between gap-3">
-                        <span className="text-gray-500 dark:text-gray-400">
-                          Method
-                        </span>
-                        <span className="text-gray-900 dark:text-white capitalize">
-                          {order.paymentMethod}
-                        </span>
-                      </div>
-                    )}
+{order.paid && order.paymentMethod && (
+  <div className="flex justify-between gap-3">
+    <span className="text-gray-500 dark:text-gray-400">
+      Method
+    </span>
+    <span className="text-gray-900 dark:text-white capitalize">
+      {order.paymentMethod}
+    </span>
+  </div>
+)}
                     {order.paymentDate && (
                       <div className="flex justify-between gap-3">
                         <span className="text-gray-500 dark:text-gray-400">
