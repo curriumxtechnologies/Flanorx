@@ -166,7 +166,7 @@ const Welcome = () => {
           <img
             src="/flanorx.png"
             alt="Flanorx"
-            className="h-7 w-auto brightness-0 invert"
+            className="h-7 w-auto"
           />
           <Link
             to="/login"
