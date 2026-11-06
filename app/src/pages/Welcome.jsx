@@ -26,7 +26,7 @@ const getRedirectPath = (role) => {
 };
 
 const HERO_IMAGE =
-  "/flanorx-people.jfif";
+  "/flanorx-people.png";
 
 // ═══════════════════════════════════════════════════════════
 //  Public Terms / Privacy Preview Modal
@@ -195,7 +195,7 @@ const Welcome = () => {
           </h1>
 
           <p className="mt-3 text-[13px] text-white/70 leading-relaxed max-w-[19rem]">
-            Skip the queue. We deliver premium fuel and gas in minutes — right
+            Skip the queue. We deliver premium fuel and gas in minutes, right
             where you need it.
           </p>
 
@@ -367,7 +367,7 @@ const Welcome = () => {
 
               <p className="mt-4 xl:mt-5 text-base xl:text-lg text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
                 Skip the queue. We deliver premium fuel and gas straight to
-                your home, office, or wherever you need it — fast, reliable,
+                your home, office, or wherever you need it, fast, reliable,
                 and hassle‑free.
               </p>
 
