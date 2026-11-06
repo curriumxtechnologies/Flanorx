@@ -181,7 +181,10 @@ const Tracking = () => {
         <div className="w-full px-0 sm:px-4 lg:px-6 py-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-              <div className="relative w-full" style={{ height: `${mapHeight}px` }}>
+              <div
+                className="relative w-full isolate"
+                style={{ height: `${mapHeight}px` }}
+              >
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
                   <div className="bg-white/90 dark:bg-gray-800/90 rounded-2xl p-6 text-center max-w-xs mx-4 shadow-xl">
                     <MapPin className="h-10 w-10 text-[#13ec5b] mx-auto mb-3 opacity-50" />
@@ -203,7 +206,7 @@ const Tracking = () => {
                 <MapContainer
                   center={[6.5244, 3.3792]}
                   zoom={14}
-                  style={{ height: "100%", width: "100%" }}
+                  style={{ height: "100%", width: "100%", zIndex: 0 }}
                   zoomControl={true}
                   attributionControl={true}
                 >
@@ -396,7 +399,7 @@ const Tracking = () => {
             <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
               <div
                 ref={mapContainerRef}
-                className="relative w-full transition-all duration-300"
+                className="relative w-full transition-all duration-300 isolate"
                 style={{ height: `${mapHeight}px` }}
               >
                 <MapContainer
