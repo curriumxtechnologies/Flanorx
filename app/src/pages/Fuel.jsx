@@ -352,7 +352,6 @@ const Fuel = () => {
   // ─── Fuel prices (all ₦10 for testing) ────────────────────
   const fuelPrices = {
     Petrol: 10,
-    "Petrol (95 Octane)": 10,
     Diesel: 10,
   };
 
@@ -488,7 +487,7 @@ const Fuel = () => {
   };
 
   const isLoading = userLoading || orderLoading;
-  const fuelTypes = ["Petrol", "Petrol (95 Octane)", "Diesel"];
+  const fuelTypes = ["Petrol", "Diesel"];
   const quantityPresets = [10, 20, 30, 50];
 
   return (
@@ -564,9 +563,7 @@ const Fuel = () => {
                             }`}
                           >
                             <div className="font-semibold leading-tight">
-                              {type === "Petrol (95 Octane)"
-                                ? "95 Octane"
-                                : type}
+                              {type}
                             </div>
                           </button>
                         );
