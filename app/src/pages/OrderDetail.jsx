@@ -331,6 +331,7 @@ const OrderDetail = () => {
             {/* ─── Status Banner ────────────────────────────── */}
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden rounded-none sm:rounded-2xl p-3 sm:p-4">
               <div className="flex flex-wrap items-center gap-2">
+                {/* 1. Main Order Status */}
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getOrderStatusColor(
                     order.status
@@ -341,16 +342,24 @@ const OrderDetail = () => {
                     {order.status || "pending"}
                   </span>
                 </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getDeliveryStatusColor(
-                    order.deliveryStatus
-                  )}`}
-                >
-                  {getStatusIcon(order.deliveryStatus)}
-                  <span className="capitalize">
-                    {order.deliveryStatus || "pending"}
-                  </span>
-                </span>
+
+                {/* 2. Delivery Status (Only show if it's not pending and differs from main status) */}
+                {order.deliveryStatus &&
+                  order.deliveryStatus !== order.status &&
+                  order.deliveryStatus !== "pending" && (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getDeliveryStatusColor(
+                        order.deliveryStatus
+                      )}`}
+                    >
+                      {getStatusIcon(order.deliveryStatus)}
+                      <span className="capitalize">
+                        {order.deliveryStatus.replace(/_/g, " ")}
+                      </span>
+                    </span>
+                  )}
+
+                {/* 3. Payment Status */}
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium sm:ml-auto ${
                     order.paid
