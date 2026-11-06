@@ -439,7 +439,7 @@ const Signup = () => {
       {/* ═══ LEFT — image panel ═══ */}
       <div className="hidden lg:flex lg:w-1/2 min-h-screen sticky top-0 h-screen overflow-hidden">
         <img
-          src="flanorx-people.jfif"
+          src="flanorx-people.png"
           alt="Fuel and gas delivery"
           className="w-full h-full object-cover"
         />

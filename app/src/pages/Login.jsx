@@ -405,7 +405,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex bg-white dark:bg-gray-950">
       <div className="hidden lg:flex lg:w-1/2 min-h-screen sticky top-0 h-screen overflow-hidden">
-        <img src="flanorx-people.jfif" alt="Fuel and gas delivery" className="w-full h-full object-cover" />
+        <img src="flanorx-people.png" alt="Fuel and gas delivery" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#13ec5b]/20 to-transparent" />
         <div className="absolute bottom-10 left-10 text-white">
           <h2 className="text-3xl font-bold drop-shadow-lg">Fuel &amp; Gas at your doorstep</h2>
